@@ -1199,6 +1199,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <ol>
 <li><div>Send command "C\r" to <b>close the device</b> if it is till open.</div>
     <div>But this command has also another purpose: It <b>resets all internal variables</b> in the firmware to their default.</div>
+    <div>Baudrates and all modes are reset (back to legacy), reports turned off, filters removed, Rx/Tx buffers are emptied.</div>
     <div><b>ATTENTION:</b> The command 'Close' is the only command that does <b>not send a feedback</b>, although feedbacks are enabled.</div>
     <div>The purpose is that you can always send this as the first command and don't have to wait for a feedback.</div>
     <div>When you connect to a CANable you don't know if the user has connected a legacy device or a CANable 2.5</div>
@@ -1277,13 +1278,14 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>It was impossible to transfer other data to the host, like for example an ASCII <b>debug string</b>.</div>
 <p>
 <div>Therfore I had to design a <b>new efficient protocol</b>: The <b>ElmüSoft protocol</b>.</div>
+<div>It adds only 2 additional bytes the CAN packet payload while transmitting over USB.</div>
 <div>It uses a <b>minimalistic data transfer</b> and is additionally very easy to expand for any future requirements.</div>
 <p>
 <div>The new firmware 2.5 still implements the legacy <b>Geschwister Schneider</b> protocol, but can be switched to the new protocol.</div>
 <div>The new protocol sends <b>optimized structs</b> for Tx and Rx packtes, Echo Markers, Debug Messages, Error reports, Busload events.</div>
 <div>You can test all this in the demo application.</div>
 <p>
-<div>In the screenshot above <b>timestamps</b> from the computer CPU are used. They are converted to local time with 10 µs precision.</div>
+<div>The screenshot above uses <b>timestamps</b> from the computer CPU. They are converted to local time with 10 µs precision.</div>
 <div>When you set the flag <code>GS_DevFlagTimestamp</code> the demo switches to <b>firmware timestamps</b> generated in the adapter.</div>
 <div>They have no advantage at all. They produce more USB traffic and you will see several lines with <b>"No Timestamp"</b>.</div>
 <div>The reason is that firmware timestamps are only available for events <b>received from</b> the firmware.</div>
@@ -1295,7 +1297,8 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>Then immediately send a SETUP request with <code>DFU_GetStatus</code> to check if execution was successful.</div>
 <div>If the state is <code>DfuState_AppIdle</code> the adapter will enter boot mode 300 ms later.</div>
 <div>If the state is <code>DfuState_AppDetach</code> you must show a message to the user to reconnect the USB cable.</div>
-<div>The demo application shows how this works.</div>
+<div>The USB reconnection is only required if the pin BOOT0 was disabled before.</div>
+<div>The demo application shows how the entire procedure.</div>
 <div>See pages 17 and 22 in <b>DFU Functional Descriptor 1.1.pdf</b> in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
 
 
@@ -1303,7 +1306,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <p>&nbsp;
 <h2>4.) Firmware Developer Manual</h2>
 
-<div>This is the first project that unites two firmware's, written by different persons, into one.</div>
+<div>This is the first project that unites two firmware's, written by different persons, into one project.</div>
 <div>The new CANable 2.5 firmware uses the <b>same code base</b> to compile Slcan and Candlelight.</div>
 <div>The CAN interface, error handling, LED control, entering DFU mode, etc... use common code.</div>
 <div>Only the USB interface and the command executer are implemented individually.</div>
@@ -1342,7 +1345,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>and you will get a comfortable developer environment, you are completely wrong!</div>
 <div>After downloading this Gigabyte monster you will find a very badly designed user interface,</div>
 <div>an extremely slow software and you notice that it is not able to compile a Make file.</div>
-<div>Several menu items are greyed out without any reason and the help file is useless.</div>
+<div>Several menu items are greyed out without an understandable reason and the help file is no help.</div>
 <div>So don't <b>waste your time</b> with this.</div>
 <div>ST Microelectronics has only hardware engineers, they have nobody who is able to write desktop software.</div>
 <p>
@@ -1358,7 +1361,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <li><div>In the Advanced System Settings search the <b>PATH variable</b> and add <b>two folders</b> separated by semicolon:</div>
     <div>The folder into which CubeCLT has installed the file <b>arm-none-eabi-gcc.exe</b></div>
     <div>The folder into which MinGW has installed the file <b>make.exe</b></div>
-    <div>You can also copy make.exe and mmkdir.exe and their DLLs into the CubCLT directory and need only one folder.</div>
+    <div>You can also copy make.exe and mmkdir.exe and their DLLs into the CubCLT directory and you need only one folder.</div>
 <li><div>Now double click the file <b>Build_Slcan.cmd</b> in my project and the compilation should start.</div>
     <div>This script copies the compiled <b>BIN files</b> automatically into the Firmware folder of HUD ECU Hacker.</div>
 <li><div>The <b>Firmware Updater</b> will convert the BIN files automatically into <b>DFU files</b> that you can upload.</div>
