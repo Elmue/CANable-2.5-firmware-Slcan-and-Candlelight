@@ -367,7 +367,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <h3>Slcan Protocol</h3>
 <div>When you connect a CANable with Slcan firmware a <b>COM port</b> will appear on Windows.</div>
 <div>The entire communcation with CAN bus is transferred as <b>ASCII</b> characters.</div>
-<div>This is a highly <b>inefficient</b> way to transmit data over a USB cable.</div>
+<div>This is a highly <b>inefficient</b> way to transmit binary data over a USB cable.</div>
 <div>For each byte that you send to CAN bus two bytes must be transferred over USB.</div>
 <div>The USB speed is limited to 12 Mbit/s but CAN bus can reach speeds up to 10 Mbaud.</div>
 <div>The only advantage of the Slcan protocol is that it is <b>simple</b>.</div>
@@ -767,7 +767,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>With the new firmware it will never again happen that something does not work and you have no idea why.</div>
 <p>
 <ol>
-    <li><div>The first error on CAN bus it always reported immediately.</div>
+    <li><div>The first error on CAN bus is always reported immediately.</div>
     <li><div>A second error is only reported after <b>100 ms</b> have elapsed and only if the second error is different from the </div>
     <div>previously reported. This is important to avoid flooding the host with thousands of errors as the legacy firmware did.</div>
     <li><div>If the same error stays present for a long time, it is reported in intervals of <b>3 seconds</b>.</div>
@@ -1264,7 +1264,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>WinUSB requires an unusal programming that is not documented by Microsoft.</div>
 
 <p>
-<img src="Images/Candlelight C++ demo.png" alt="Candlelight C++ demo project" width="722" height="572">
+<img src="Images/Candlelight Cpp demo.png" alt="Candlelight C++ demo project" width="722" height="572">
 <p>
 
 <a name="Candle_NewProto"></a>
