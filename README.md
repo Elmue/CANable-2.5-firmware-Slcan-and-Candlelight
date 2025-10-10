@@ -13,7 +13,7 @@ The firmware has been tested on the STM32G431 on the MKS Makerbase isolated boar
 The firmware has been designed to be easily expandable for future processors and boards.
 Precompiled binary firmware files can be uploaded to the CANable with the new Firmware Updater.
 
-<img alt="CANable STM32 Firmware Updater" src="https://github.com/user-attachments/assets/8b2b658d-a723-4fb5-9329-370d25015336" />
+<img width="577" height="484" alt="CANable STM32 Firmware Updater" src="https://github.com/user-attachments/assets/8b2b658d-a723-4fb5-9329-370d25015336" />
 
 
 Please read the detailed 
