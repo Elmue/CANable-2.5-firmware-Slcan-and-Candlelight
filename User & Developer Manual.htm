@@ -1,0 +1,1385 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <title>CANable 2.5 Firmware Update - Slcan &amp; Candlelight</title>
+    <meta name="description" content="CANable firmware 2.5 and firmware update on Windows and firmware sourcecode from ElmüSoft">
+    <meta name="keywords" content="CANable, CANable firmware 2.5, CANable SLCAN, CANable Candlelight, CANable Firmware update, CANable MKS Makerbase, CANable OpenlightLabs, CANable Walfront, CANable DSD Tech">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+    <meta http-equiv="MSThemeCompatible" content="Yes">
+    <meta http-equiv="Language" content="en">
+    <meta name="Author" content="ElmüSoft">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="index, follow">
+    <style>
+    body          { font-family:Verdana; font-size:13px; background-color:#F9F8F1; }
+    h1            { font-size:25px; font-weight:bold; background-color:#007799; color:white; padding:8px 8px 8px 16px; margin-top:35px; border:solid 2px #77CCDD; border-radius: 10px; }
+    h2            { font-size:20px; font-weight:bold; background-color:#007799; color:white; padding:5px 3px 5px 8px; margin-top:10px; border:solid 1px #77CCDD; border-radius: 10px; width:75%; }
+    h3            { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:22px; margin-bottom:5px; }
+    h4            { font-size:13px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:12px; margin-bottom:2px; }
+    hr            { border: 3px solid #007799; border-radius: 5px; }
+    ul, ol        { padding-inline-start: 25px; }
+    li            { padding-top:1px; padding-bottom:1px;}
+    code          { color:brown; font-size:14px; }
+    img           { max-width: 100%; height: auto;}
+    a:hover       { color: #AA00FF; }
+    pre           { border:1px solid #AAAAAA; padding:2px; font-family:Courier New; font-size:13px; background-color:#FFFFDD; width:690px; }
+    .Pre          { border:1px solid #AAAAAA; padding:2px; font-family:Courier New; font-size:13px; background-color:white; }
+    .Link:hover   { color: #AA00FF; }
+    .Link, a      { color: blue; cursor:pointer; font-family:Verdana; font-size:12px; font-weight:bold; text-decoration:none; }
+    .DivFullSize  { position:absolute; visibility:hidden; background-color:#DDDDDD; padding:0px 10px 10px 10px; border:1px solid black; box-shadow: 5px 5px 5px #777; }
+    .Warning      { border:2px solid red; padding:5px; font-weight:bold; }
+    .Error        { color:red; font-weight:bold; }
+    .TblImage     { border:1px solid #CCCCCC; border-spacing: 0px; margin-top:15px; margin-bottom:15px; }
+    .TblImage td  { padding:0px; }
+    .TblImage th  { background-color:#777777; color:#FFFFFF; padding:1px 5px 2px 5px; font-weight:bold; }
+    .NoTopMargin  { margin-top:0px; }
+    .Highlight    { background-color:#FFFFAA; }
+    .Center       { text-align:center; }
+    .Right        { text-align:right; }
+    .Green        { color:green; }
+    .Red          { color:red; }
+    .Orange       { color:orange; }
+    .DarkRed      { color:#AA0000; }
+    .Blue         { color:blue; }
+    .Magenta      { color:magenta; }
+    .Gray         { color:#888888; }
+    .Time         { color:#775533; }
+    .Big          { font-size:15px; font-weight:bold; }
+    .Img          { border:1px solid #CCCCCC; }
+    .Photo        { border:2px solid #555555; }
+    .LineTop      { border-top:1px solid #CCCCCC; }
+    .LineBot      { border-bottom:1px solid #CCCCCC; }
+    .Translate    { background-color: #007799; border:2px solid #77CCDD; border-radius: 10px; }
+    .Translate td { color:white; padding:10px; }
+    .Assembler    { border:1px solid gray; padding:5px; }
+    .Assembler b  { color:blue; }
+    .Assembler code  { color:#DD8800; }
+    .Over         { text-decoration:overline; }
+    .OrangeSquare { background-color:#FFCC99; font-weight:bold; border-width:1px; border-style:solid; border-color:black; padding:1px; line-height:22px; }
+
+    .DataTable    { background-color:#333333; margin-top:10px; margin-bottom:10px; }
+    .DataTable th { background-color:#777777; color:#FFFFFF; padding:1px 5px 2px 5px; font-weight:bold; }
+    .DataTable tr { background-color:#F8F8F8; }
+    .DataTable td { background-color:#FFFFF8; padding:3px; }
+    .DataTable h3 { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:8px; margin-bottom:0px; }
+
+    .PopupMenu { position:fixed; top:0px; right:0px; border:2px solid #77CCDD; z-index: 999; padding:5px; background-color:#007799; color:white; font-weight:bold; font-family:Arial,Helvetica,Sans-serif; font-size:13px; cursor:default; }
+    .Menu     { color:white; text-decoration:none; font-family:Verdana; }
+    .MenuLink { color:white; text-decoration:none; font-family:Verdana; }
+    .MenuLink:hover { color:#CCCCFF; }
+
+    .TimeBk { padding-left:3px; padding-right:3px; margin-right:5px; font-family:Courier New; font-size:13px; background-color:#EEEEEE; }
+    .TimeWt { padding-left:3px; padding-right:3px; margin-right:5px; font-family:Courier New; font-size:13px; }
+    .Grey { color:#888888; }
+    .Info { color: #000000; }
+    .InfoBold { color: #000000; font-weight:bold; font-size:14px; }
+    .Error { color: #FF0000; font-weight:bold; }
+    .Warn { color: #FF8C00; font-weight:bold; }
+    .Success { color: #00AA00; font-weight:bold; }
+    .Command { color: #000000; }
+    .TxData { color: #0000FF; font-family:Courier New; font-size:14px; }
+    .RxData { color: #008000; font-family:Courier New; font-size:14px; }
+    .RxDataInvalid { color: #FF0000; font-family:Courier New; font-size:14px; }
+    .TxSecnd { color: #A52A2A; font-family:Courier New; font-size:14px; }
+    .RxSecnd { color: #808000; font-family:Courier New; font-size:14px; }
+    .Detail { color: #BB00DD; }
+    .Timing { color: #FF8C00; }
+    .TimingDataRx { color: #A52A2A; }
+    .TimingDataTx { color: #808000; }
+    .Debug { color: #808080; font-family:Courier New; font-size:14px; }
+    .DebugDark { color: #444444; font-family:Courier New; font-size:14px; }
+    .Comment { color: #8B4513; font-weight:bold; text-decoration:underline; }
+    .Macro { color: #4B0082; font-family:Courier New; font-size:14px; }
+
+    .DataNarrow    { background-color:#AAAAAA; margin-top:10px; margin-bottom:10px; }
+    .DataNarrow th { background-color:#777777; color:#FFFFFF; padding:1px 5px 1px 5px; font-weight:bold; }
+    .DataNarrow tr { background-color:#F8F8F8; }
+    .DataNarrow td { background-color:#FFFFF8; padding:0px 5px 0px 5px; }    
+    </style>
+        
+    <script>
+    var LastLink = null;
+    var LastDiv  = null;
+    var LastTop  = 0;
+    var LastUrl  = null;
+    function ShowFullSize(Link, ImgFile)
+    {    
+        if (Link == LastLink)
+        {
+            HideFullSize(); // sets LastLink = null
+            return;
+        }
+            
+        HideFullSize();            
+
+        var Div = document.getElementById("DivFullSize");
+        var Img = document.getElementById("ImgFullSize");
+        var Scr = document.getElementById("DivScrollable");
+
+        Scr.style.overflow = "auto";
+        Scr.scrollLeft = 0;
+        Scr.scrollTop  = 0;
+
+        var Top = Math.max(document.body.scrollTop, document.documentElement.scrollTop) + 15;
+        Div.style.top  = Top + "px";
+        Div.style.left = "20px";
+        Div.style.visibility = "visible";
+
+        Link.innerHTML = "Hide Full Size";
+        LastLink = Link;
+        LastDiv  = Div;
+
+        Img.style.maxWidth = "none";
+        Img.onload = function()
+        {
+            var MaxWidth  = window.innerWidth  - 80;
+            var MaxHeight = window.innerHeight - 80;
+
+            var ImgWidth  = Img.width  + 4;
+            var ImgHeight = Img.height + 4;
+
+            var HScroll = (ImgWidth  > MaxWidth);
+            var VScroll = (ImgHeight > MaxHeight);
+
+            if (VScroll) ImgWidth  += 18;
+            if (HScroll) ImgHeight += 18;
+
+            if (HScroll) Scr.style.width  = MaxWidth  + "px";
+            else         Scr.style.width  = ImgWidth  + "px";
+            if (VScroll) Scr.style.height = MaxHeight + "px";
+            else         Scr.style.height = ImgHeight + "px";
+        }
+        Img.src = ImgFile;
+    }
+    function HideFullSize()
+    {
+        if (LastLink != null)
+        {
+            LastDiv.style.visibility = "hidden";
+            LastLink.innerHTML = "Show Full Size";
+            LastDiv  = null;
+            LastLink = null;
+        }
+        ShowMenu(false);
+    }
+    function ShowMenu(bShow)
+    {
+        MenuHead = document.getElementById("MenuHead");
+        MenuCont = document.getElementById("MenuContent");
+        if (MenuHead != null && MenuCont != null)
+        {
+            MenuHead.style.display = bShow ? "none"  : "block";
+            MenuCont.style.display = bShow ? "block" : "none";
+        }
+    }
+    try
+    {
+        window.addEventListener('scroll', function(e)
+        {
+            var Top = Math.max(document.body.scrollTop, document.documentElement.scrollTop)
+            if (Math.abs(LastTop - Top) > 50) // Workaround for buggy Firefox 79
+            {
+                if (LastUrl == window.location.href)
+                    HideFullSize(); // also hide menu
+                LastTop = Top;
+                LastUrl = window.location.href;
+            }
+        } );
+    }
+    catch (ex)
+    {}
+    </script>
+</head>
+<body background="Images/Bkgnd.jpg">
+<div id="DivFullSize" class="DivFullSize" OnClick="ShowMenu(false)">
+    <table>
+        <tr><td class="Right"><span class="Link" onClick="HideFullSize()">Close</span></td></tr>
+        <tr><td><div id="DivScrollable"><img id="ImgFullSize" src=""></div></td></tr>
+    </table>
+</div>
+
+<div id="MenuTop" class="PopupMenu" >
+    <div id="MenuHead" style="display:none;" onMouseover="ShowMenu(true)">Menu</div>
+    <div id="MenuContent">
+        <div><a href="#User_Manual"                   class="MenuLink" onClick="ShowMenu(false)">1.) User Manual</a></div>
+        <div>— &nbsp; <a href="#Adapters"             class="MenuLink" onClick="ShowMenu(false)">CANable Adapters</a></div>
+        <div>— &nbsp; <a href="#Hardware"             class="MenuLink" onClick="ShowMenu(false)">Hardware Misdesign</a></div>
+        <div>— &nbsp; <a href="#WebUpdater"           class="MenuLink" onClick="ShowMenu(false)">Official Firmware</a></div>
+        <div>— &nbsp; <a href="#Slcan_Protocol"       class="MenuLink" onClick="ShowMenu(false)">Slcan Protocol</a></div>
+        <div>— &nbsp; <a href="#Candlelight_Protocol" class="MenuLink" onClick="ShowMenu(false)">Candlelight Protocol</a></div>
+        <div>— &nbsp; <a href="#Speed_Comparison"     class="MenuLink" onClick="ShowMenu(false)">Inefficient USB Data Transfer</a></div>
+        <div>— &nbsp; <a href="#Legacy_Installation"  class="MenuLink" onClick="ShowMenu(false)">Legacy Candlelight Installation</a></div>
+        <div>— &nbsp; <a href="#Ms_OS_Descriptor"     class="MenuLink" onClick="ShowMenu(false)">Microsoft OS Descriptor</a></div>
+        <div>— &nbsp; <a href="#Firmware_Updater"     class="MenuLink" onClick="ShowMenu(false)">Firmware Updater</a></div>
+        <div>— &nbsp; <a href="#Meaning_of_LEDs"      class="MenuLink" onClick="ShowMenu(false)">Meaning of the LEDs</a></div>
+        <div>— &nbsp; <a href="#Cangaroo"             class="MenuLink" onClick="ShowMenu(false)">Cangaroo</a></div>
+        <div>— &nbsp; <a href="#HUD_ECU_Hacker"       class="MenuLink" onClick="ShowMenu(false)">HUD ECU Hacker</a></div>
+        <div>— &nbsp; <a href="#CAN_Settings"         class="MenuLink" onClick="ShowMenu(false)">CAN bus Settings</a></div>
+        <div>— &nbsp; <a href="#Filter"               class="MenuLink" onClick="ShowMenu(false)">CAN Filter</a></div>
+        <div>— &nbsp; <a href="#Samplepoint"          class="MenuLink" onClick="ShowMenu(false)">Samplepoint</a></div>
+        <div>— &nbsp; <a href="#Baudrates"            class="MenuLink" onClick="ShowMenu(false)">Baudrates</a></div>
+        <div>— &nbsp; <a href="#CAN_Errors"           class="MenuLink" onClick="ShowMenu(false)">CAN bus Errors</a></div>
+        <div>— &nbsp; <a href="#Transmit_Timeout"     class="MenuLink" onClick="ShowMenu(false)">Transmit Timeout</a></div>
+        <div>— &nbsp; <a href="#Echo_Marker"          class="MenuLink" onClick="ShowMenu(false)">Tx Echo Marker</a></div>
+        <div>— &nbsp; <a href="#Timestamps"           class="MenuLink" onClick="ShowMenu(false)">Timestamps</a></div>        
+        <div>— &nbsp; <a href="#Enter_DFU"            class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>        
+        <div><a href="#Slcan_Manual"                  class="MenuLink" onClick="ShowMenu(false)">2.) Slcan Developer Manual</a></div>
+        <div>— &nbsp; <a href="#Slcan_Commands"       class="MenuLink" onClick="ShowMenu(false)">Commands</a></div>
+        <div>— &nbsp; <a href="#Slcan_Responses"      class="MenuLink" onClick="ShowMenu(false)">Responses &amp; Events</a></div>
+        <div>— &nbsp; <a href="#Slcan_Version"        class="MenuLink" onClick="ShowMenu(false)">Version Info</a></div>
+        <div>— &nbsp; <a href="#Slcan_Packets"        class="MenuLink" onClick="ShowMenu(false)">Packets</a></div>
+        <div>— &nbsp; <a href="#Slcan_Errors"         class="MenuLink" onClick="ShowMenu(false)">Error Reports</a></div>
+        <div>— &nbsp; <a href="#Slcan_Initialization" class="MenuLink" onClick="ShowMenu(false)">Initialization</a></div>
+        <div><a href="#Candlelight_Manual"            class="MenuLink" onClick="ShowMenu(false)">3.) Candlelight Developer Manual</a></div>
+        <div>— &nbsp; <a href="#Demo_Application"     class="MenuLink" onClick="ShowMenu(false)">C++ Demo Application</a></div>
+        <div>— &nbsp; <a href="#Candle_NewProto"      class="MenuLink" onClick="ShowMenu(false)">The New Protocol</a></div>
+        <div>— &nbsp; <a href="#Candle_DFU"           class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>        
+        <div><a href="#Firmware_Manual"               class="MenuLink" onClick="ShowMenu(false)">4.) Firmware Developer Manual</a></div>
+        <div>— &nbsp; <a href="#Compile_Windows"      class="MenuLink" onClick="ShowMenu(false)">Compiling on Windows</a></div>
+        <div>— &nbsp; <a href="#Source_Code"          class="MenuLink" onClick="ShowMenu(false)">Source Code</a></div>
+    </div>
+</div>
+
+<noscript>
+    <div class="Error">You have Java script turned off.</div>
+    <div class="Error">You cannot view the images in full size.</div>
+    <div>&nbsp;</div>
+</noscript>
+
+<h1>CANable 2.5 Firmware from ElmüSoft - Slcan &amp; Candlelight</h1>
+
+<div>While I added support for CANable adapters to <a href="https://netcult.ch/elmue/HUD ECU Hacker" target="_blank">HUD ECU Hacker</a> I found so <b>many issues</b> that I ended up writing a new firmware.</div>
+<div>The official firmware that you find on Github and that comes with the adapters bought in China is of <b>low quality</b>.</div>
+<div>Here you find the first CANable firmware that can be used for <b>professional</b> CAN bus applications.</div>
+<ol>
+    <li><div>I united 2 formerly separate firmware projects <b>Slcan</b> and <b>Candlelight</b> into one project with a <b>common code base</b>.</div>
+    <li><div>The new CANable 2.5 firmware is <b>high quality</b> and <b>open-source</b>.</div>
+    <li><div>If you noticed in the legacy firmware that CAN communication did not work you had <b>no chance</b> to find out why.</div>    
+    <li><div>Here you find the first CANable firmware with correctly implemented <b>error handling</b> telling you what is wrong.</div>
+    <li><div>Although many new features were added, the new firmware is 100% <b>backward compatible</b> with legacy software.</div>
+    <li><div>The firmware has been tested successfully with <b>CAN FD</b> baudrates up to <b>10 Mega baud</b>.</div>
+    <li><div>The firmware has been designed to be <b>easily expandable</b> for future requirements.</div>
+    <li><div>The firmware has been written by a software developer with 40+ years of programming, reverse engineering and electronic experience.</div>
+</ol>
+<div>Additionally with <a href="#HUD_ECU_Hacker">HUD ECU Hacker</a> you get a powerfull tool with lots of features, the <b>swiss knife</b> for CAN bus.</div>
+<ol>
+    <li><div>With the <a href="#Firmware_Updater">Firmware Updater</a> you can upload the new firmware to your CANable with one click.</div>
+    <li><div>Additionally you get a high speed <a href="#HUD_ECU_Hacker">CAN Raw Terminal</a> that supports all the new features, but works also with legacy adapters.</div>
+    <li><div>You can grab <b>logfiles</b> of CAN bus traffic.</div>
+    <li><div>You can decode the CAN bus protocols <b>ISO 15765</b>, <b>J1939</b> and <b>NMEA 2000</b> that are used in motorbikes, cars, trucks and vessels.</div>
+    <li><div>You can write ultra fast <b>macro scripts</b> that communicate with devices on CAN bus.</div>
+</ol>
+
+<a name="User_Manual"></a>
+<p>&nbsp;
+<h2>1.) User Manual</h2>
+
+<a name="Adapters"></a>
+<h3>CANable Adapters</h3>
+<table>
+<tr><td>
+    <table class="TblImage">
+        <tr><td><img src="Images/CANable Adapter.jpg" alt="CANable - MKS Makerbase, Openlight Labs Adapter" width="141" height="90"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CANable Adapter.jpg')">Show Full Size</span></td></tr>
+    </table>
+</td>
+<td>&nbsp;</td>
+<td>
+    <table class="TblImage">
+        <tr><td><img src="Images/MKS_CANable_Board.jpg" alt="CANable - MKS Makerbase CANable board" width="239" height="90"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/MKS_CANable_Board.jpg')">Show Full Size</span></td></tr>
+    </table>
+</td></tr>
+</table>
+
+<div>The CANable is a very cheap ($15 US) CAN bus adapter with <b>CAN FD</b> support.</div>
+<div>Several Chinese companies sell different versions like:
+<a href="https://www.aliexpress.com/w/wholesale-canable-makerbase.html" target="_blank">MKS Makerbase</a>,&nbsp;
+<a href="https://www.deshide.com/product-details_SH-C31A.html" target="_blank">DSD Tech</a>,&nbsp;
+<a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a>.
+</div>
+<div>If you buy one make sure that it is a CANable 2.0 and has the <b>STM32G431</b> processor.</div>
+<div>Do not buy the older CANable 1.0 adapters which are obsolete because they don't support CAN FD.</div>
+<p>
+<div>I recommend the MKS Makerbase because it has a <b>robust case</b> and CAN bus is electrically <b>isolated</b> from USB.</div>
+<div>It uses an ADM3050E isolated CAN Transceiver (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>)
+and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
+<div>It has a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
+<div>I tested it thoroughly and it works perfectly up to <b>10 Mega baud</b>.</div>
+
+<a name="Hardware"></a>
+<h3>Hardware Misdesign</h3>
+<div>CANable adapters have an extremely <b>stupid</b> hardware design:</div>
+<div>They use the same processor pin for CAN RX and for BOOT0.</div>
+<table>
+<tr><td>
+    <table class="TblImage">
+        <tr><td><img src="Images/CANable 2.0 Diagram.png" alt="CANable 2.0 diagram" width="141" height="90"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CANable 2.0 Diagram.png')">Show Full Size</span></td></tr>
+    </table>
+</td></tr>
+</table>
+
+<div>When the pin <b>BOOT0</b> is High during power ON the processor goes into <b>Bootloader Mode</b>.</div>
+<div>In a correctly designed hardware this would only happen when the Boot Mode <b>jumper</b> is set.</div>
+<div>But in this misdesign they must make sure that the CAN RX pin is Low when the processor is reset.</div>
+<div>Therefore they use the transistors Q1 and Q2 which delay the power supply for the CAN transceiver.</div>
+<div>Without these transistors the processor would always start in Boot Mode.</div>
+<p>
+<div>In Boot Mode the processor runs it's internal bootloader and is ready to receive a <b>firmware update</b>.</div>
+<div>In Boot Mode only the red LED is on and you see a <b>"STM Device in DFU mode"</b> in Device Manager.</div>
+<div>(<b>DFU</b> stands for "Device Firmware Updgrade")</div>
+<div>In Boot Mode you cannot use the adapter to connect to CAN bus.</div>
+<p>
+<div>The consequence of this misdesign is that short interruptions of the 5V USB power will immediately enter Boot Mode.</div>
+<div>This happens when you merely move the USB plug a little bit or when you <b>reboot</b> the computer.</div>
+<div>During a reboot the mainboard interrupts the USB power supply for a short time.</div>
+<div>Finally the Boot Mode jumper is not required to enter Boot Mode.</div>
+<div>If you want to <b>enter Boot Mode</b> you only have to <b>quickly</b> disconnect and reconnect the USB cable.</div>
+<p>
+<div>If you want to <b>leave Boot Mode</b> you must disconnect the USB cable, <b>wait 5 seconds,</b> and reconnect USB.</div>
+<div>If you don't wait 5 seconds you will get Boot Mode again. The condensator C3 must be discharged first.</div>
+<p>
+<div>This misdesign <b>really sucks</b>.</div>
+<div>Therefore my CANable 2.5 firmware comes with a <b>solution</b>: You can disable the pin BOOT0.</div>
+
+<a name="WebUpdater"></a>
+<h3>Official Firmware for STM32G431</h3>
+<div>The CANable adpters use an <b>open source</b> firmware that was first developed by <b>Geschwister Schneider</b>.</div>
+<div>Later it was adapted on <b>Github</b> to multiple processors and CAN FD support was added.</div>
+<div>There are 2 versions: CANable 1.0 for older processors and version 2.0 with CAN FD support.</div>
+<div>A big problem is the <b>low quality</b> and <b>low speed</b> of the officially available firmware.</div>
+<div>Here you see the web updater on canable.io that offers 2 different firmware types.</div>
+<table>
+<tr><td>
+    <table class="TblImage">
+        <tr><td align="center"><b>canable.io &nbsp; Web Updater</b></td></tr>
+        <tr><td><img src="Images/Canable.io Firmware Update.png" alt="Official CANable firmware update" width="335" height="120"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Canable.io Firmware Update.png')">Show Full Size</span></td></tr>
+    </table>
+</td></tr>
+</table>
+<div>This web updater works only in Chrome and requires that you install a driver which gives a website access to your USB devices.</div>
+<div>I would never do that. This opens a security hole.</div>
+
+<a name="Slcan_Protocol"></a>
+<h3>Slcan Protocol</h3>
+<div>When you connect a CANable with Slcan firmware a <b>COM port</b> will appear on Windows.</div>
+<div>The entire communcation with CAN bus is transferred as <b>ASCII</b> characters.</div>
+<div>This is a highly <b>inefficient</b> way to transmit data over a USB cable.</div>
+<div>For each byte that you send to CAN bus two bytes must be transferred over USB.</div>
+<div>The USB speed is limited to 12 Mbit/s but CAN bus can reach speeds up to 10 Mbaud.</div>
+<div>The only advantage of the Slcan protocol is that it is <b>simple</b>.</div>
+<div>There are even people who send commands manually to the adapter in Teraterm.</div>
+<div>Slcan is for people who play around with CAN bus at the <b>hobby</b> level.</div>
+<div>But Slcan is <b>slow</b> and not recommended for any professional use.</div>
+
+<a name="Candlelight_Protocol"></a>
+<h3>Candlelight Protocol</h3>
+<div>The Candlelight protocol sends <b>binary</b> data over USB and could theoretically make the best use of the USB speed.</div>
+<div>But the official firmware from canable.io does not even implement <b>CAN FD</b>.</div>
+<div>A correctly working Candlelight firmware for the <b>STM32G431</b> processor did not exist nowhere.</div>
+<div>I'am the first one who releases a functional Candlelight firmware for the STM32G431.</div>
+<div>And my Candlelight 2.5 firmware implements a new protocol that <b>optimizes USB data transfer</b> to the maximum.</div>
+<div>However, my firmware is still 100% backward compatible with the legacy protocol.</div>
+
+<a name="Speed_Comparison"></a>
+<h3>Inefficient USB Data Transfer</h3>
+<div>The following table compares the efficiency of different firmware versions receiving a CAN FD packet.</div>
+<div>The payload in this example consists of a 29 bit CAN ID + 16 data bytes + flags = 21 byte.</div>
+<p>
+<table class="Pre" style="white-space: nowrap;">
+<tr><td class="Green">19F50C02: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F (FDF, BRS)</td></tr>
+</table>
+
+
+<table class="DataTable">
+<tr><th>Firmware</th><th>Payload</th><th>Transferred over USB</th><th>Efficiency</th></tr>
+<tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td style="color:#CC8800"><b>48 %</b></td></tr>
+<tr><td>ElmüSoft Slcan 2.5</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td style="color:#CC8800"><b>48 %</b></td></tr>
+<tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td style="color:#FF0000"><b>0 %</b></td></tr>
+<tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td style="color:#00AA00"><b>91 %</b></td></tr>
+</table>
+
+<a name="Legacy_Installation"></a>
+<h3>Legacy Candlelight Installation not working</h3>
+<div>When you connect a CANable with Candlelight firmware, Windows should install the <b>WinUSB</b> driver automatically.</div>
+<div>This works only if the firmware responds correctly to the <b>Microsoft OS descriptor</b> request.</div>
+<div>Windows asks the firmware which driver it needs and the firmware tells Windows that it needs a WinUSB driver.</div>
+<div>As simple as this is, you will not find any official firmware where this is implemented 100% correctly.</div>
+<div>And the official firmware from canable.io is even such a <b>crap</b> that no driver is installed at all.</div>
+<div><a href="https://github.com/HubertD/cangaroo/issues/11" target="_blank">Many people have complained</a> about this problem, but nobody ever cared to fix the many <b>ugly bugs</b> during six years.</div>
+<p>
+<div>This was another reason why I had to write a new firmware.</div>
+<div>When you upload the new Candlelight 2.5 firmware from ElmüSoft, Windows will <b>instantly</b> install 2 drivers.</div>
+<div>This happens so fast that you don't even notice it. There will be no window telling you that a driver is installed.</div>
+<div>Windows installs the driver invisibly in the background in one second.</div>
+
+<a name="Ms_OS_Descriptor"></a>
+<h3>Microsoft OS Descriptor Request</h3>
+<div>The new Candlelight 2.5 firmware is the first Candlelight firmware that <b>works 100% correctly</b> on Windows.</div>
+<div>Now you can test this on your own: Open your adapter with HUD ECU Hacker and you see all details in the Trace pane.</div>
+<div>HUD ECU Hacker sends the Microsoft OS descriptor requests to the adapter and <b>shows the adapter responses</b>.</div>
+<div>There are 3 requests that the adapter must answer correctly for 2 interfaces.</div>
+
+<p>
+<div><b>1.)</b></div>
+<div>Here you see the correct response of the CANable 2.5 firmware:</div>
+<table class="Pre" style="white-space: nowrap;">
+<tr><td>
+<div>String ID: 0xEE, Signature: "MSFT100", VendorCode: 0x20</div>
+<div>Interface: 0, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
+<div>Interface: 1, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
+<div>Interface: 0, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c15b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</div>
+<div>Interface: 1, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c25b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</div>
+</td></tr>
+</table>
+<div><b>Interface 0</b> is the Candlelight interface and <b>Interface 1</b> is the DFU Firmware Update interface.</div>
+<div>Both interfaces need a unique identifier (GUID) so Windows can install a driver for each interface.</div>
+
+<p>
+<div><b>2.)</b></div>
+<div>This is the response of a legacy Candlelight 1.0 firmware that does not have a version number:</div>
+<table class="Pre" style="white-space: nowrap;">
+<tr><td>
+<div>String ID: 0xEE, Signature: "MSFT100", VendorCode: 0x20</div>
+<div>Interface: 0, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
+<div>Interface: 1, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
+<div>Interface: 0, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c15b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</div>
+<div class="Red">Interface: 1, Error requesting MS OS Extended Properties descriptor.</div>
+<div class="Red">The device has a buggy firmware. The driver for the firmware update (DFU) interface cannot be installed automatically.</div>
+</td></tr>
+</table>
+
+<p>
+<div><b>3.)</b></div>
+<div>And the worst is the Candlelight firmware <b>ba6b1dd</b> from the canable.io <a href="#WebUpdater">Web Updater</a>.</div>
+<div>No driver is installed at all because the firmware does not respond to the request. This firmware is garbage.</div>
+
+
+<a name="Firmware_Updater"></a>
+<h3>The new Firmware Updater</h3>
+<div><a href="https://netcult.ch/elmue/HUD ECU Hacker" target="_blank">HUD ECU Hacker</a> has a built-in <b>Firmware Updater</b> for all types of STM32 processors from ST Microelectronics.</div>
+
+<table>
+<tr><td>
+    <table class="TblImage">
+        <tr><td align="center"><b>HUD ECU Hacker</b></td></tr>
+        <tr><td><img src="Images/HudEcuHacker Update CANable Firmware.png" alt="HUD ECU Hacker - CANAble Firmware Update" width="178" height="150"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/HudEcuHacker Update CANable Firmware.png')">Show Full Size</span></td></tr>
+    </table>
+</td>
+<td>&nbsp;</td>
+<td>
+    <table class="TblImage">
+        <tr><td align="center"><b>Firmware Updater</b></td></tr>
+        <tr><td><img src="Images/CANable STM32 Firmware Updater.png" alt="HUD ECU Hacker - CANAble Firmware Update" width="178" height="150"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CANable STM32 Firmware Updater.png')">Show Full Size</span></td></tr>
+    </table>
+</td></tr>
+</table>
+
+<a name="FirmwareVersions"></a>
+<div>When you install HUD ECU Hacker you can chose between 4 different CANable 2.5 firmware versions:</div>
+
+<table class="DataTable">
+<tr><th>File Name</th><th>Destination Adapters</th></tr>
+<tr><td>STM32G431 - Slcan2.5 - MksMakerbase.dfu</td><td>MKS Makerbase, DSD Tech, Walfront</td></tr>
+<tr><td>STM32G431 - Slcan2.5 - OpenlightLabs.dfu</td><td>Openlight Labs</td></tr>
+<tr><td>STM32G431 - Candlelight2.5 - MksMakerbase.dfu</td><td>MKS Makerbase, DSD Tech, Walfront</td></tr>
+<tr><td>STM32G431 - Candlelight2.5 - OpenlightLabs.dfu</td><td>Openlight Labs</td></tr>
+</table>
+
+<div>The only difference between the adapters is the pin that is used for the <b>green LED</b>.</div>
+<div>Openlight Labs uses processor pin B11, while the other companies use pin A0.</div>
+<div>If you install the wrong firmware the green LED will always be off.</div>
+<div>If you have another adapter with a different pin assignment, send me an email, this can easily be adapted.</div>
+<p>
+<div>The firmware has been tested on the STM32G431 processor. But it should work on all processors of this serie:</div>
+<div>STM32G441, STM32G471, STM32G473, STM32G474, STM32G483, STM32G484, STM32G491, STM32G4A1.</div>
+<p>
+<table class="Warning" cellpadding=0 cellspacing=0><tr><td>
+<div>The HUD ECU Hacker Firmware Updater can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
+<div>Flashing the CANable is no risk. The processor has a hard-coded bootloader that cannot be destroyed.</div>
+<div>When you connect the USB cable and the blue and green LED are not blinking alternatingly, the firmware is not working.</div>
+<div>This may happen when you upload the firmware to the wrong processor. In this case you can simply flash it again.</div>
+<div>Therefore it is strongly recommended that you first make a backup of the current firmware in the adapter.</div>
+<div>With the button 'Download' you can store the current firmware into a DFU file.</div>
+<div>This allows you to always revert the adapter to it's original state.</div>
+</td></tr></table>
+<p>
+<div>The firmware updater works with the <b>DFU file format</b> that has been developed by ST Microelectronics.</div>
+<div>Apart from the flash data the DFU file contains additional information like name, target, version, memory address,...</div>
+<div>If you have other firmware formats, like <b>BIN</b>, <b>HEX</b> or <b>S19</b> you can copy them into the subfolder 'Firmware'.</div>
+<div>The firmware updater will convert the files automatically into DFU files that match the currently selected device.</div>
+<p>
+<div>Before clicking the <b>button 'Upload'</b> you must select the <b>target 'Internal Flash'</b>.</div>
+<div>The Firmware Updater can also write the Option Bytes and the One Time Programmable memory. But this is only for experts.</div>
+<p>
+<div>When you click the <b>button 'Identify'</b> the LED's on the CANable will blink, and with the next click they stop blinking.</div>
+<div>This allows to distinguish with which adapter you are communicating if multiple adapters are connected at the same time.</div>
+<p>
+<div>The <b>button 'Disable pin Boot0'</b> is a workaround for the annoying <a href="#Hardware">hardware misdesign</a>.</div>
+<div>The processor will ignore the pin Boot0 and not enter bootloader mode alone when you only reboot the computer.</div>
+<div>But this means that the processor will also NOT enter bootloader mode when you set the <b>Boot Mode jumper</b>.</div>
+<div>You can easily revert this by clicking the <b>button 'Enter DFU mode'</b>.</div>
+<div>The firmware will first activate the pin Boot0 again before you can upload any other firmware.</div>
+<p>
+<div>The new CANable 2.5 firmware has a command to enter the <b>bootloader</b>.</div>
+<div>This means with the new firmware you just click a button and don't need to put a jumper on the board.</div>
+
+<a name="Meaning_of_LEDs"></a>
+<h3>Meaning of the LED's</h3>
+<div>The <b>red LED</b> is connected to 5 Volt from USB. It cannot be controlled by the firmware. It is always On.</div>
+
+<table class="DataTable">
+<tr><th>LED's</th><th>Meaning</th><th>LED's</th><th>Meaning</th></tr>
+<tr>
+    <td><img src="Images/LED RG.gif" width="101" height="34"></td><td>The adapter is ready and closed.</td>
+    <td><img src="Images/LED R.gif" width="101" height="34"></td><td><div>1.) The adapter is open: No CAN bus traffic.</div>
+                                                              <div>2.) The adapter is in Firmware Update mode.</div>
+                                                              <div>3.) The USB bus is suspended in sleep mode.</div></td>
+</tr>
+<tr>
+    <td><img src="Images/LED RxTraffic.gif" width="101" height="34"></td><td><div>1.) The adapter is open: RX CAN bus traffic.</div>
+                                                                      <div>2.) The adapter is closed: USB command received.</div></td>
+    <td><img src="Images/LED RGB.gif" width="101" height="34"></td><td><div>The adapter is blocked after a severe error</div>
+                                                                <div>buffer overflow or bus off.</div></td>
+</tr>
+<tr>
+    <td><img src="Images/LED TxTraffic.gif" width="101" height="34"></td><td>The adapter is open: TX CAN bus traffic.</td>
+    <td><img src="Images/LED Blink.gif"     width="101" height="34"></td><td><div>1.) After Power-On both LED's flash alternatingly.</div>
+                                                                      <div>2.) Also when you click the button 'Identify'.</div></td>
+</tr>
+<tr>
+    <td><img src="Images/LED RxTxTraffic.gif" width="101" height="34"></td><td>The adapter is open: RX+TX CAN bus traffic.</td>
+    <td colspan="2"></td>    
+</tr>
+</table>
+
+<div><b>NOTE:</b> The behaviour of the LED's has been fixed by ElmüSoft.</div>
+<div>The legacy Slcan firmware did not show TX CAN bus traffic at all.</div>
+<div>The legacy Candlelight firmware flashed the TX LED even if there was an error and the packet was never sent.</div>
+<p>
+<div>With the new CANable 2.5 firmware both LED's show exactly what is happening on CAN bus.</div>
+<div>The <b>green TX LED</b> will only flash if a CAN packet has been sent <b>successfully</b> and acknowledged by the recipient.</div>
+<div>The <b>blue RX LED</b> will always flash when a CAN packet was received even if the packet is blocked by a filter.</div>
+
+<a name="Cangaroo"></a>
+<h3>Cangaroo</h3>
+<div>People are told to use the Cangaroo software to connect to their CANable. But Cangaroo is very <b>primitive</b>.</div>
+<div>The developer of Cangaroo was not able to <b>calculate</b> the settings for any given baudrate / samplepoint combination.</div>
+<div>Instead he implemented hard-coded tables only for processors with 16 Mhz, 48 MHz and 170 MHz <b>clock</b>.</div>
+<div>And not even the values in these tables are calculated correctly.</div>
+<div>Cangaroo gives you very <b>few options</b> for CAN bus baudrates and much less options for the samplepoint.</div>
+<div>When you connect an adapter with any other clock (for example 160 MHz) you cannot select any baudrate.</div>
+<div>Cangaroo is not even able to show you an error message. It simply <b>does not work</b> and you don't know why you see nothing.</div>
+<div>Cangaroo uses WinUSB in the <b>wrong way</b> which may result in missing packets or wrong packet order at a high bus load.</div>
+<div>Cangaroo may suddenly hang eternally and even <b>crash</b>.</div>
+<div>Cangaroo is <b>low quality</b> software, as many projects on Github that have never been finished and that have bugs that never get fixed.</div>
+
+<a name="HUD_ECU_Hacker"></a>
+<h3>HUD ECU Hacker</h3>
+<div>The good news is that now you can use your CANable with <a href="https://netcult.ch/elmue/HUD ECU Hacker" target="_blank">HUD ECU Hacker</a>, a <b>high quality</b> software.</div>
+<div>HUD ECU Hacker is <a href="https://netcult.ch/elmue/HUD ECU Hacker#Charityware" target="_blank">charityware</a>, which means that the author does not earn any money with it.</div>
+<div>If you like the software you are asked to give a donation to a charity organization of your choice.</div>
+
+<table>
+<tr><td>
+    <table class="TblImage">
+        <tr><td align="center"><b>CAN Raw Terminal</b></td></tr>
+        <tr><td><img src="Images/CAN Raw Terminal.png" alt="HUD ECU Hacker - CAN Raw Terminal" width="180" height="150"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CAN Raw Terminal.png')">Show Full Size</span></td></tr>
+    </table>
+</td>
+<td>&nbsp;</td>
+<td>
+    <table class="TblImage">
+        <tr><td align="center"><b>J1939 Protocol</b></td></tr>
+        <tr><td><img src="Images/J1939 Protocol.png" alt="HUD ECU Hacker - J1939 Protocol" width="154" height="150"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/J1939 Protocol.png')">Show Full Size</span></td></tr>
+    </table>
+</td>
+<td>&nbsp;</td>
+<td>
+    <table class="TblImage">
+        <tr><td align="center"><b>NMEA 2000 Protocol</b></td></tr>
+        <tr><td align="center"><img src="Images/NMEA 2000 Protocol.png" alt="HUD ECU Hacker - J1939 Protocol" width="93" height="150"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/NMEA 2000 Protocol.png')">Show Full Size</span></td></tr>
+    </table>
+</td></tr>
+</table>
+
+<div>HUD ECU Hacker is a powerful tool with lots of features, like the <b>swiss knife</b> for CAN bus and ECU's.</div>
+<div>The <b>CAN Raw Terminal</b> allows you to see CAN bus traffic and send packets manually.</div>
+<div>You can open multiple Terminal windows at once, one for each adapter.</div>
+<div>You can also write <a href="https://netcult.ch/elmue/HUD ECU Hacker#Macros" target="_blank">macro scripts</a> that receive packets and send responses and <b>simulate</b> any CAN controller.</div>
+<div>You can grab <b>logfiles</b> from CAN bus traffic.</div>
+<div>You can send the content of an entire logfile to CAN bus.</div>
+<p>
+<div>The CAN Raw Terminal is designed to communicate with a device on CAN bus.</div>
+<div>There is another Terminal, the <b>Sniff Terminal</b> which allows to sniff CAN bus traffic silently without interference.</div>
+<div>In the Sniff Terminal packets are normally not ACKnowledged, the adapter works in <b>Silent Mode</b>.</div>
+<p>
+<div>But HUD ECU Hacker would not be very useful if it would only show the <b>raw packets</b> that are transferred over CAN bus.</div>
+<div>HUD ECU Hacker can <b>decode</b> the protocols <a href="https://netcult.ch/elmue/HUD ECU Hacker#ISO_15765" target="_blank">ISO 15765</a>, <b>J1939</b> and <b>NMEA 2000</b>.</div>
+<div>The <a href="https://netcult.ch/elmue/HUD ECU Hacker#J1939" target="_blank">J1939 protocol</a> is used in on-highway, construction, agriculture and forestry vehicles.</div>
+<div>The <a href="https://netcult.ch/elmue/HUD ECU Hacker#NMEA_2000" target="_blank">NMEA 2000 protocol</a> is used in yachts, sailing boats, fisher boats and vessels.</div>
+<div>And if you provide a <a href="https://netcult.ch/elmue/HUD ECU Hacker#DBC_Files" target="_blank">DBC file</a> HUD ECU Hacker can decode the CAN packets of any vehicle, like for example from your car.</div>
+
+<a name="CAN_Settings"></a>
+<h3>CAN bus Settings</h3>
+<div>Here you can configure how HUD ECU Hacker connects to CAN bus.</div>
+<p>
+<table>
+<tr><td>
+    <img src="Images/CAN Connection Settings.png" alt="CAN bus - Connection Settings" width="363" height="454">
+</td>
+<td>&nbsp;</td>
+<td valign="top">
+    <div><b>Send always 8 data bytes</b></div>
+    <div>If you send classic packets with less than 8 bytes they are padded to 8 bytes,</div>
+    <div>while CAN FD packets are always padded to the next possible data length.</div>
+    <p>
+    <div><b>Show all packets on the bus</b></div>
+    <div>This checkbox turns off all filters and also the combobox "ID Length" is ignored.</div>
+    <div>No matter if you selected '11 Bit' or '29 Bit', you will see all packets on the bus.</div>
+    <p>
+    <div><b>Automatic Retransmission if no ACK received</b></div>
+    <div>If this checkbox is <b>On</b> the processor tries to send a packet until it is achnowledged.</div>
+    <div>After trying it 128 times in vain the processor goes into error state <b>Bus Passive</b>.</div>
+    <div>If the checkbox is <b>Off</b> the processor sends the packet in <b>One shot mode</b>.</div>
+    <div>If the packet is not acknowledged the processor does not send it again.</div>
+    <p>
+    <div><b>Show sent packets in Trace if ACK received</b></div>
+    <div>When a packet was acknowledeged you see the <b>'echo' of the Tx packet</b> in olive color.</div>
+    <div>You see the exact timestamp when the packet has been acknowledged.</div>
+    <div>If the packet is not acknowledged you will not see any echo and the green LED does not flash.</div>
+    <div>This allows you to verify that a packet has been sent and received successfully.</div>
+    <div>The CANable 2.5 firmware is the first firmware where this is implemented correctly.</div>
+    <div>The legacy Slcan firmware did not implement this feature.</div>
+    <div>The legacy Candlelight firmware showed a <b>fake echo</b>, also for not acknowledged packets.</div>
+    <p>
+    <div><b>Suppress repeating identical CAN bus packets</b></div>
+    <div>CAN bus traffic is often very repetitive.</div>
+    <div>Here you can hide all packets that have already been shown with the same ID and data bytes.</div> 
+    <div>You see each unique packet only once.</div>
+</td></tr>
+</table>
+
+<a name="Filter"></a>
+<h3>CAN Filter</h3>
+<div>Filters are a new feature that was missing in the legacy firmware.</div>
+
+<div>CAN bus filters can drastically reduce the traffic over USB.</div>
+<div>This is important because the USB speed is limited to 12 Mbit/s while CAN data may come with up to 10 Mbaud.</div>
+<div>All traffic that does not interest you will not be sent over USB.</div>
+<p>
+<div>The screenshot above shows a filter that lets only pass the CAN ID's <b>from 18EE0000 to 18EEFFFF</b>.</div>
+<div>Please read the chapter about <a href="https://netcult.ch/elmue/HUD ECU Hacker#CAN_Filter" target="_blank">CAN filters</a> in the HUD ECU Hacker manual.</div>
+<p>
+<div><b>NOTE:</b> The <b>blue LED</b> flashes when a CAN packet is received. It also flashes for packets that are blocked by the filters.</div>
+<div>This means that the green and blue LEDs always show the entire CAN bus traffic, even if your filter blocks everything.</div>
+
+<a name="Samplepoint"></a>
+<h3>Samplepoint</h3>
+
+<div>The samplepoint is not really important for classic CAN.</div>
+<div>But if you plan to use <b>CAN FD</b> you must enter the correct samplepoints, otherwise you will get problems</div>
+<div>because on a CAN bus many controllers must <b>synchronize</b> to each other using the exactly same settings.</div>
+<p>
+<img src="Images/CanFdSamplepoint.png" alt="CAN Samplepoint" width="662" height="158">
+<p>
+<div>One bit of a CAN packet is sub-divided into multiple <b>Time Quantums</b>, in this example sixteen.</div> 
+<div>The samplepoint is the exact moment when the processor measures the state of the CAN bus: High or Low.</div>
+<div>The samplepoint must be a fraction of 2 integers: 1/2 = <b>50%</b>, 3/4 = <b>75%</b>, 5/8 = <b>62.5%</b>, 4/5 = <b>80%</b>, 7/8 = <b>87.5%</b></div>
+<div>A later samplepoint has the advantage that it allows longer cables, to compensate for the delay of distant controllers.</div>
+<div>An earlier samplepoint has the advantage that it is more robust against cheap, unprecise oscillators and jitter.</div>
+<p>
+<div>But the major problem is that CAN FD <b>switches the baudrate</b> exactly at the samplepoint of the BRS bit.</div>
+<div>If you did not enter the two samplepoints correctly you will not be able to communicate with the CAN bus.</div>
+<div>You find a more detailed description with an oscilloscope screenshot in my <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer#DecodeCAN" target="_blank">Oszi Waveform Analyzer manual</a>.</div>
+
+<a name="Baudrates"></a>
+<h3>Baudrates</h3>
+
+<div>The processor needs 3 settings to configure baudrate and samplepoint:</div>
+<ol>
+    <li><div><b>Bitrate Prescaler</b>: the CAN clock is divided by the prescaler which gives the clock for one Time Quantum.</div>
+    <li><div><b>Segment1</b>: defines the count of time quantums before the samplepoint (in the above example = 11).</div>
+    <li><div><b>Segment2</b>: defines the count of time quantums after the samplepoint (in the above example = 4).</div>
+</ol>
+<div>The STM32 processors treat the <span class="Magenta">Synchronization segment</span> separately. Therefore you must add <span class="Magenta">1</span> to Segment 1.</div>
+<div>Example: CAN Clock = 160 MHz, Baudrate = 500 kBaud, Samplepoint = 75%, Time Quantums (TQ) per bit = 16.</div>
+<div>This can be achieved by passing the following settings to the processor: <span class="Blue">Prescaler = 20</span>, <span class="Orange">Segment1 = 11</span>, <span class="Green">Segment2 = 4</span>.</div>
+<p>
+<div>Baudrate = 160 MHz / <span class="Blue">20</span> / (<span class="Magenta">1</span> + <span class="Orange">11</span> + <span class="Green">4</span>) = 500 kbaud</div>
+<div>Samplepoint = &nbsp; (<span class="Magenta">1</span> + <span class="Orange">11</span>) / (<span class="Magenta">1</span> + <span class="Orange">11</span> + <span class="Green">4</span>) = 0.75 = 75%</div>
+
+<p>
+<div>The legacy Slcan firmware gives poor options for the CAN FD baudrates: only 2 and 5 Mega baud.</div>
+<div>The legacy Candlelight firmware can theoretically set any baudrate that is possible.</div>
+<div>But for the calculation the host application must know the limits for the settings Prescaler, Segment1 and Segment2.</div>
+<div>Every processor has a different range for these values.</div>
+<div>The legacy Candlelight firmware reports <b>wrong limits</b> and so a correct calculation is impossible.</div>
+<p>
+<div>Summary: With none of the legacy firmware's can you set a precise baudrate/samplepoint as needed.</div>
+<div>Additionally the legacy firmware uses a CAN clock frequency of <b>170 Mhz</b> which is not an intelligent choice.</div>
+<div>It is not possible to derive baudrates like 2, 4, 5 or 8 Mbaud with 50%, 62.5%, 75% or 87.5% samplepoint from 170 Mhz.</div>
+<div>Therefore the new CANable 2.5 firmware changes the CAN clock to <b>160 MHz</b>.</div>
+<p>
+<div>It is <b>recommended</b> by ST Microelectronics that the nominal and the data baudrate use the <b>same prescaler</b>.</div>
+<div>The baudrate is switched exactly at the samplepoint of the BRS bit.</div>
+<div>If the baudrates do not use the same prescaler, a <b>phase shift</b> will be the consequence which may corrupt the timing.</div>
+<div>Another recommendation is that the <b>prescaler</b> should be as low as possible.</div>
+<div>And the <b>Synchronization Jump Width</b> should be: SJW = min(Segment1, Segment2).</div>
+<div>For more details read the PDF documents in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
+<p>
+<div>All this baudrate / samplepoint stuff is quite complex and I have found many bugs in legacy code, so I implemented a check.</div>
+<div>The host application sends the values for Prescaler, Segment 1 + 2 for the nominal and the data baudrate to the firmware.</div>
+<div>And the firmware calculates the exact values and reports them in a debug message back to the host application.</div>
+<div>When you open the adapter you see this debug message from the firmware:</div>
+<p>
+<table class="Pre">
+    <tr><td>Nominal: 500k baud, 87.5%; Data: 2M baud, 50.0%; Perfect match: Yes</td></tr>
+</table>
+<p>
+<div>When you see <b>Perfect Match: Yes</b>, this means that both baudrates use the same prescaler.</div>
+<div>HUD ECU Hacker implements a complex algorithm that does all this calculation for you.</div>
+<div>HUD ECU Hacker tries to find the perfect settings for your nominal/data baudrates/samplepoints.</div>
+<div>If a samplepoint cannot be matched exactly, it shows a <b>warning</b> and uses the nearest value that is possible.</div>
+<div>If a baudrate cannot be matched it shows an <b>error</b>.</div>
+
+<p>
+<img src="Images/CAN FD Arbitration.png" alt="CAN FD Arbitration / Data phase" width="746" height="209">
+
+
+<a name="CAN_Errors"></a>
+<h3>CAN bus Errors</h3>
+<div>The legacy <b>Slcan</b> firmware has no error reporting at all.</div>
+<div>When you send a packet to CAN bus you have <b>no idea</b> if the packet was really sent or not.</div>
+<div>After sending an invalid parameter, for example when setting the baudrate, you will never know why you cannot connect to CAN bus.</div>
+<div>And the legacy <b>Candlelight</b> firmware has an error reporting, but only for CAN bus errors and there are many issues.</div>
+<p>
+<div>I implemented a <b>proper error reporting</b> for CAN bus errors and also for command errors.</div>
+<div>Whenever a software or firmware does not work, but shows no error, be sure that it was written by a sloppy programmer.</div>
+<div>With the new firmware it will never again happen that something does not work and you have no idea why.</div>
+<p>
+<ol>
+    <li><div>The first error on CAN bus it always reported immediately.</div>
+    <li><div>A second error is only reported after <b>100 ms</b> have elapsed and only if the second error is different from the </div>
+    <div>previously reported. This is important to avoid flooding the host with thousands of errors as the legacy firmware did.</div>
+    <li><div>If the same error stays present for a long time, it is reported in intervals of <b>3 seconds</b>.</div>
+</ol>
+
+<table class="Pre">
+<tr><td style="white-space: nowrap;">
+<div><span class='TimeBk'>21:20:14.788</span><span class='InfoBold'>Send Packet</span></div>
+<div><span class='TimeBk'>21:20:14.788</span><span class='TxData'>18EEFF01: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this packet was sent successfully</span></div>
+<div><span class='TimeBk'>21:20:14.790</span><span class='RxSecnd'>18EEFF01: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this is the Tx echo</span></div>
+<div><span class='TimeBk'>21:20:18.119</span><span class='InfoBold'>Send Packet</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— send with auto-retransmission ON</span></div>
+<div><span class='TimeBk'>21:20:18.119</span><span class='TxData'>14A90022: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this packet was not acknowledged</span></div>
+<div><span class='TimeBk'>21:20:18.120</span><span class='Debug'>Bus Active, Tx Errors: 8</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;—— first error immediately</span></div>
+<div><span class='TimeBk'>21:20:18.220</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>&nbsp; &lt;—— second error after 100 ms</span></div>
+<div><span class='TimeBk'>21:20:18.738</span><span class='InfoBold'>Send Packet</span></div>
+<div><span class='TimeBk'>21:20:18.738</span><span class='TxData'>14A90022: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this packet was not acknowledged</span></div>
+<div><span class='TimeBk'>21:20:21.216</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></div>
+<div><span class='TimeBk'>21:20:24.212</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>&nbsp; &lt;—— same error repeated every 3 seconds</span></div>
+<div><span class='TimeBk'>21:20:27.208</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></div>
+</td></tr>
+</table>
+<p>
+<div>All controllers on CAN bus share the same two data wires.</div>
+<div>If only one controller has a bug and breaks the rules of CAN bus, it will screw up the traffic of all the others.</div>
+<div>Thefore it is <b>fundamentally</b> important that a controller turns off it's transmitter, when it has detected a problem.</div>
+<div>This error detection <b>must be implemented in hardware</b>. It must be immediate and bullet proof.</div>
+<div>Therefore all processors that have a CAN bus controller distinguish these 4 states:</div>
+<ol>
+    <li><div><span class="Green"><b>Bus Actice</b></span>  (no errors or less than 96 errors)</div>
+    <li><div><span class="Warn">Warning Level</span> (between 96 and 128 errors)</div>
+    <li><div><span class="Error">Bus Passive</span> (between 128 and 248 errors)</div>
+    <li><div><span class="Error">Bus Off</span> (more than 248 errors)</div>
+</ol>
+<p>
+<div>In the <b>arbitration phase</b> it is allowed that multiple controllers send at the same time. One of them will win the arbitration.</div>
+<div>But in the <b>data phase</b> there must be only one controller sending data.</div>
+<div>If the processor detects a case of a severe data corruption it immediately stops transmitting and goes into <b>Bus Off</b> state.</div>
+<div>Bus Off is a severe error that you can create by sending packets between two adapters configured for different baudrates.</div>
+<p>
+<table class="Pre">
+<tr><td style="white-space: nowrap;">
+<div><span class='TimeBk'>22:21:24.187</span><span class='InfoBold'>Send Packet</span></div>
+<div><span class='TimeBk'>22:21:24.187</span><span class='TxData'>170AA3CB: 01 02 03 04 05 06 07 08</span></div>
+<div><span class='TimeBk'>22:21:24.623</span><span class='RxDataInvalid'>Bus Passive, Bit stuffing error, &nbsp;Tx Errors: 128, Rx Errors: 8</span><span class='DebugDark'>&nbsp;&lt;—— corruption while sending</span></div>
+<div><span class='TimeBk'>22:21:27.618</span><span class='RxDataInvalid'>Bus Passive, Recessive bit error, Tx Errors: 128, Rx Errors: 8</span></div>
+<div><span class='TimeBk'>22:21:30.367</span><span class='RxDataInvalid'>Bus Off, Frame format error, Tx Errors: 248, Rx Errors: 127</span><span class='DebugDark'>&nbsp; &nbsp; &lt;—— corrupt packet received</span></div>
+</td></tr>
+</table>
+<p>
+<div>With a little experience you can deduce what is wrong on CAN bus by understanding what these errors mean.</div>
+<div>If there is a severe error like Bus Off of Buffer Overflow, the <b>green and blue LED's</b> are permanently On.</div>
+
+<a name="Transmit_Timeout"></a>
+<h3>Transmit Timeout</h3>
+<div>If automatic retransmission is enabled and the processor does not receive an ACK it goes into <b>Tx Bus Passive</b> state.</div>
+<div>In this state the processor re-transmits the first packet in the Tx FIFO <span class="Error">eternally</span> creating <b>95% bus load</b>.</div>
+<div>The name '<b>Bus Passive</b>' is totally <b>misleading</b>. The bus is not passive. In the opposite it is flooded with traffic.</div>
+<div>On the <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer" target="_blank">oscilloscope</a> you see the same packet retransmitted with nearly no pauses in between.</div>
+<p>
+<img src="Images/Oszi BusPassive.png" width="685" height="124" alt="CAN traffic duringh Bus Passive">
+<p>
+<div>Therefore I implemented a Tx timeout. Pending Tx requests are cancelled after <b>500 ms</b>.</div>
+<div>You see an error report:</div>
+<p>
+<table class="Pre">
+<tr><td style="white-space: nowrap;">
+<div class="RxDataInvalid">Bus Passive, Tx Timeout, No ACK received, Tx Errors: 128</div>
+</td></tr>
+</table>
+<p>
+<div>The error counter stops counting at 128, but without a timeout there may be <b>thousands</b> of failed transmit attempts.</div>
+
+<a name="Echo_Marker"></a>
+<h3>Transmit Echo Markers</h3>
+<div>The legacy Slcan firmware never gave you any feedback if a packet was sent or not.</div></div>
+<div>The legacy Candlelight firmware had a wrongly designed feedback mechanism for Tx packets:</div>
+<div>When the firmware received a Tx packet it has sent the entire Tx packet in a <b>fake event</b> back to the host.</div>
+<div>This feedback was immediate, no matter if the packet was really sent to CAN bus or not.</div>
+<div>For a CAN FD packet with 8 data bytes the firmware sent a fake event of <b>80 bytes</b> over USB back to the host.</div>
+<div>These fake events produced a lot of <b>useless USB traffic</b>, could not be turned off and the timestamps were wrong.</div>
+<p>
+<img src="Images/TxMarker.png" width="728" height="263" alt="CAN Tx Event Marker">
+<p>
+<div>The new firmware can receive an <b>8 bit marker</b> with each transmit packet from the host application.</div>
+<div>When the packet has been sent successfully to CAN bus the processor will fire a <b>Tx Event</b> that contains the marker.</div>
+<div>The host application must store the last sent packets in an internal array (study the code of the <a href="#Demo_Application">Demo Application</a>).</div>
+<div>The maximum count of packets that can be stored in the adapter is 64 + 3 = 67.</div>
+<div>An 8 bit marker can have values from 0 to 255 which is more than enough to give each Tx packet a unique marker.</div>
+<p>
+<div>The advantage is that the user has a <b>reliable feedback</b> which packets have really been sent.</div>
+<div>In <b>One-Shot mode</b> (no re-transmission) this is the only way to know if a packet has been acknowledged or not.</div>
+<div>The user can also see the <b>exact time</b> when the packet has been dispatched to CAN bus.</div>
+<div>By using markers <b>only one byte</b> is transferred back to the host, rather than the entire packet (See <a href="#Marker_Example">example</a>).</div>
+
+<a name="Timestamps"></a>
+<h3>Timestamps</h3>
+<div>I have seen <b>Slcan</b> firmware that sends timestamps over USB to the host application.</div>
+<div>A 32 bit timestamp is sent as <b>8 ASCII characters</b> with each received packet.</div>
+<div>Using an ASCII protocol is already inefficient. See <a href="#Speed_Comparison">Comparison</a>.</div>
+<div>But making USB traffic even slower by inflating each packet with 8 additional bytes is a bad idea.</div>
+<p>
+<div>The CANable 2.5 firmware is <b>speed optimized</b> to the maximum that is possible.</div>
+<div>Therefore timestamps are not implemented for <b>Slcan</b>, by purpose.</div>
+<p>
+<div>The legacy <b>Candlelight</b> firmware has transferred 32 bit timestamps with a precision of <b>1 µs</b>.</div>
+<div>This is not a good idea because the timestamps will roll over already after <b>one hour</b>.</div>
+<div>If you write a logfile over several hours the timestamps will be useless.</div>
+<div>And nobody needs this precision. It doesn't matter if a CAN packet has arrived one mircrosecond earlier or later.</div>
+<div>On a busy CAN bus you may have delays of several milliseconds until a packet can finally be dispatched.</div>
+<p>
+<div>The Candlelight 2.5 firmware maintains 1 µs timestamps in legacy mode for backward compatibility.</div>
+<div>But if you switch to the new <b>ElmüSoft protocol</b>, the timestamps are changed to <b>10 µs</b> precision.</div>
+<div>This allows to write logfiles for 10 hours without a roll over.</div>
+<p>
+<div>However, I recommend to use timestamps created by the <a href="https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter" target="_blank">performance counter</a> in the computer CPU.</div>
+<div>This 64 bit counter will never roll over and has a precision of nanoseconds.</div>
+<div>When a packet arrives over USB you attach a timestamp to it.</div>
+<div>The <a href="#Demo_Application">C++ Demo Application</a> shows both: How to use timestamps from firmware and from performance counter.</div>
+
+<p>
+<a name="Enter_DFU"></a>
+<h3>Enter DFU mode</h3>
+<div>The new Slcan and the new Candlelight firmware have a new <b>command</b> to enter DFU mode.</div>
+<div>The boot mode jumper will not be required anymore.</div>
+<p>
+<div>Before entering boot mode the firmware enables the <b>pin BOOT0</b> if it was disabled.</div>
+<div>If the pin BOOT0 was disabled the processor will not enter boot mode before it receives a <b>hardware reset</b>.</div>
+<div>This means the user must <b>reconnect the USB cable</b>. This is only required if the pin BOOT0 was disabled before.</div>
+<p>
+<div>Other than the legacy firmware, the new firmware waits a <b>delay</b> of 300 ms before entering boot mode.</div>
+<div>This guarantees that always a feedback is sent back to the host telling if the command was successful or not.</div>
+
+<h3>Bugfixes</h3>
+<div>I fixed several bugs in the legacy firmware. The top worst bugs were:</div>
+<ol>
+<li><div>The Candlelight firmware could crash completely after a buffer overflow.</div>
+<li><div>Candlelight had a misdesign: it used only one buffer for CAN Rx and Tx.</div>
+    <div>The consequence was that after a CAN buffer overflow it could not even send the error status to the host.</div>
+<li><div>Candlelight did not send USB traffic correctly. USB Packets with exactly 64 bytes arrived wrong.</div>
+</ol>
+
+<h3>Bus Load</h3>
+<div>The new firmware can <b>calculate the bus load</b>. It is displayed in percent in an interval that the user can define.</div>
+<div>HUD ECU Hacker shows the bus load every 5 seconds in the Trace pane, if it is not zero.</div>
+<div>The calculation of the bus load is quite complex. It may have a deviation of +/- 10%.</div>
+
+<h3>Transceiver Delay</h3>
+<div>The delay of the CAN bus transceiver chip is relevant for baudrates above 1 Mega baud.</div>
+<div>The processor automatically <b>measures the delay</b> and the firmware reports it.</div>
+<div>You see a debug message after the first CAN FD packet that you send with the <b>BRS</b> flag set:</div>
+<p>
+<table class="Pre">
+<tr><td style="white-space: nowrap;">
+<div><span class='TimeBk'>23:32:21.069</span><span class='TxData'>19858A01: 0C 00 00 00 F0 18 51 0E (FDF, BRS)</span></div>
+<div><span class='TimeBk'>23:32:21.073</span><span class='Debug'>Measured transceiver chip delay: 131 ns</span></div>
+<div><span class='TimeBk'>23:32:21.073</span><span class='RxSecnd'>19858A01: 0C 00 00 00 F0 18 51 0E (FDF, BRS)</span></div>
+</td></tr>
+</table>
+<p>
+<div>Normally transceiver chips have a delay around 50 ns.</div>
+<div>But the optically isolated chip in the MKS Makerbase that you see here is slower. (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>).</div>
+
+
+<a name="Slcan_Manual"></a>
+<p>&nbsp;
+<h2>2.) Application Developer Manual - Slcan</h2>
+
+<div>This manual is for software developers who want to communicate with the CANable 2.5 from a computer.</div>
+<div>In Slcan all commands and responses are sent as <b>ASCII</b> strings which is slow. See <a href="#Speed_Comparison">Comparison</a>.</div>
+<div>For professional applications use Candlelight and not Slcan.</div>
+<p>
+<div>The <b>first character</b> is the command to execute. The <b>last character</b> is always a Carriage Return.</div>
+
+<a name="Slcan_Commands"></a>
+<h3>Slcan Commands</h3>
+
+<table class="DataNarrow" cellspacing="1">
+<tr><th>Command</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"A1\r"</td><td>Closed</td><td>legacy</td><td>Enable Auto Retransmission</td><td>Retransmit packets until they are acknowledged</td></tr>
+<tr><td>"A0\r"</td><td>Closed</td><td>legacy</td><td>Disable Auto Retransmission</td><td>Enable one shot mode</td></tr>
+<tr><td>"C\r"</td><td>Open/Closed</td><td>legacy</td><td>Close the adapter</td><td>Shut down CAN connection, reset to default settings</td></tr>
+<tr><td>"L7\r"</td><td>Open/Closed</td><td>100</td><td>Enable Bus Load reports every 700 ms</td><td rowspan="2">
+    <div>L1: Report interval= 100 ms, L50: Interval= 5 seconds</div>
+    <div>Valid range of interval: 0 ... 100 (max 10 seconds)</div>
+    </td></tr>
+<tr><td>"L0\r"</td><td>Open/Closed</td><td>100</td><td>Disable Bus Load report</td></tr>
+<tr><td>"O\r"</td><td>Closed</td><td>legacy</td><td>Open adapter</td><td>Connect to CAN bus with the mode set by M0 / M1</td></tr>
+<tr><td>"ON\r"</td><td>Closed</td><td>100</td><td>Open in normal mode</td><td>Ignore settings with M0 / M1</td></tr>
+<tr><td>"OS\r"</td><td>Closed</td><td>100</td><td>Open in silent mode</td><td>Ignore settings with M0 / M1</td></tr>
+<tr><td>"OI\r"</td><td>Closed</td><td>100</td><td>Open in internal loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
+<tr><td>"OE\r"</td><td>Closed</td><td>100</td><td>Open in external loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
+<tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns seven key/value pairs. See <a href="#Slcan_Version">Version Info</a></td></tr>
+<tr><th>Set Modes</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"M1\r"</td><td>Closed</td><td>legacy</td><td>Enable silent mode</td><td>The next command "O\r" will open in bus monitoring mode</td></tr>
+<tr><td>"M0\r"</td><td>Closed</td><td>legacy</td><td>Disable silent mode</td><td>The next command "O\r" will open in normal mode</td></tr>
+<tr><td>"MA\r"</td><td>Closed</td><td>100</td><td>Enable Auto Retransmission mode (same as A1)</td><td>Retransmit packets until they are acknowledged</td></tr>
+<tr><td>"Ma\r"</td><td>Closed</td><td>100</td><td>Disable Auto Retransmission mode (same as A0)</td><td>Enable one-shot mode</td></tr>
+<tr><td>"MD\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug Messages</td><td>Firmware sends string messages to the host</td></tr>
+<tr><td>"Md\r"</td><td>Open/Closed</td><td>100</td><td>Disable Debug Messages</td><td>Do not send debug messages</td></tr>
+<tr><td>"ME\r"</td><td>Open/Closed</td><td>100</td><td>Enable CAN Error reports</td><td>CAN errors are sent to the host</td></tr>
+<tr><td>"Me\r"</td><td>Open/Closed</td><td>100</td><td>Disable CAN Error reports</td><td>CAN error reporting is off (deprecated!)</td></tr>
+<tr><td>"MF\r"</td><td>Open/Closed</td><td>100</td><td>Enable Feedback mode</td><td>For each command a success/error feedback is sent</td></tr>
+<tr><td>"Mf\r"</td><td>Open/Closed</td><td>100</td><td>Disable Feedback mode</td><td>Command Feedback mode is off (deprecated!)</td></tr>
+<tr><td>"MI\r"</td><td>Open/Closed</td><td>100</td><td>Enable Identify mode</td><td>The green/blue LED's start blinking</td></tr>
+<tr><td>"Mi\r"</td><td>Open/Closed</td><td>100</td><td>Disable Identify mode</td><td>The LED's stop blinking</td></tr>
+<tr><td>"MM\r"</td><td>Open/Closed</td><td>100</td><td>Enable Tx echo report marker</td><td>Report all successfully sent packets with a marker</td></tr>
+<tr><td>"Mm\r"</td><td>Open/Closed</td><td>100</td><td>Disable Tx echo report marker</td><td>No Tx Echo report</td></tr>
+<tr><td>"MR\r"</td><td>Open/Closed</td><td>100</td><td>Enable 120 Ω Termination Resistor</td><td rowspan="2">Supported only by few boards</td></tr>
+<tr><td>"Mr\r"</td><td>Open/Closed</td><td>100</td><td>Disable 120 Ω Termination Resistor</td></tr>
+<tr><td>"MS\r"</td><td>Open/Closed</td><td>100</td><td>Enable ESI report</td><td>Report the ESI flag of received CAN FD messages</td></tr>
+<tr><td>"Ms\r"</td><td>Open/Closed</td><td>100</td><td>Disable ESI report</td><td>No ESI report</td></tr>
+<tr><td>"MDEFMS\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug, Error, Feedback, Echo, ESI reports</td><td>You can set all modes at once in one command</td></tr>
+<tr><th>Set Baudrates</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"Y4\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 4 Mbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"Y5\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 5 Mbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"Y8\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 8 Mbaud</td><td>Samplepoint 50% &nbsp; (75% does not work on STM32G431)</td></tr>
+<tr><td>"s4,69,10,7\r"</td><td>Closed</td><td>100</td><td>Set nominal bitrate: Prescaler=4,<br>Seg1=69, Seg2=10, Synchr. Jump Width=7</td><td>Set 500 kbaud, Samplepoint 87.5%<br>See <a href="#Samplepoint">Samplepoint</a></td></tr>
+<tr><td>"y4,9,10,7\r"</td><td>Closed</td><td>100</td><td>Set data bitrate: Prescaler=4,<br>Seg1=9, Seg2=10, Synchr. Jump Width=7</td><td>Set 2 Mbaud, Samplepoint 50%<br>See <a href="#Samplepoint">Samplepoint</a></td></tr>
+<tr><th>Set Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
+    <div>You can set up to <b>8 mask filters</b> separated by semicolons.</div>
+    <div>11 bit and 29 bit filters can be mixed.</div>    
+    <div>See <a href="#Filter">CAN Filters</a>.</div>    
+    </td></tr>
+<tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
+<tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>Set 3 filters for 16 ID's each: 7EX, 72X and 73X</td></tr>
+<tr><td>"f\r"</td><td>Closed</td><td>100</td><td>Clear all filters</td><td>Remove all filters</td></tr>
+<tr><th>Boot Mode</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"*Boot0:Off\r"</td><td>Closed</td><td>100</td><td>Disable pin BOOT0</td><td>See <a href="#Hardware">Hardware Misdesign</a></td></tr>
+<tr><td>"*Boot0:?\r"</td><td>Open/Closed</td><td>100</td><td>Request status of pin BOOT0</td><td>returns "+1\r" if enabled or "+0\r" if disabled</td></tr>
+<tr><td>"*DFU\r"</td><td>Open/Closed</td><td>100</td><td>Enable pin BOOT0 and enter DFU mode</td><td>If feedback = <code>FBK_ResetRequired</code>: Reconnect USB cable!</td></tr>
+<tr><th>Transmit Packets</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"Txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 29 bit ID</td><td>Bits: IDE  &nbsp; &nbsp; See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
+<tr><td>"txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 11 bit ID</td><td>Bits: None</td></tr>
+<tr><td>"Rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
+<tr><td>"rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
+<tr><td>"Dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
+<tr><td>"dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
+<tr><td>"Bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+<tr><td>"bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
+</table>
+
+<a name="Slcan_Responses"></a>
+<h3>Slcan Responses and Events</h3>
+
+<table class="DataNarrow" cellspacing="1">
+<tr><th>Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"#\r"</td><td>100</td><td>The command has executed successfully</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#1\r"</td><td>100</td><td>The command is invalid</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#2\r"</td><td>100</td><td>A parameter of the command is invalid</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#3\r"</td><td>100</td><td>The command reqires the adapter to be open</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#4\r"</td><td>100</td><td>The command reqires the adapter to be closed</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#5\r"</td><td>100</td><td>The HAL from ST Microelectronics reported an error</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#6\r"</td><td>100</td><td>The feature is not supported by the board / not implemented</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#7\r"</td><td>100</td><td>The CAN Tx Buffer is full (no ACK received, 67 packets waiting)</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#8\r"</td><td>100</td><td>CAN bus is off (a severe CAN error has occurred)</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#9\r"</td><td>100</td><td>Sending packets is not possible in silent mode</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#:\r"</td><td>100</td><td>The required baudrate has not been set</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#;\r"</td><td>100</td><td>Programming the Option Bytes in flash memory failed</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#&lt;\r"</td><td>100</td><td>Please reconnect the USB cable, a hardware reset is required</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><th>Response</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"+Text\r"</td><td>100</td><td>The firmware sends a text response to a command</td><td>Used by commands "*Boot0:?\r" and "V\r"</td></tr>
+<tr><th>Event</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"&gt;Message\r"</td><td>100</td><td>The firmware sends a debug message (plain text)</td><td>Requires Debug Messages to be enabled</td></tr>
+<tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status (See <a href="#Slcan_Errors">Slcan Errors</a>)</td><td>Requires CAN Error Reports to be enabled</td></tr>
+<tr><td>"L27\r"</td><td>100</td><td>The firmware has calculated a bus load of 27%.<br>If the bus load is zero, no report is sent.</td><td>Requires Bus Load Reports to be enabled</td></tr>
+<tr><td>"M3C\r"</td><td>100</td><td>The firmware reports the Tx echo marker 0x3C (See <a href="#Slcan_Packets">Slcan Packets</a>)</td><td>Requires Tx Echo Report markers to be enabled</td></tr>
+<tr><th>Rx Packets</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"Txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 29 bit ID</td><td>Bits: IDE  &nbsp;  (See <a href="#Slcan_Packets">Slcan Packets</a>)</td></tr>
+<tr><td>"txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 11 bit ID</td><td>Bits: None</td></tr>
+<tr><td>"Rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
+<tr><td>"rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
+<tr><td>"Dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
+<tr><td>"dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
+<tr><td>"Bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+<tr><td>"bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
+</table>
+
+<a name="Slcan_Version"></a>
+<h3>Slcan Version Info</h3>
+<div>In the new firmware the command "V\r" returns one string with <b>seven key/value pairs</b> separatad by <b>tab characters</b>.</div>
+<div>It starts with a <b>plus character</b> that indicates a command response with text content, rather than a feedback response (#).</div>
+<p>
+<table class="Pre">
+<tr><td style="white-space: nowrap;">
+<div>+Board: MksMakerbase\t</div>
+<div>MCU: STM32G431\t</div>
+<div>DevID: 1128\t</div>
+<div>Firmware: 25.09.14\t</div>
+<div>Slcan: 100\t</div>
+<div>Clock: 160\t</div>
+<div>Limits: 512,256,128,128,32,32,16,16\r</div>
+</td></tr>
+</table>
+<p>
+<div>Split this string at each tab character ('\t') and then each part at the colon. You get 7 key/value pairs:</div>
+
+<table class="DataTable">
+<tr><th>Key</th><th>Value</th><th>Comment</th></tr>
+<tr><td>Board</td><td>MksMakerbase</td><td>
+    <div>This defines for which board the firmware was compiled.</div>
+    <div>It may not match the real hardware if the user has uploaded the wrong firmware.</div>
+    <div>See <a href="#FirmwareVersions">Firmware Versions</a></div></td></tr>
+<tr><td>MCU</td><td>STM32G431</td><td>
+    <div>This defines for which processor the firmware was compiled.</div>
+    <div>It may not match the real processor if the user has uploaded the wrong firmware.</div>
+    <div>See <a href="#FirmwareVersions">Firmware Versions</a></div></td></tr>
+<tr><td>DevID</td><td>1128</td><td>
+    <div>This is the "Device ID" of the real processor. Convert 1128 to hex and you get 0x468.</div>
+    <div>Each <b>processor serie</b> is identified by a unique "Device ID".</div>
+    <div>In the <a href="https://www.st.com/resource/en/reference_manual/dm00355726.pdf" target="_blank">Reference Manual</a> from ST Microelectronics you find these identifiers:</div>
+    <div>0x468 = Category 2 devices (STM32G431, STM32G441)</div>
+    <div>0x469 = Category 3 devices (STM32G471, STM32G473, STM32G474, STM32G483, STM32G484)</div>
+    <div>0x479 = Category 4 devices (STM32G491, STM32G4A1)</div></td></tr>
+<tr><td>Firmware</td><td>25.09.14</td><td>
+    <div>The legacy firmware has returned completely meaningless version numbers like "ba6b1dd".</div>
+    <div>Here you get a <b>version</b> number that indicates <b>the date</b> when the firmware was created.</div>
+    <div>The version "25.09.14" means 14th september of 2025.</div></td></tr>
+<tr><td>Slcan</td><td>100</td><td>
+    <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
+    <div>The first version created by ElmüSoft is version 100 which contains all the features described here.</div>
+    <div>Future versions will be 101, 102, etc and contain new commands which will be documented here.</div>
+    <div>Use this version number to detect which features are supported by the firmware.</div></td></tr>
+<tr><td>Clock</td><td>160</td><td>The CAN clock is 160 MHz</td></tr>
+<tr><td>Limits</td><td>512,256,128,128,<br>32,32,16,16</td><td>
+    <div>These 8 values are the <b>upper limits</b> for the bitrate commands 's' and 'y'.</div>
+    <div>Each processor has different limits for Prescaler, Segment1, Segment2 and Synchr. Jump Width.</div>
+    <div>Nominal baudrate: max Prescaler= 512, max Seg1 = 256, max Seg2= 128, max SJW = 128</div>
+    <div>FD Data baudrate: max Prescaler= 32, max Seg1 = 32, max Seg2= 16, max SJW = 16</div>
+    <div>See <a href="#Samplepoint">Samplepoint</a></div></td></tr>
+</table>
+
+<a name="Slcan_Packets"></a>
+<h3>Slcan Packets</h3>
+
+<div>All packets are transmitted using this pattern:
+<ul>
+<li><div><b><span class="Magenta">Packet type</span></b>: T, t, R, r, D, d, B or b (see tables above)</div>
+<li><div><b><span class="Green">CAN ID</span></b>: 3 digits for 11 bit or 8 digits for 29 bit CAN ID</div>
+<li><div><b><span class="Orange">DLC</span></b>: 1 digit (count of data bytes) </div>
+    <div>Classic packets: DLC = '0' to '8', </div>
+    <div>CAN FD: '8'= 8 byte, '9'= 12 bytes, 'A'= 16 bytes, 'B'= 20 byte, 'C'= 24 bytes, 'D'= 32 bytes, 'E'= 48 byte, 'F'= 64 byte.</div>
+<li><div><b><span class="Blue">Data bytes</span></b>: Classic packets: 0 to 8, CAN FD: 8 to 64 bytes.</div>
+<li><div>only for Tx packets and only if Tx <b><span class="Red">Echo Markers</span></b> are enabled: a 2 digit marker.</div>
+<li><div>only for Rx packets and only if <b><span class="Red">ESI</span></b> reporting is enabled: a character 'S' if the sending node is error passive.</div>
+</ul>
+
+<table class="DataTable">
+<tr><th>Direction</th><th>Packet</th><th>Slcan</th><th>Comment</th></tr>
+<tr><td>Both</td><td>18AABBCC: 11 22 33 44 55</td><td>"<span class="Magenta">T</span><span class="Green">18AABBCC</span><span class="Orange">5</span><span class="Blue">1122334455</span>\r"</td><td>Classic, 29 bit ID</td></tr>
+<tr><td>Both</td><td>7E0: 11 22 33 44 55 66 77 88 99 AA BB CC</td><td>"<span class="Magenta">d</span><span class="Green">7E0</span><span class="Orange">9</span><span class="Blue">112233445566778899AABBCC</span>\r"</td><td>CAN FD, 11 bit, FDF</td></tr>
+<tr><td>Receive</td><td>7E0: 11 22 33 44 55 66 77 88</td><td>"<span class="Magenta">b</span><span class="Green">7E0</span><span class="Orange">8</span><span class="Blue">1122334455667788</span><span class="Red">S</span>\r"</td><td>FDF, BRS, <span class="Red">ESI</span></td></tr>
+<tr><td>Transmit</td><td>7E0: 11 22 33 44 55 66</td><td>"<span class="Magenta">t</span><span class="Green">7E0</span><span class="Orange">6</span><span class="Blue">112233445566</span><span class="Red">3F</span>\r"</td><td>Marker = <span class="Red">3F</span></td></tr>
+</table>
+
+<a name="Marker_Example"></a>
+<div><b>Example:</b></div>
+<table class="Pre" style="white-space: nowrap;">
+<tr><td>
+<div>Tx: "t7E061122334455663F\r" &lt;—— send packet with marker 3F</div>
+<div>Rx: "#\r" &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;—— receive command feedback (Success)</div>
+<div>Rx: "M3F\r" &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;—— receive echo marker 3F</div>
+</td></tr>
+</table>
+
+
+<a name="Slcan_Errors"></a>
+<h3>Slcan Error Reports</h3>
+
+<div>When CAN Error Reports are enabled you get an error report only if at least one error is present.</div>
+<div>Errors are sent immediately, after 100 ms or after 3 seconds as explained <a href="#CAN_Errors">above</a>.</div>
+<div>An error report is always of the form "Exxxxxxxx\r" and consists of 5 parts:</div>
+
+<table class="DataTable">
+<tr><th>Digit</th><th>Meaning</th><th>Value</th></tr>
+<tr><td align="center">1</td><td class="Magenta">Bus Status</td>
+    <td>    
+        <div>'0' = Bus Active</div>
+        <div>'1' = Warning Level</div>
+        <div>'2' = Bus Passive</div>
+        <div>'3' = Bus Off</div>
+    </td>
+</tr>
+<tr><td align="center">2</td><td class="Green">Last Protocol Error</td>
+    <td>
+        <div>'0' = None</div>
+        <div>'1' = Bit stuffing error</div>
+        <div>'2' = Frame format error</div>
+        <div>'3' = No ACK received</div>
+        <div>'4' = Recessive bit error</div>
+        <div>'5' = Dominant bit error</div>
+        <div>'6' = CRC error</div>
+</tr>
+<tr><td>3 + 4</td><td class="Orange">Firmware Error Flags</td>
+    <td>
+    <div>0x00 = None</div>
+    <div>0x01 = Rx Failed</div>
+    <div>0x02 = Tx Failed</div>
+    <div>0x04 = CAN Tx buffer overflow</div>
+    <div>0x08 = USB IN buffer overflow</div>
+    <div>0x10 = Tx Timeout</div>
+    <div>Multiple flags may be combined</div>
+    </td>
+</tr>
+<tr><td>5 + 6</td><td class="Blue">Tx Error Count</td><td>0 ... 255 errors</td></tr>
+<tr><td>7 + 8</td><td class="Red">Rx Error Count</td><td>0 ... 255 errors</td></tr>
+</table>
+
+<div><b>Example: </b> "E<span class="Magenta">2</span><span class="Green">3</span><span class="Orange">10</span><span class="Blue">80</span><span class="Red">0C</span>\r" means:</div>
+<div>Bus is passive, No ACK received, Tx Timeout, 128 Tx Errors, 12 Rx Errors</div>
+
+<a name="Slcan_Initialization"></a>
+<h3>Slcan Initialization</h3>
+
+<div>When connecting to a CANable 2.5 adapter you should follow this sequence:</div>
+<ol>
+<li><div>Send command "C\r" to <b>close the device</b> if it is till open.</div>
+    <div>But this command has also another purpose: It <b>resets all internal variables</b> in the firmware to their default.</div>
+    <div><b>ATTENTION:</b> The command 'Close' is the only command that does <b>not send a feedback</b>, although feedbacks are enabled.</div>
+    <div>The purpose is that you can always send this as the first command and don't have to wait for a feedback.</div>
+    <div>When you connect to a CANable you don't know if the user has connected a legacy device or a CANable 2.5</div>
+    <div>Additionally the firmware cannot know at this moment if you will enable feedback mode later or not.</div>
+    <div>Therefore the command 'Close' behaves exactly as the legacy command: It never sends a feedback.</div>
+<li><div>Send command "V\r" to get the <a href="#Slcan_Version">Version String</a>.</div>
+    <div>Split the response string at the <b>tab characters</b>.</div>
+    <div>When you get <b>7 parts</b> or more you are communicating with a CANable 2.5, otherwise it is a legacy firmware.</div>
+    <div>If you don't support legacy devices show an error message, otherwise switch to legacy mode.</div>
+    <div>If it is a CANable 2.5 use the <b>Slcan Version Number</b> (100 or higher) to check which features are available.</div>
+<li><div>Send command "MF\r" to enable <b>feedback mode</b> (or "MADEFMS\r" with all the other modes that you need)</div>
+    <div>This will be the first command that sends a feedback.</div>
+    <div>From now on you must wait for the feedback "#\r" and check for errors before sending the next command.</div>
+<li><div>Send command 'S' or 's' to set the <b>nominal</b> <a href="#Baudrates">baudrate</a>.</div>
+<li><div>If you also send command 'Y' or 'y' to set the <b>data baudrate</b>, the firmware will switch automatically into CAN FD mode.</div>
+<li><div>Now you can optionally set <a href="#Filter">filters</a></div>
+<li><div>Finally execute command "ON\r" to <b>open</b> the device in normal mode.</div>
+</ol>
+
+<table>
+<tr><td>
+    <table class="TblImage">
+        <tr><td align="center"><b>RS232 Terminal</b></td></tr>
+        <tr><td><img src="Images/HudEcuHacker RS232 Terminal Slcan.png" alt="CANable 2.0 diagram" width="186" height="160"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/HudEcuHacker RS232 Terminal Slcan.png')">Show Full Size</span></td></tr>
+    </table>
+</td><td>&nbsp;</td><td>
+    <div>Here you see how to send commands manually to the adapter.</div>
+    <div>Use the <b>RS232 Terminal</b> in HUD ECU Hacker.</div>
+    <p>
+    <div>The <b>baudrate</b> that you enter to open the COM port is irrelevant.</div>
+    <div>The port runs always with maximum USB speed (12 MBit).</div>
+</td></tr>
+</table>
+
+<p>
+<a name="Candlelight_Manual"></a>
+<p>&nbsp;
+<h2>3.) Application Developer Manual - Candlelight</h2>
+
+<div>The Candlelight 2.5 firmware can be used to build <b>professional high speed</b> CAN FD applications.</div>
+<div>Controlling the Candlelight firmware is more complex than the Slcan firmware.</div>
+<div>There are lots of structures and enums. Explaining them all here would explode this manual.</div>
+
+<a name="Demo_Application"></a>
+<h3>C++ Demo Application</h3>
+<div>Therefore I wrote a <b>ready-to-use C++ Candlelight class</b> that you can copy and paste into your project.</div>
+<div>This robust and well tested class demonstrates all the features that the new firmware offers:</div>
+<ul>
+<li>Detect and enumerate all connected Candlelight devices
+<li>Obtain details about the connected device: USB descriptor, board, processor, version numbers,.....
+<li>Set baudrate and samplepoint
+<li>Set mask filters
+<li>Open / Close / Start / Reset
+<li>Send packet / Receive packet / Process Tx echo marker
+<li>Decode and display CAN bus errors
+<li>Disable boot pin / Enter DFU mode
+</ul>
+<div>The <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/SampleApplication%20C%2B%2B" target="_blank">source code</a> is full of <b>detailed comments</b> so you can easily understand how it works.</div>
+<p>
+<div>The C++ demo also shows how to <b>use WinUSB.dll correctly</b> which is more complex than it seems at the first look.</div>
+<div>For example in Cangaroo and in Candle.NET they use WinUSB wrongly which results in packet loss or wrong packet order.</div>
+<div>WinUSB requires an unusal programming that is not documented by Microsoft.</div>
+
+<p>
+<img src="Images/Candlelight C++ demo.png" alt="Candlelight C++ demo project" width="722" height="572">
+<p>
+
+<a name="Candle_NewProto"></a>
+<h3>The new ElmüSoft Protocol</h3>
+<div>The legacy Candlelight protocol had several <b>design errors</b>.</div>
+<div>For example when a CAN FD packet was transmitted to the host they sent the timestamp behind a fix array of 64 data bytes.</div>
+<div>Adding more unneccessary overhead resulted in sending <b>always 80 bytes</b> over USB, even for a packet with only 8 data bytes.</div>
+<p>
+<div>Additionally the legacy protocol was never designed to transmit anything else than CAN packets.</div>
+<div>It was impossible to transfer other data to the host, like for example an ASCII <b>debug string</b>.</div>
+<p>
+<div>Therfore I had to design a <b>new efficient protocol</b>: The <b>ElmüSoft protocol</b>.</div>
+<div>It uses a <b>minimalistic data transfer</b> and is additionally very easy to expand for any future requirements.</div>
+<p>
+<div>The new firmware 2.5 still implements the legacy <b>Geschwister Schneider</b> protocol, but can be switched to the new protocol.</div>
+<div>The new protocol sends <b>optimized structs</b> for Tx and Rx packtes, Echo Markers, Debug Messages, Error reports, Busload events.</div>
+<div>You can test all this in the demo application.</div>
+<p>
+<div>In the screenshot above <b>timestamps</b> from the computer CPU are used. They are converted to local time with 10 µs precision.</div>
+<div>When you set the flag <code>GS_DevFlagTimestamp</code> the demo switches to <b>firmware timestamps</b> generated in the adapter.</div>
+<div>They have no advantage at all. They produce more USB traffic and you will see several lines with <b>"No Timestamp"</b>.</div>
+<div>The reason is that firmware timestamps are only available for events <b>received from</b> the firmware.</div>
+<div>But when you <b>send a packert to</b> the firmware you don't get a timestamp.</div>
+
+<a name="Candle_DFU"></a>
+<h3>Enter DFU mode</h3>
+<div>A <b>SETUP</b> request with <code>DFU_Detach</code> to interface 1 (DFU) enables boot mode.</div>
+<div>Then immediately send a SETUP request with <code>DFU_GetStatus</code> to check if execution was successful.</div>
+<div>If the state is <code>DfuState_AppIdle</code> the adapter will enter boot mode 300 ms later.</div>
+<div>If the state is <code>DfuState_AppDetach</code> you must show a message to the user to reconnect the USB cable.</div>
+<div>The demo application shows how this works.</div>
+<div>See pages 17 and 22 in <b>DFU Functional Descriptor 1.1.pdf</b> in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
+
+
+<a name="Firmware_Manual"></a>
+<p>&nbsp;
+<h2>4.) Firmware Developer Manual</h2>
+
+<div>This is the first project that unites two firmware's, written by different persons, into one.</div>
+<div>The new CANable 2.5 firmware uses the <b>same code base</b> to compile Slcan and Candlelight.</div>
+<div>The CAN interface, error handling, LED control, entering DFU mode, etc... use common code.</div>
+<div>Only the USB interface and the command executer are implemented individually.</div>
+<div>Each project has an own <b>Make file</b> that inculdes the corresponding subfolder: Slcan or Candlelight.</div>
+
+<h3>Caveat</h3>
+<div>The code in this project is not for beginners.</div>
+<div>You need several years of embedded C programming experience and hardware knowledge.</div>
+
+<h3>Adding new boards</h3>
+<div>In the file <b>settings.h</b> you find the definitions for the boards.</div>
+<div>Currently there are the pin defintions for the boards from MKS Makerbase and Openlight Labs.</div>
+<div>The new board must be defined in a new Make file as <code>TARGET_BOARD</code></div>
+
+<h3>Adding new processors</h3>
+<div>Also in <b>settings.h</b> are the includes of the HAL files (Hardware Abtraction Layer) from ST Microelectronics.</div>
+<div>For another processor serie the required HAL files must be added into a new subfolder.</div>
+<div>The new processor must be defined in a new Make file as <code>TARGET_MCU</code></div>
+
+<h3>USB Interface</h3>
+<div>The USB interface is by far the most complicated code in the firmware.</div>
+<div>ST Microelectronics gives us a HAL that is scatterd over eleven files calling from one file into another.</div>
+<div>All the USB stuff is called from multiple interrupt handlers.</div>
+<p>
+<div>If you don't know what is a <b>SETUP request</b>, what is an <b>OUT endpoint</b> or what <b>stalling</b> an endpoint means,
+<div>I recommend that you read the exellent <b>USB tutorial</b> in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
+
+
+<a name="Compile_Windows"></a>
+<h3>Compiling STM32 code on Windows</h3>
+<div>You find a lot of instructions in internet how to compile the firmware on Linux.</div>
+<div>But there is nothing for Windows developers, although it is quite simple.</div>
+<p>
+<div><b><u>Cube Programmer</u></b></div>
+<div>If you think that you can install the <b>STM32 Cube Programmer</b> from ST Microelectronics</div>
+<div>and you will get a comfortable developer environment, you are completely wrong!</div>
+<div>After downloading this Gigabyte monster you will find a very badly designed user interface,</div>
+<div>an extremely slow software and you notice that it is not able to compile a Make file.</div>
+<div>Several menu items are greyed out without any reason and the help file is useless.</div>
+<div>So don't <b>waste your time</b> with this.</div>
+<div>ST Microelectronics has only hardware engineers, they have nobody who is able to write desktop software.</div>
+<p>
+<div><b><u>Intallation</u></b></div>
+<ol>
+<li><div>Install <a href="https://www.st.com/en/development-tools/stm32cubeclt.html" target="_blank">STM32 Cube CLT</a> (STM32 Command Line Compiler)</div>
+    <div>From the drop down list on the ST website you can select the oldest version (300 MB).</div>
+    <div>The newer the version, the bigger it gets. The latest version is 1 Gigabyte. You don't need that.</div>
+<li><div>Install <a href="https://sourceforge.net/projects/mingw" target="_blank">MinGW</a> (Minimalist GNU for Windows)</div>
+    <div>The only files that you need from this installation are <b>make.exe</b> and <b>mkdir.exe</b> and their 6 DLLs:</div>
+    <div>libgcc_s_dw2-1.dll, libiconv-2.dll, libintl-8.dll, msys-1.0.dll, msys-iconv-2.dll, msys-intl-8.dll</div>
+<li><div>Rename mkdir.exe into <b>mmkdir.exe</b> to avoid collision with the MKDIR command in the Windows console.</div>
+<li><div>In the Advanced System Settings search the <b>PATH variable</b> and add <b>two folders</b> separated by semicolon:</div>
+    <div>The folder into which CubeCLT has installed the file <b>arm-none-eabi-gcc.exe</b></div>
+    <div>The folder into which MinGW has installed the file <b>make.exe</b></div>
+    <div>You can also copy make.exe and mmkdir.exe and their DLLs into the CubCLT directory and need only one folder.</div>
+<li><div>Now double click the file <b>Build_Slcan.cmd</b> in my project and the compilation should start.</div>
+    <div>This script copies the compiled <b>BIN files</b> automatically into the Firmware folder of HUD ECU Hacker.</div>
+<li><div>The <b>Firmware Updater</b> will convert the BIN files automatically into <b>DFU files</b> that you can upload.</div>
+</ol>
+
+<a name="Source_Code"></a>
+<h3>Source Code</h3>
+<ul>
+<li><div><b>Version 25.09.14</b>: Initial release</div>
+<li><div><span class="Grey">Any future versions will be listed here.</div>
+</ul>
+
+<div>You find the source code on <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight" target="_blank">Github</a>.</div>
+
+<h3>Version Numbers</h3>
+<div>When you add new features to the firmware don't forget to adapt <code>FIRMWARE_VERSION_BCD</code> in <b>settings.h</b></div>
+<div>After adding new Slcan commands you must increase <code>SLCAN_VERSION</code> and add the new commands to the documentation.</div>
+
+
+<div>&nbsp;</div>
+<div>&nbsp;</div>
+
+</body>
+</html>
