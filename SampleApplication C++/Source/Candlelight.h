@@ -42,9 +42,7 @@ public:
     DWORD    ReceiveData(DWORD u32_Timeout, kHeader* pk_Header, DWORD u32_BufSize, __int64* ps64_WinTimestamp);
     // ------------------------------------
     __int64  GetWinTimestamp();
-    DWORD    GetMcuTimestamp(DWORD* pu32_Timestamp);
     CString  FormatTimestamp(kHeader* pk_Header, __int64 s64_WinTimestamp);
-    CString  FormatTimestamp(__int64 s64_Stamp);
     CString  FormatHexBytes(BYTE u8_Data[], int s32_DataLen);
     CString  FormatRxPacket (kRxFrameElmue* pk_RxFrame);
     CString  FormatTxEcho   (kTxEchoElmue*  pk_Echo);

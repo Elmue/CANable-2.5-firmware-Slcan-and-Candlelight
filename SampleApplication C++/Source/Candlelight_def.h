@@ -25,7 +25,7 @@ typedef enum // transferred as 8 bit
     GS_ReqBerrReport,          // -- not implemented, undocumented 
     GS_ReqGetCapabilities,     // kCapabilityClassic: get supported features and processor limits of timing for classic frames
     GS_ReqGetDeviceVersion,    // kDeviceVersion: get version numbers
-    GS_ReqGetTimestamp,        // uint32_t: get firmware 1 탎 timestamp
+    GS_ReqGetTimestamp,        // uint32_t: get firmware 1 탎 timestamp (Needs roll over detection! Roll over after one hour!)
     GS_ReqIdentify,            // uint32_t (ignored): blink LEDs for device identification
     GS_ReqGetUserID,           // -- not implemented, undocumented  (WTF is a user ID ??)
     GS_ReqSetUserID,           // -- not implemented, undocumented  (WTF is a user ID ??)
@@ -402,7 +402,7 @@ typedef enum // 32 bit
 typedef struct  // Legacy
 {
     uint8_t  data[8];
-    uint32_t timestamp_us; // precision 1 탎
+    uint32_t timestamp_us; // precision 1 탎 (Needs roll over detection! Roll over after one hour!)
 } __packed kPacketClassic;
 
 // This is an incredibly stupid design.
@@ -411,7 +411,7 @@ typedef struct  // Legacy
 typedef struct  // Legacy  
 {
     uint8_t  data[64];
-    uint32_t timestamp_us; // precision 1 탎
+    uint32_t timestamp_us; // precision 1 탎 (Needs roll over detection! Roll over after one hour!)
 } __packed kPacketFD;
 
 // ---------------------------
