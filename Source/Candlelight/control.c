@@ -312,10 +312,6 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
             // ------------------------- 3.) Start / Reset ----------------------------------
             if (dev_Mode->mode == GS_ModeStart)
             {
-                // legacy   protocol: send timestamps with  1 µs precision (roll over already after 1 hour!)
-                // ElmüSoft protocol: send timestamps with 10 µs precision (roll over after 10 hours)
-                system_init_timestamp((dev_Mode->flags & ELM_DevFlagProtocolElmue) > 0);
-
                 uint32_t open_mode = FDCAN_MODE_NORMAL;
                 if ((dev_Mode->flags & GS_DevFlagListenOnly) > 0)
                 {

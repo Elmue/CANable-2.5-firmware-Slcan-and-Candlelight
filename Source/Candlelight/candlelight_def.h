@@ -17,7 +17,7 @@ typedef enum // transferred as 8 bit
     GS_ReqBerrReport,          // -- not implemented, undocumented 
     GS_ReqGetCapabilities,     // kCapabilityClassic: get supported features and processor limits of timing for classic frames
     GS_ReqGetDeviceVersion,    // kDeviceVersion: get version numbers
-    GS_ReqGetTimestamp,        // uint32_t: get hardware timestamp. Legacy: precision = 1 µs, CANable 2.5: precision = 10 µs
+    GS_ReqGetTimestamp,        // uint32_t: get hardware 1 µs timestamp
     GS_ReqIdentify,            // uint32_t (ignored): blink LEDs for device identification
     GS_ReqGetUserID,           // -- not implemented, undocumented  (WTF is a user ID ??)
     GS_ReqSetUserID,           // -- not implemented, undocumented  (WTF is a user ID ??)
@@ -51,8 +51,7 @@ typedef enum // transferred as 32 bit
     GS_DevFlagTripleSample            = 0x00004,
     // if set, send a packet only once, otherwise retransmit until an ACK was revcived
     GS_DevFlagOneShot                 = 0x00008,
-    // Send a hardware timestamp with each Rx packet and Tx echo
-    // Legacy: timestamp precision = 1 µs (roll over after 1 hour), CANable 2.5: precision = 10 µs (roll over after 10 hours)
+    // Send a hardware timestamp with each Rx packet and Tx echo.
     // Deprecated: creates more USB traffic overhead on a slow Full speed USB device.
     // Timestamps should be created in the host application at packet reception.
     // See subfolder "SampleApplication C++" for a sample code how to generate precise timestamps in Windows.
@@ -348,7 +347,7 @@ typedef enum // 32 bit
 typedef struct  // Legacy
 {
     uint8_t  data[8];
-    uint32_t timestamp_us; // precision 1 µs, roll over already after 1 hour!
+    uint32_t timestamp_us; // precision 1 µs
 } __packed kPacketClassic;
 
 // This is an incredibly stupid design.
@@ -357,7 +356,7 @@ typedef struct  // Legacy
 typedef struct  // Legacy  
 {
     uint8_t  data[64];
-    uint32_t timestamp_us; // precision 1 µs, roll over already after 1 hour!
+    uint32_t timestamp_us; // precision 1 µs
 } __packed kPacketFD;
 
 // ---------------------------
@@ -396,13 +395,11 @@ typedef struct  // Legacy (size = 80 byte)
 // 4) The idea to send multiple CAN channels over one Full speed USB connection is totally absurd.
 // 5) Bus errors are sent in a stupid way (flooding the host with the same error again and again, hundreds per second).
 // 6) The legacy structures do not allow to send other data than CAN packets or error frames.
-// 7) The legacy firmware sent 1 µs timestamps that already roll over after 1 hour.
-// 8) The legacy firmware had fatal bugs, of which one resulted even in a firmware crash.
+// 7) The legacy firmware had fatal bugs, of which one resulted even in a firmware crash.
 //
 // However, the legacy GS protocol with all it's design errors is still implemented here for backward compatibility with legacy software.
 // You have to set ELM_DevFlagProtocolElmue to enable the new CANable 2.5 protocol which optimizes USB transfer to the maximum.
 // Additionally the new ElmüSoft protocol can send string messages and calculates the bus load and has a lots of bugfixes.
-// Timestamps now have 10 µs precision and roll over after 10 hours, but is is recommended to generate timestamps in the host.
 // See subfolder "SampleApplication C++" for a sample code how to generate precise timestamps using the performance counter in the CPU.
 // The legacy code was very difficult to understand because the authors were too lazy to write comments. This has been fixed by ElmüSoft.
 // A new error reporting has been implemented that sends bus errors (passive, bus off, error counters) in an efficient way to the host.
@@ -532,7 +529,7 @@ typedef struct
     uint8_t  flags;             // eFrameFlags    
     uint32_t can_id;            // CAN ID + eCanIdFlags
     uint8_t  data_no_stamp[0];  // data start if timestamps are off (highest possible USB transmission speed)
-    uint32_t timestamp;         // timestamp with 10 µs precision, only sent to host if GS_DevFlagTimestamp has been set
+    uint32_t timestamp;         // timestamp with 1 µs precision, only sent to host if GS_DevFlagTimestamp has been set
     uint8_t  data_use_stamp[0]; // data start if timestamps are transmitted
 } __packed __aligned(1) kRxFrameElmue;
 
@@ -540,7 +537,7 @@ typedef struct
 {
     kHeader  header;      // MSG_TxEcho
     uint8_t  marker;      // the same marker that was sent in kTxFrameElmue sent back to the host when the packet was ACKnowledged on CAN bus.
-    uint32_t timestamp;   // timestamp with 10 µs precision, only sent to host if GS_DevFlagTimestamp has been set
+    uint32_t timestamp;   // timestamp with 1 µs precision, only sent to host if GS_DevFlagTimestamp has been set
 } __packed __aligned(1) kTxEchoElmue;
 
 typedef struct 
@@ -548,7 +545,7 @@ typedef struct
     kHeader  header;      // MSG_Error
     uint32_t err_id;      // eErrFlagsCanID
     uint8_t  err_data[8]; // several error flags and error counters
-    uint32_t timestamp;   // timestamp with 10 µs precision, only sent to host if GS_DevFlagTimestamp has been set
+    uint32_t timestamp;   // timestamp with 1 µs precision, only sent to host if GS_DevFlagTimestamp has been set
 } __packed __aligned(1) kErrorElmue;
 
 typedef struct 
