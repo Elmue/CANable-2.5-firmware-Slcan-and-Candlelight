@@ -11,6 +11,8 @@
 
 uint32_t canfd_clock;
 
+void  system_init_timestamp();
+
 // Initialize system clocks
 bool system_init(void)
 {
@@ -75,6 +77,7 @@ bool system_init(void)
     
     canfd_clock = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_FDCAN); // 160 MHz
 
+    system_init_timestamp();
     system_set_option_bytes(OPT_BOR_Level4);
     return true;
 }
@@ -109,15 +112,9 @@ uint32_t system_get_can_clock()
     return canfd_clock;
 }
 
-// b10us = false --> generate timestamps with  1 탎 precision (roll over already after 1 hour! Used by legacy protocol)
-// b10us = true  --> generate timestamps with 10 탎 precision (roll over after 10 hours, used by new protocol)
-void system_init_timestamp(bool b10us)
+// 1 탎 counter
+void system_init_timestamp()
 {
-    uint32_t divider = 1000000; // 1 MHz
-    if (b10us)
-        divider /= 10;
-    
-    // configure timer 2 for 1 탎 / 10 탎 interval
     __HAL_RCC_TIM2_CLK_ENABLE();
     TIM2->CR1   = 0;
     TIM2->CR2   = 0;
@@ -126,7 +123,7 @@ void system_init_timestamp(bool b10us)
     TIM2->CCMR1 = 0;
     TIM2->CCMR2 = 0;
     TIM2->CCER  = 0;
-    TIM2->PSC   = (SystemCoreClock / divider) - 1;
+    TIM2->PSC   = (SystemCoreClock / 1000000) - 1; // 1 MHz
     TIM2->ARR   = 0xFFFFFFFF;
     TIM2->CR1  |= TIM_CR1_CEN;
     TIM2->EGR   = TIM_EGR_UG;

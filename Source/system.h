@@ -23,13 +23,12 @@ typedef enum
 } eMcuSerie;
 
 bool      system_init();
-void      system_init_timestamp(bool b10us);
 bool      system_is_option_enabled(eOptionBytes e_Option);
 eFeedback system_set_option_bytes (eOptionBytes e_Option);
 uint32_t  system_get_can_clock();
 eMcuSerie system_get_mcu_serie();
 
-// get timestamp with 1 µs or 10 µs precision
+// get timestamp with 1 µs precision
 static inline uint32_t system_get_timestamp()
 {
     return TIM2->CNT;
