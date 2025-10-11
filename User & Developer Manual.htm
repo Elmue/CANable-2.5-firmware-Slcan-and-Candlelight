@@ -852,7 +852,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <img src="Images/TxMarker.png" width="728" height="263" alt="CAN Tx Event Marker">
 <p>
 <div>The new firmware can receive an <b>8 bit marker</b> with each transmit packet from the host application.</div>
-<div>When the packet has been sent successfully to CAN bus the processor will fire a <b>Tx Event</b> that contains the marker.</div>
+<div>When the packet has been sent successfully to CAN bus the processor fires a <b>Tx Event</b> that contains the marker.</div>
 <div>The host application must store the last sent packets in an internal array (study the code of the <a href="#Demo_Application">Demo Application</a>).</div>
 <div>The maximum count of packets that can be stored in the adapter is 64 + 3 = 67.</div>
 <div>An 8 bit marker can have values from 0 to 255 which is more than enough to give each Tx packet a unique marker.</div>
