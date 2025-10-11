@@ -872,15 +872,8 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>The CANable 2.5 firmware is <b>speed optimized</b> to the maximum that is possible.</div>
 <div>Therefore timestamps are not implemented for <b>Slcan</b>, by purpose.</div>
 <p>
-<div>The legacy <b>Candlelight</b> firmware has transferred 32 bit timestamps with a precision of <b>1 µs</b>.</div>
-<div>This is not a good idea because the timestamps will roll over already after <b>one hour</b>.</div>
-<div>If you write a logfile over several hours the timestamps will be useless.</div>
-<div>And nobody needs this precision. It doesn't matter if a CAN packet has arrived one mircrosecond earlier or later.</div>
-<div>On a busy CAN bus you may have delays of several milliseconds until a packet can finally be dispatched.</div>
-<p>
-<div>The Candlelight 2.5 firmware maintains 1 µs timestamps in legacy mode for backward compatibility.</div>
-<div>But if you switch to the new <b>ElmüSoft protocol</b>, the timestamps are changed to <b>10 µs</b> precision.</div>
-<div>This allows to write logfiles for 10 hours without a roll over.</div>
+<div>The Candlelight 2.5 firmware maintains 1 µs timestamps for backward compatibility.</div>
+<div>These occupy only 4 bytes and can be turned off.</div>
 <p>
 <div>However, I recommend to use timestamps created by the <a href="https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter" target="_blank">performance counter</a> in the computer CPU.</div>
 <div>This 64 bit counter will never roll over and has a precision of nanoseconds.</div>
@@ -1285,7 +1278,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>The new protocol sends <b>optimized structs</b> for Tx and Rx packtes, Echo Markers, Debug Messages, Error reports, Busload events.</div>
 <div>You can test all this in the demo application.</div>
 <p>
-<div>The screenshot above uses <b>timestamps</b> from the computer CPU. They are converted to local time with 10 µs precision.</div>
+<div>The screenshot above uses <b>timestamps</b> from the computer CPU. They are converted to local time with 1 µs precision.</div>
 <div>When you set the flag <code>GS_DevFlagTimestamp</code> the demo switches to <b>firmware timestamps</b> generated in the adapter.</div>
 <div>They have no advantage at all. They produce more USB traffic and you will see several lines with <b>"No Timestamp"</b>.</div>
 <div>The reason is that firmware timestamps are only available for events <b>received from</b> the firmware.</div>
