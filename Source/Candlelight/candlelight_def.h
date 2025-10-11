@@ -17,7 +17,7 @@ typedef enum // transferred as 8 bit
     GS_ReqBerrReport,          // -- not implemented, undocumented 
     GS_ReqGetCapabilities,     // kCapabilityClassic: get supported features and processor limits of timing for classic frames
     GS_ReqGetDeviceVersion,    // kDeviceVersion: get version numbers
-    GS_ReqGetTimestamp,        // uint32_t: get hardware 1 µs timestamp
+    GS_ReqGetTimestamp,        // uint32_t: get firmware 1 µs timestamp
     GS_ReqIdentify,            // uint32_t (ignored): blink LEDs for device identification
     GS_ReqGetUserID,           // -- not implemented, undocumented  (WTF is a user ID ??)
     GS_ReqSetUserID,           // -- not implemented, undocumented  (WTF is a user ID ??)

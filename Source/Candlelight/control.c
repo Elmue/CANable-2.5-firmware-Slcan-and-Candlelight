@@ -205,7 +205,7 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     switch (req->bRequest)
     {
         // -------- Host -> Device (OUT) --------
-        case  GS_ReqIdentify:        
+        case  GS_ReqIdentify:
         case  GS_ReqSetHostFormat:
         case  GS_ReqSetBitTiming:
         case  GS_ReqSetBitTimingFD:
@@ -324,7 +324,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
                 {
                     if ((dev_Mode->flags & GS_DevFlagLoopback) > 0)
                         open_mode = FDCAN_MODE_EXTERNAL_LOOPBACK; // Send packets to CAN bus and Loopback Tx -> Rx
-                }
+                }              
                 ELM_LastError = can_open(open_mode);
                 return;
             }
@@ -376,12 +376,12 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
         case ELM_ReqSetPinStatus:
         {
             kPinStatus* pin_status = (kPinStatus*)hcan->ep0_buf;
-            
+
             // Enabling the pin needs not to be implemented here.
             // The pin is automatically enabled when entering DFU mode in dfu_switch_to_bootloader()
             if (pin_status->PinID == PINID_BOOT0 && pin_status->Operation == PINOP_Disable)
             {
-                ELM_LastError = system_set_option_bytes(OPT_BOOT0_Disable); 
+                ELM_LastError = system_set_option_bytes(OPT_BOOT0_Disable);
                 return;
             }
             ELM_LastError = FBK_InvalidParameter;
