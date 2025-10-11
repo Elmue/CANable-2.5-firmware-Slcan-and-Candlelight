@@ -112,7 +112,7 @@ uint32_t system_get_can_clock()
     return canfd_clock;
 }
 
-// 1 µs counter
+// 1 µs timer
 void system_init_timestamp()
 {
     __HAL_RCC_TIM2_CLK_ENABLE();
