@@ -840,6 +840,9 @@ __int64 Candlelight::GetWinTimestamp()
 // otherwise use s64_WinTimestamp which comes from GetWinTimestamp() at packet reception
 CString Candlelight::FormatTimestamp(kHeader* pk_Header, __int64 s64_WinTimestamp)
 {
+    if (!mb_Started) // the variable mb_McuTimestamp is not yet valid
+        return L"Not Initialized ";
+
     __int64 s64_Stamp = -1;
     if (mb_McuTimestamp)
     {
