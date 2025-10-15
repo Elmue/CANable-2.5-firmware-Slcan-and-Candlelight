@@ -493,13 +493,13 @@ typedef enum // 16 bit
 typedef enum // 8 bit
 {
     // received from host
-    MSG_TxFrame = 10, // the message contains a CAN frame to be sent to CAN bus
+    MSG_TxFrame = 10, // the message contains a CAN frame to be sent to CAN bus (kTxFrameElmue)
     // sent to host
-    MSG_TxEcho,       // the message contains the echo marker of a Tx CAN frame (can be disabled with ELM_DevFlagDisableTxEcho)    
-    MSG_RxFrame,      // the message contains a received CAN frame from CAN bus
-    MSG_Error,        // the message contains multiple error flags (same format as legacy protocol, see buf_store_error())
-    MSG_String,       // the message contains an ASCII string to be displayed to the user
-    MSG_Busload,      // the message contains one byte which is the bus load in percent
+    MSG_TxEcho,       // the message contains the echo marker of a Tx CAN frame (kTxEchoElmue, can be disabled with ELM_DevFlagDisableTxEcho)    
+    MSG_RxFrame,      // the message contains a received CAN frame from CAN bus (kRxFrameElmue)
+    MSG_Error,        // the message contains multiple error flags (kErrorElmue, same format as legacy protocol, see buf_store_error())
+    MSG_String,       // the message contains an ASCII string to be displayed to the user (kStringElmue)
+    MSG_Busload,      // the message contains one byte which is the bus load in percent (kBusloadElmue)
 //  MSG_xxxx          // future expansions are easily possible
 } eMessageType;
 
@@ -511,7 +511,8 @@ typedef struct
 } __packed __aligned(1) kHeader;
 
 // this struct is received on endpoint 02 (OUT) from the host
-// A DLC byte is not required: count of transferred data bytes is calculated as: tot_length - sizeof(kTxFrameElmue)
+// A DLC byte is not required: count of transferred data bytes is calculated as: header.size - sizeof(kTxFrameElmue)
+// see buf_process_can_bus()
 typedef struct 
 {
     kHeader  header;        // MSG_TxFrame
@@ -522,38 +523,44 @@ typedef struct
 } __packed __aligned(1) kTxFrameElmue;
 
 // this struct is transmitted on endpoint 81 (IN) to the host
-// A DLC byte is not required: count of transferred data bytes is calculated as: tot_length - sizeof(kRxFrameElmue)
+// A DLC byte is not required: count of transferred data bytes is calculated as: header.size - sizeof(kRxFrameElmue)
+// if timestamps are not used subtract 4 additional bytes
+// see buf_store_rx_packet()
 typedef struct 
 {
     kHeader  header;            // MSG_RxFrame
     uint8_t  flags;             // eFrameFlags    
     uint32_t can_id;            // CAN ID + eCanIdFlags
     uint8_t  data_no_stamp[0];  // data start if timestamps are off (highest possible USB transmission speed)
-    uint32_t timestamp;         // timestamp with 1 탎 precision, only sent to host if GS_DevFlagTimestamp has been set
+    uint32_t timestamp;         // timestamp with 1 탎 precision, only sent to host if GS_DevFlagTimestamp has been set, roll over detection required!
     uint8_t  data_use_stamp[0]; // data start if timestamps are transmitted
 } __packed __aligned(1) kRxFrameElmue;
 
+// see buf_store_tx_echo()
 typedef struct 
 {
     kHeader  header;      // MSG_TxEcho
     uint8_t  marker;      // the same marker that was sent in kTxFrameElmue sent back to the host when the packet was ACKnowledged on CAN bus.
-    uint32_t timestamp;   // timestamp with 1 탎 precision, only sent to host if GS_DevFlagTimestamp has been set
+    uint32_t timestamp;   // timestamp with 1 탎 precision, only sent to host if GS_DevFlagTimestamp has been set, roll over detection required!
 } __packed __aligned(1) kTxEchoElmue;
 
+// see buf_store_error()
 typedef struct 
 {
     kHeader  header;      // MSG_Error
     uint32_t err_id;      // eErrFlagsCanID
     uint8_t  err_data[8]; // several error flags and error counters
-    uint32_t timestamp;   // timestamp with 1 탎 precision, only sent to host if GS_DevFlagTimestamp has been set
+    uint32_t timestamp;   // timestamp with 1 탎 precision, only sent to host if GS_DevFlagTimestamp has been set, roll over detection required!
 } __packed __aligned(1) kErrorElmue;
 
+// see control_send_debug_mesg()
 typedef struct 
 {
     kHeader  header;       // MSG_String
     char     ascii_msg[0]; // string data
 } __packed __aligned(1) kStringElmue;
 
+// see control_report_busload()
 typedef struct 
 {
     kHeader  header;      // MSG_Busload
