@@ -16,7 +16,9 @@
 #include "usb_lowlevel.h"
 #include "usb_core.h"
 
-uint32_t tick_last = 0;
+uint32_t tick_last   = 0;
+bool     usb_suspend = false;
+bool     blink_leds  = true;
 
 int main(void)
 {
@@ -33,15 +35,26 @@ int main(void)
     utils_init();
     control_init(); // AFTER utils_init()
     
-    led_blink_power_on(); // blink blue / green 8 times (blocking function)
-
     // This loop runs approx 100 times in one millisecond
     while (true)
     {
         if (HAL_PCD_Is_Suspended()) // computer is in sleep mode (USB off)
         {
-            led_sleep();
+            led_sleep(); // only the red LED is on
+            usb_suspend = true;
             continue;
+        }
+        else if (usb_suspend)
+        {
+            usb_suspend = false;            
+            blink_leds  = true;
+        }
+
+        // blink LED's after power-on and after wake-up from sleep mode
+        if (blink_leds)
+        {
+            blink_leds = false;
+            led_blink_power_on(); // blink blue / green 8 times (blocking function)            
         }
         
         uint32_t tick_now = HAL_GetTick();        
