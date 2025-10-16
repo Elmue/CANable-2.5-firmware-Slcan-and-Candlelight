@@ -418,6 +418,7 @@ typedef struct
 
 // -----------------------------------------
 
+// 8 bit = 256 possible operations
 typedef enum // 8 bit
 {
     FIL_ClearAll = 0,    // remove all filters
@@ -439,6 +440,7 @@ typedef struct
 
 // -----------------------------------------
 
+// 16 bit = 65536 possible operations
 typedef enum // 16 bit
 {
     PINOP_Reset = 0,    // Set pin to Low  
@@ -451,6 +453,7 @@ typedef enum // 16 bit
 //  PINOP_xxxx          // future expansions are easily possible
 } ePinOperation;
 
+// This enum is limited to 16 bit because it must be transmitted in SETUP.wValue with ELM_ReqGetPinStatus (65535 possible pins).
 // In the future pins can be added here that the user can control. Some boards have jumpers where processor pins are connected.
 // But it would be completely wrong to allow the user to set *ANY* pin here like Pin 15 of GPIO port B.
 // Many pins have special functions and changing them may result in a crash.
@@ -476,7 +479,7 @@ typedef struct
 
 // -------------------
 
-// ELM_ReqGetPinStatus
+// ELM_ReqGetPinStatus (bit flags)
 // The USB protocol does not allow to receive OUT data bytes from the host and return in the same SETUP request IN data bytes to the host.
 // So we cannot receive the desired pin ID from the host and return the pin status in the data bytes.
 // Therefore this command must receive the requested Pin ID in the SETUP packet in wValue (16 bit).
