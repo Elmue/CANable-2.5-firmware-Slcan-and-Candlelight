@@ -1,0 +1,86 @@
+name: Build and Release Firmware
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    name: ${{ matrix.firmware }} Build for ${{ matrix.vendor }}
+    strategy:
+      matrix:
+        include:
+          - firmware: Candlelight
+            vendor: MksMakerbase
+            makefile: Make_G431_Candle_MksMakerbase
+            build_dir: Build_STM32G431xx_Candlelight_MksMakerbase
+          - firmware: Candlelight
+            vendor: Openlightlabs
+            makefile: Make_G431_Candle_Openlightlabs
+            build_dir: Build_STM32G431xx_Candlelight_OpenlightLabs
+          - firmware: Slcan
+            vendor: MksMakerbase
+            makefile: Make_G431_Slcan_MksMakerbase
+            build_dir: Build_STM32G431xx_Slcan_MksMakerbase
+          - firmware: Slcan
+            vendor: Openlightlabs
+            makefile: Make_G431_Slcan_Openlightlabs
+            build_dir: Build_STM32G431xx_Slcan_OpenlightLabs
+    runs-on: ubuntu-latest
+    outputs:
+      sha_short: ${{ steps.sha.outputs.sha_short }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Capture short commit SHA
+        id: sha
+        run: echo "sha_short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Install ARM GCC toolchain
+        run: |
+          sudo apt-get -qq update
+          sudo apt-get -qq install gcc-arm-none-eabi
+
+      - name: Build ${{ matrix.firmware }} firmware for ${{ matrix.vendor }}
+        run: make -s -f ${{ matrix.makefile }}
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.firmware }}-${{ matrix.vendor }}
+          path: |
+            ${{ matrix.build_dir }}/*.bin
+            ${{ matrix.build_dir }}/*.hex
+          if-no-files-found: warn
+
+  release:
+    name: Firmware Release
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Download firmware artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: release_artifacts
+          merge-multiple: true
+
+      - name: Release firmware assets
+        uses: ncipollo/release-action@v1
+        with:
+          name: CANable 2.5 Firmware Release - ${{ needs.build.outputs.sha_short }}
+          tag: 2.5-${{ needs.build.outputs.sha_short }}
+          generateReleaseNotes: true
+          artifacts: |
+            release_artifacts/**/*.bin
+            release_artifacts/**/*.hex
+
+      - name: Delete workflow artifacts
+        uses: GeekyEggo/delete-artifact@v5
+        with:
+          name: firmware-*
