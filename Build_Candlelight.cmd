@@ -3,6 +3,7 @@
 @echo Find a detailed description on https://netcult.ch/elmue/CANable Firmware Update
 
 @REM Copy all BIN files after compiling into this directory:
+@REM The firmware updater will convert them automatically into DFU files.
 @set COPY_DIRECTORY="C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmware Update\Firmware\"
 
 @echo:
