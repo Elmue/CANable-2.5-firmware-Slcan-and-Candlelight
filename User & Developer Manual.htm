@@ -681,6 +681,9 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <p>
 <div><b>NOTE:</b> The <b>blue LED</b> flashes when a CAN packet is received. It also flashes for packets that are blocked by the filters.</div>
 <div>This means that the green and blue LEDs always show the entire CAN bus traffic, even if your filter blocks everything.</div>
+<p>
+<div>The STM32 processor does not allow to modify filters after the adapter has been opened.</div>
+<div>The only exception is that a single filter can be replaced by another filter of the same type (11 / 29 bit).</div>
 
 <a name="Samplepoint"></a>
 <h3>Samplepoint</h3>
@@ -1062,7 +1065,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>+Board: MksMakerbase\t</div>
 <div>MCU: STM32G431\t</div>
 <div>DevID: 1128\t</div>
-<div>Firmware: 25.09.14\t</div>
+<div>Firmware: 2427156\t</div>
 <div>Slcan: 100\t</div>
 <div>Clock: 160\t</div>
 <div>Limits: 512,256,128,128,32,32,16,16\r</div>
@@ -1088,10 +1091,10 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
     <div>0x468 = Category 2 devices (STM32G431, STM32G441)</div>
     <div>0x469 = Category 3 devices (STM32G471, STM32G473, STM32G474, STM32G483, STM32G484)</div>
     <div>0x479 = Category 4 devices (STM32G491, STM32G4A1)</div></td></tr>
-<tr><td>Firmware</td><td>25.09.14</td><td>
+<tr><td>Firmware</td><td>2427156</td><td>
     <div>The legacy firmware has returned completely meaningless version numbers like "ba6b1dd".</div>
     <div>Here you get a <b>version</b> number that indicates <b>the date</b> when the firmware was created.</div>
-    <div>The version "25.09.14" means 14th september of 2025.</div></td></tr>
+    <div>Convert to hex and you get the BCD version 0x250914, which means 14th september of 2025.</div></td></tr>
 <tr><td>Slcan</td><td>100</td><td>
     <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
     <div>The first version created by ElmüSoft is version 100 which contains all the features described here.</div>
@@ -1364,6 +1367,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <h3>Source Code</h3>
 <ul>
 <li><div><b>Version 25.09.14</b>: Initial release</div>
+<li><div><b>Version 25.10.23</b>: Allows to modify one filter after the adapter is already open.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
