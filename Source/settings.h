@@ -166,11 +166,11 @@ typedef enum // sent as 8 bit
 // ============================================================================================
 
 // Define the firmware version in BCD format.
-// Version 25.09.14 means 14th september 2025
+// Version 0x250914 is displayed as "25.09.14" and means 14th september 2025
 // The year and month are stored in the device descriptor.
 // The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
 // Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
-#define FIRMWARE_VERSION_BCD   0x250914 
+#define FIRMWARE_VERSION_BCD   0x251023 
 
 // ATTENTION: 
 // This version defines which Slcan commands are available.

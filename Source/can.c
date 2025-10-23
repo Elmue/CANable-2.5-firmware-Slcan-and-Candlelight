@@ -60,8 +60,9 @@ uint32_t busload_counter     = 0;
 uint32_t tdc_offset          = 0;
 
 // Private methods
-void     can_reset();
-uint16_t can_calc_bit_count_in_frame(FDCAN_RxHeaderTypeDef *header);
+void      can_reset();
+bool      can_apply_filters();
+uint16_t  can_calc_bit_count_in_frame(FDCAN_RxHeaderTypeDef *header);
 
 // Initialize CAN peripheral settings, but don't actually start the peripheral
 void can_init()
@@ -189,6 +190,7 @@ eFeedback can_open(uint32_t mode)
 
     // ------------------ init FDCAN ----------------------
 
+    // sets can_handle.State == HAL_FDCAN_STATE_READY
     if (HAL_FDCAN_Init(&can_handle) != HAL_OK)
         return FBK_ErrorFromHAL; // error detail in can_handle.ErrorCode
 
@@ -235,20 +237,19 @@ eFeedback can_open(uint32_t mode)
     }
 
     // -------------------- filters --------------------------
-
-    // if no user filters are defined --> accept all packets in FIFO 0 where they are sent over USB to the host
-    uint32_t non_matching = FDCAN_ACCEPT_IN_RX_FIFO0;
-
+    
+    // Store all user filters in can_filters into the processor's memory
+    if (!can_apply_filters())
+        return FBK_ErrorFromHAL;
+    
     // the user can define up to 8 filters
-    int tot_filters = std_filter_count + ext_filter_count;
-    for (int i=0; i<tot_filters; i++)
-    {
-        if (HAL_FDCAN_ConfigFilter(&can_handle, &can_filters[i]) != HAL_OK) return FBK_ErrorFromHAL; // error detail in can_handle.ErrorCode
+    bool has_filters = (std_filter_count + ext_filter_count) > 0;
+    
+    // If no user filters are defined --> accept all packets in FIFO 0 where they are sent over USB to the host.
+    // Otherwise all packets that do not pass the user filters go to FIFO 1 where they only flash the blue LED.
+    uint32_t non_matching = has_filters ? FDCAN_ACCEPT_IN_RX_FIFO1 : FDCAN_ACCEPT_IN_RX_FIFO0;
 
-        // all packets that do not pass the user filters go to FIFO 1 where they only flash the blue LED
-        non_matching = FDCAN_ACCEPT_IN_RX_FIFO1;
-    }
-    HAL_FDCAN_ConfigGlobalFilter(&can_handle, non_matching, non_matching, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
+    HAL_FDCAN_ConfigGlobalFilter(&can_handle, non_matching, non_matching, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);    
 
     // --------------------- timestamp -------------------------
 
@@ -273,6 +274,7 @@ eFeedback can_open(uint32_t mode)
 
     // ----------------------- start ---------------------------
 
+    // sets can_handle.State == HAL_FDCAN_STATE_BUSY
     if (HAL_FDCAN_Start(&can_handle) != HAL_OK) return FBK_ErrorFromHAL; // error detail in can_handle.ErrorCode
 
     can_is_open = true;
@@ -779,11 +781,14 @@ void can_print_info()
 // Rx FIFO 0 receives all packets that pass. They are sent to the host application over USB.
 // Rx FIFO 1 receives all packets that are rejected, they only flash the blue LED.
 // Each FIFO can store 3 Rx packets before it is full.
+// ---------------------------------------------------------
+// While all industry CAN bus adapters allow to set filters after opening the adapter, the STM32 processor is very restricted.
+// The values can_handle.Init.StdFiltersNbr and ExtFiltersNbr cannot be modified anymore after opening the adapter.
+// But HAL_FDCAN_ConfigFilter() can be called after opening the adapter.
+// So the only possible filter modification after opening the adapter is to modify ONE existing filter.
+// The filter type must be the same (11 bit or 29 bit).
 eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask)
 {
-    if (can_is_open)
-        return FBK_AdapterMustBeClosed; // cannot set filter while on bus
-
     int tot_filters = std_filter_count + ext_filter_count;
     if (tot_filters >= MAX_FILTERS)
         return FBK_InvalidParameter;
@@ -791,6 +796,22 @@ eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask)
     uint32_t maximum = extended ? 0x1FFFFFFF : 0x7FF;
     if (filter > maximum || mask > maximum)
         return FBK_InvalidParameter;
+    
+    if (can_is_open)
+    {
+        // only one existing filter can be modified if the adapter is already open
+        if (tot_filters != 1)
+            return FBK_AdapterMustBeClosed;
+
+        // the filter to be modified must be from the same type
+        if (extended != (ext_filter_count == 1))
+            return FBK_AdapterMustBeClosed;
+        
+        // modify the one and only filter at index 0
+        ext_filter_count = 0; 
+        std_filter_count = 0;
+        tot_filters      = 0;
+    }
 
     can_filters[tot_filters].IdType       = extended ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID;
     can_filters[tot_filters].FilterIndex  = extended ? ext_filter_count  : std_filter_count;
@@ -801,7 +822,23 @@ eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask)
 
     if (extended) ext_filter_count ++;
     else          std_filter_count ++;
+    
+    if (can_is_open && !can_apply_filters())
+        return FBK_ErrorFromHAL;
+
     return FBK_Success;
+}
+
+// Store all user filters in can_filters into the processor's memory
+bool can_apply_filters()
+{
+    // the user can define up to 8 filters
+    int tot_filters = std_filter_count + ext_filter_count;
+    for (int i=0; i<tot_filters; i++)
+    {
+        if (HAL_FDCAN_ConfigFilter(&can_handle, &can_filters[i]) != HAL_OK) return false; // error detail in can_handle.ErrorCode
+    }
+    return true;
 }
 
 // clear all filters
