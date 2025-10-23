@@ -194,13 +194,13 @@ eFeedback control_parse_str(char buf[], int len)
                 sprintf(tempbuf, "+Board: "      TARGET_BOARD            // MksMakerbase           (from MakeFile)
                                  "\tMCU: %s"                             // STM32G431              (from MakeFile)
                                  "\tDevID: %lu"                          // 0x468                  (from processor)
-                                 "\tFirmware: %2X.%02X.%02X"             // 25.08.14               (from settings.h)
+                                 "\tFirmware: %u"                        // 0x250814               (from settings.h)
                                  "\tSlcan: "     STR(SLCAN_VERSION)      // 100                    (from settings.h)
                                  "\tClock: %lu"                          // 160                    (from system variable)
                                  "\tLimits: %lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\r",
                                  utils_get_MCU_name(),
                                  HAL_GetDEVID(),
-                                 HIBYTE2(FIRMWARE_VERSION_BCD), HIBYTE(FIRMWARE_VERSION_BCD), LOBYTE(FIRMWARE_VERSION_BCD),
+                                 FIRMWARE_VERSION_BCD,
                                  system_get_can_clock() / 1000000,
                                  lim->nom_brp_max, lim->nom_seg1_max, lim->nom_seg2_max, lim->nom_sjw_max,
                                  lim->fd_brp_max,  lim->fd_seg1_max,  lim->fd_seg2_max,  lim->fd_sjw_max);
