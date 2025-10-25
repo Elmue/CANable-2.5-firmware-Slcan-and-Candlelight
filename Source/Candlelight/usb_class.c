@@ -239,7 +239,7 @@ void USBD_ConfigureEndpoints(USBD_HandleTypeDef *pdev)
     HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData, 0x00, PCD_SNG_BUF, 0x18);       // EP 0 OUT (max packet size = 64 byte)
     HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData, 0x80, PCD_SNG_BUF, 0x58);       // EP 0 IN  (max packet size = 64 byte)
     HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData, 0x81, PCD_SNG_BUF, 0xd8);       // EP 1 IN  (max packet size = 64 byte)
-    HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData, 0x02, PCD_DBL_BUF, 0x015801d8); // EP 2 OUT (max packet size = 64 byte, double buffer addr 158 + 1D8)
+    HAL_PCDEx_PMAConfig((PCD_HandleTypeDef*)pdev->pData, 0x02, PCD_SNG_BUF, 0x0158);     // EP 2 OUT (max packet size = 64 byte)
 }
 
 // =========================================================================================================
