@@ -478,7 +478,7 @@ void USBD_SendFrameToHost(void *frame)
         // The legacy protocol is not intelligently designed. The timestamp is behind a fix 64 byte data array.
         // For CAN FD it sends ALWAYS 76 or 80 bytes over USB no matter how many bytes the frame really has.
         len = sizeof(kHostFrameLegacy); // 80 bytes
-        if (!can_using_FD())                   len -= 56; 
+        if ((((kHostFrameLegacy*)frame)->flags & FRM_FDF) == 0) len -= 56;
         if ((USER_Flags & USR_Timestamp) == 0) len -= 4;
     }
  
