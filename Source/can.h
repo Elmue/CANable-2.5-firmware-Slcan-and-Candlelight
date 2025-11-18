@@ -10,6 +10,13 @@
 #include "settings.h"
 #include "system.h"
 
+// FDCAN_TxHeaderTypeDef.DataLength needs the DLC value to be shifted up by 16 bits.
+// It is stupid that ST Microelectronics did not implement this shift operation into the HAL.
+// Will other ST processor models also need the DLC to be shifted 16 bits up ??
+#define DLC_SHIFT        16
+#define DLC_TO_HAL(DLC) ((DLC & 0xF) << DLC_SHIFT)
+#define HAL_TO_DLC(LEN) ((LEN >> DLC_SHIFT) & 0xF)
+
 // Classic CAN / CANFD nominal bitrates
 // always samplepoint 87.5%
 typedef enum 
@@ -72,7 +79,7 @@ eFeedback can_open(uint32_t mode);
 void      can_close();
 void      can_process(uint32_t tick_now);
 void      can_timer_100ms();
-bool      can_send_packet(FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
+void      can_send_packet(FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
 eFeedback can_set_baudrate     (can_nom_bitrate bitrate);
 eFeedback can_set_data_baudrate(can_data_bitrate bitrate);
 eFeedback can_set_nom_bit_timing (uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw);
@@ -90,6 +97,7 @@ eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask);
 eFeedback can_clear_filters();
 uint32_t  can_get_cycle_ave_time_ns();
 uint32_t  can_get_cycle_max_time_ns();
+void      can_recover_bus_off();
 
 FDCAN_HandleTypeDef *can_get_handle();
 

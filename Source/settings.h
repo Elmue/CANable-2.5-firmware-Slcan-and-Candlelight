@@ -63,7 +63,7 @@ typedef enum // sent as 4 bit
 typedef enum // sent as 8 bit 
 {
     APP_CanRxFail       = 0x01, // the HAL reports an error receiving a CAN packet.
-    APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or HAL error
+    APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or invalid Tx packet or HAL error
     APP_CanTxOverflow   = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
     APP_UsbInOverflow   = 0x08, // a USB IN packet could not be sent because CAN traffic is faster than USB transfer.
     APP_CanTxTimeout    = 0x10, // A packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
@@ -170,7 +170,7 @@ typedef enum // sent as 8 bit
 // The year and month are stored in the device descriptor.
 // The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
 // Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
-#define FIRMWARE_VERSION_BCD   0x251023 
+#define FIRMWARE_VERSION_BCD   0x251116 
 
 // ATTENTION: 
 // This version defines which Slcan commands are available.

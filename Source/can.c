@@ -300,18 +300,20 @@ void can_close()
 }
 
 // Called from Buffer. Stores a packet in the Tx FIFO
-// Check HAL_FDCAN_GetTxFifoFreeLevel() and can_is_tx_allowed() before calling this function.
-bool can_send_packet(FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
+// Check HAL_FDCAN_GetTxFifoFreeLevel() and can_is_tx_allowed() before calling this function!
+void can_send_packet(FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
 {
     // Sending a message with BRS flag, but nominal and data baudrate are the same --> reset flag and send without BRS.
-    if (tx_header->BitRateSwitch == FDCAN_BRS_ON && !can_using_BRS())
-        tx_header->BitRateSwitch =  FDCAN_BRS_OFF;
+    if (!can_using_BRS())
+        tx_header->BitRateSwitch = FDCAN_BRS_OFF;
 
     HAL_StatusTypeDef status = HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, tx_header, tx_data);
     if (status != HAL_OK) // may be busy (state = HAL_FDCAN_STATE_BUSY)
     {
-        error_assert(APP_CanTxFail, false);
-        return false;
+        // On error the HAL sets can_handle.ErrorCode to HAL_FDCAN_ERROR_FIFO_FULL or HAL_FDCAN_ERROR_NOT_STARTED        
+        // Both errors can never happen, because this function is only called when CAN has been initialized and the FIFO is not full.
+        error_assert(APP_CanTxFail, true);
+        return;
     }
     
     if (can_handle.Init.AutoRetransmission == ENABLE)
@@ -323,7 +325,6 @@ bool can_send_packet(FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
     // Do not flash the Tx LED here! This was wrong in the legacy Candlelight firmware.
     // The packet has not been sent yet. It is still in the Tx FIFO and will stay there until an ACK is received.
     // When an ACK is received HAL_FDCAN_GetTxEvent() will return the Tx Event and the Tx LED will be flashed.
-    return true;
 }
 
 // Process data from CAN tx/rx circular buffers
@@ -418,42 +419,7 @@ void can_process(uint32_t tick_now)
     // ------------------------- Refresh Bus Status ---------------------------------
 
     HAL_FDCAN_GetProtocolStatus(&can_handle, &cur_status);
-
-    // --------------------------- Recover Bus Off ----------------------------------
-
-    // ATTENTION:
-    // The state BusOff (after 248 Tx errors) is a fatal situation where the CAN module is completely blocked.
-    // No further transmit operations are possible.
-    // And the FDCAN module will never recover alone from this situation.
-    // If the adapter is once in Bus Off state it will hang there eternally.
-    // The recovery process may take up to 200 ms for low baudrates (10 kBaud).
-    // The adapter easily goes into bus off state if you try to communicate between 2 adapters with a different baudrate.
-    if (cur_status.BusOff)
-    {
-        // Important: this code must execute BEFORE setting bus_off = true below!
-        // Otherwise the message "Start recovery from Bus Off" is printed before the error state "Bus Off"
-        if (!recover_bus_off)
-        {
-            recover_bus_off = true;
-            control_send_debug_mesg(">> Start recovery from Bus Off");
-
-            HAL_FDCAN_AbortTxRequest(&can_handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
-            HAL_FDCAN_Stop (&can_handle);
-            HAL_FDCAN_Start(&can_handle);
-        }
-    }
-    else
-    {
-        if (recover_bus_off)
-        {
-            recover_bus_off = false;
-            control_send_debug_mesg("<< Successfully recovered from Bus Off");
-
-            // Clear errors that are still stored in the error handler, but that are outdated now.
-            error_clear();
-        }
-    }
-    
+   
     // ----------------------------- Transmit Timeout -----------------------------
     
     // If a message hangs longer than a few milliseconds in the Tx FIFO this means that it was not acknowledged.
@@ -520,6 +486,41 @@ void can_process(uint32_t tick_now)
         // chip_delay = 21 mtq --> 21 * 1000 / 160 = 131 ns
         sprintf(dbg_msg_buf, "Measured transceiver chip delay: %lu ns", chip_delay * 1000 / clock_MHz);
         control_send_debug_mesg(dbg_msg_buf);
+    }
+}
+
+// ATTENTION:
+// The state BusOff (after 248 Tx errors) is a fatal situation where the CAN module is completely blocked.
+// No further transmit operations are possible.
+// And the FDCAN module will never recover alone from this situation.
+// If the adapter is once in Bus Off state it will hang there eternally.
+// The recovery process may take up to 200 ms for low baudrates (10 kBaud).
+// The adapter easily goes into bus off state if you try to communicate between 2 adapters with a different baudrate.
+// This function must be called after reporting BusOff to the host.
+void can_recover_bus_off()
+{
+    if (cur_status.BusOff)
+    {
+        if (!recover_bus_off)
+        {
+            recover_bus_off = true;
+            control_send_debug_mesg(">> Start recovery from Bus Off");
+
+            HAL_FDCAN_AbortTxRequest(&can_handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
+            HAL_FDCAN_Stop (&can_handle);
+            HAL_FDCAN_Start(&can_handle);
+        }
+    }
+    else
+    {
+        if (recover_bus_off)
+        {
+            recover_bus_off = false;
+            control_send_debug_mesg("<< Successfully recovered from Bus Off");
+
+            // Clear errors that are still stored in the error handler, but that are outdated now.
+            error_clear();
+        }
     }
 }
 
@@ -638,11 +639,14 @@ eFeedback can_set_data_baudrate(can_data_bitrate bitrate)
 
     switch (bitrate)
     {
-        case CAN_DATA_BITRATE_500K:
-            can_bitrate_data.Brp  = 40; // 160 MHz / 40 / (1 + 5 + 2) = 500 kBaud
+        // maximum for data BRP is 32 !
+        case CAN_DATA_BITRATE_500K: 
+            can_bitrate_data.Brp  = 20; // 160 MHz / 20 / (1 + 11 + 4) = 500 kBaud
+            can_bitrate_data.Seg1 = 11; // (1 + 11)     / (1 + 11 + 4) = 75%
+            can_bitrate_data.Seg2 = 4;
             break;
         case CAN_DATA_BITRATE_1M:
-            can_bitrate_data.Brp  = 20;
+            can_bitrate_data.Brp  = 20; // 160 MHz / 20 / (1 + 5 + 2) = 1 MBaud
             break;
         case CAN_DATA_BITRATE_2M:
             can_bitrate_data.Brp  = 10;
@@ -953,7 +957,7 @@ uint16_t can_calc_bit_count_in_frame(FDCAN_RxHeaderTypeDef* header)
     if (busload_interval == 0)
         return 0;
 
-    uint32_t byte_count = utils_dlc_to_byte_count(header->DataLength >> 16);
+    uint32_t byte_count = utils_dlc_to_byte_count(HAL_TO_DLC(header->DataLength));
 
     uint16_t time_msg, time_data;
     if (header->RxFrameType == FDCAN_REMOTE_FRAME && header->IdType == FDCAN_STANDARD_ID)
