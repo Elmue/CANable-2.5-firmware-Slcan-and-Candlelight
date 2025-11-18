@@ -428,8 +428,8 @@ typedef struct  // Legacy (size = 80 byte)
     uint8_t  reserved;   // unused
     union // size = 68 byte
     {
-        kPacketClassic pack_classic;
-        kPacketFD      pack_FD;
+        kPacketClassic pack_classic; // used if flags does not contain FRM_FDF
+        kPacketFD      pack_FD;      // used if flags contains FRM_FDF
         uint8_t        raw_data[sizeof(kPacketFD)];
     };
 } __packed __aligned(4) kHostFrameLegacy;
