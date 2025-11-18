@@ -401,7 +401,7 @@ eFeedback control_parse_str(char buf[], int len)
     // It is allowed that the data baudrate is the same as the nominal baudrate to send messages up to 64 bytes without BRS.
     if (tx_header->FDFormat == FDCAN_FD_CAN && !can_using_FD())
         return FBK_BaudrateNotSet;
-
+    
     // Start parsing at second byte (skip command byte)
     int parse_loc = 1;
 
@@ -428,24 +428,21 @@ eFeedback control_parse_str(char buf[], int len)
     if (tx_header->FDFormat == FDCAN_CLASSIC_CAN && dlc_code > 8)
         return FBK_InvalidParameter;
     
-    // remote frames have no data bytes
-    if (tx_header->TxFrameType == FDCAN_REMOTE_FRAME && dlc_code > 0)
-        return FBK_InvalidParameter;
+    tx_header->DataLength = DLC_TO_HAL(dlc_code);
 
-    // Shift bits up for direct storage in FIFO register
-    // It is stupid that ST Microelectronics did not define a processor independent macro for this shift operation.
-    // Will other processors also need this to be shifted 16 bits up ??
-    tx_header->DataLength = dlc_code << 16;
-
-    int8_t byte_count = utils_dlc_to_byte_count(dlc_code);
-    // Parse data bytes
-    for (uint8_t i = 0; i < byte_count && parse_loc < len; i++)
+    // remote frames may have DLC > 0 but never send data bytes
+    if (tx_header->TxFrameType != FDCAN_REMOTE_FRAME)
     {
-        uint32_t byte_val;
-        if (!utils_parse_hex_value(buf, &parse_loc, 2, &byte_val))
-            return FBK_InvalidParameter;
+        int8_t byte_count = utils_dlc_to_byte_count(dlc_code);
+        // Parse data bytes
+        for (uint8_t i = 0; i < byte_count && parse_loc < len; i++)
+        {
+            uint32_t byte_val;
+            if (!utils_parse_hex_value(buf, &parse_loc, 2, &byte_val))
+                return FBK_InvalidParameter;
 
-        tx_data[i] = byte_val;
+            tx_data[i] = byte_val;
+        }
     }
 
     // The host must generate a unique one-byte marker for each sent packet using a counter that increments with each Tx message.
@@ -456,6 +453,10 @@ eFeedback control_parse_str(char buf[], int len)
         if (!utils_parse_hex_value(buf, &parse_loc, 2, &tx_header->MessageMarker))
             return FBK_InvalidParameter;
     }
+
+    // If there are any remaining bytes at the end, this is a syntax error.
+    if (parse_loc != len)
+        return FBK_InvalidParameter;
 
     // Store the message in the buffer
     return buf_comit_can_dest();
@@ -519,6 +520,9 @@ void control_process(uint32_t tick_now)
                                             (uint8_t)state->rx_err_count);
     buf_enqueue_cdc(tempbuf, 10);
     error_clear();
+    
+    // Revover BusOff AFTER printing error BusOff to the Trace output!
+    can_recover_bus_off();
 }
 
 // send the busload in percet to the host in the user defined interval

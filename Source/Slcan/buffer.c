@@ -109,12 +109,13 @@ void buf_process(uint32_t tick_now)
     while ((buf_can_tx.send != buf_can_tx.head || buf_can_tx.full) && (HAL_FDCAN_GetTxFifoFreeLevel(can_get_handle()) > 0))
     {
         // Transmit can frame
-        if (can_send_packet(&buf_can_tx.header[buf_can_tx.send], buf_can_tx.data[buf_can_tx.send]))
-        {
-            buf_can_tx.send = (buf_can_tx.send + 1) % BUF_CAN_TXQUEUE_LEN;
-            buf_can_tx.tail = (buf_can_tx.tail + 1) % BUF_CAN_TXQUEUE_LEN;
-            buf_can_tx.full = 0;
-        }
+        can_send_packet(&buf_can_tx.header[buf_can_tx.send], buf_can_tx.data[buf_can_tx.send]);
+        
+        // At this point the Tx packet is in the CAN Tx FIFO, but it has not yet been transmitted to CAN bus.
+
+        buf_can_tx.send = (buf_can_tx.send + 1) % BUF_CAN_TXQUEUE_LEN;
+        buf_can_tx.tail = (buf_can_tx.tail + 1) % BUF_CAN_TXQUEUE_LEN;
+        buf_can_tx.full = 0;
     }
     
     // report buffer full always --> green + blue LED are permanently ON
@@ -235,16 +236,13 @@ void buf_store_rx_packet(FDCAN_RxHeaderTypeDef *rx_header, uint8_t *frame_data)
     uint8_t pos = 1 + id_len;
     
     // Add DLC
-    // Shift bits down from FIFO register
-    // It is stupid that ST Microelectronics did not define a processor independent macro for this shift operation.
-    // Will other processors also need this to be shifted 16 bits down ??
-    uint32_t dlc_code = rx_header->DataLength >> 16;    
-    buf[pos++]        = utils_nibble_to_ascii  (dlc_code);
-    int8_t byte_count = utils_dlc_to_byte_count(dlc_code); // returns -1 if invalid
+    uint32_t dlc_code = HAL_TO_DLC(rx_header->DataLength);
+    buf[pos++]        = utils_nibble_to_ascii(dlc_code);
 
     // Add data bytes (not for remote frames)
     if (rx_header->RxFrameType != FDCAN_REMOTE_FRAME)
     {
+        int8_t byte_count = utils_dlc_to_byte_count(dlc_code); // returns -1 if invalid
         for (uint8_t j = 0; j < byte_count; j++)
         {
             buf[pos++] = utils_nibble_to_ascii(frame_data[j] >> 4);
