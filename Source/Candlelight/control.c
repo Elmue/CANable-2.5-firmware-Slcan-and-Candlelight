@@ -399,6 +399,9 @@ void control_process(uint32_t tick_now)
 {
     if (error_is_report_due(tick_now))
         buf_store_error();
+    
+    // Revover BusOff AFTER printing error BusOff to the Trace output!
+    can_recover_bus_off();
 }
 
 void control_report_busload(uint8_t busload_percent)
