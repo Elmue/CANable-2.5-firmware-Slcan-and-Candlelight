@@ -74,7 +74,7 @@ public:
 private:
     DWORD    ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, CString* ps_String);
     DWORD    CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, void* p_Data, DWORD u32_DataSize);
-    CString  FormatFrame(DWORD u32_ID, BYTE u8_Flags, CString s_Data);
+    CString  FormatFrame(DWORD u32_ID, BYTE u8_Flags, BYTE* u8_Data, int s32_DataLen);
     DWORD    Reset();
 
     HANDLE                   mh_Device;

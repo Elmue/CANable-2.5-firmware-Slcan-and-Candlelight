@@ -457,7 +457,9 @@ DWORD Candlelight::Reset()
 
 // ======================================= Send ========================================
 
-// CAN FD packets (b_FDF) can only be sent if a data baudrate has been set
+// CAN FD packets (b_FDF) can only be sent if a data baudrate has been set before.
+// Remote frames (b_RTR = true): s32_DataLen = 0 --> DLC = 0 will be sent, or s32_DataLen = 1 and u8_Data[0] contains the DLC to send.
+// ps_Packet returns the formatted packet as string
 DWORD Candlelight::SendPacket(DWORD u32_ID, bool b_29bit, bool b_FDF, bool b_BRS, bool b_RTR, BYTE u8_Data[], int s32_DataLen,
                               CString* ps_Packet, __int64* ps64_WinTimestamp)
 {
@@ -470,6 +472,11 @@ DWORD Candlelight::SendPacket(DWORD u32_ID, bool b_29bit, bool b_FDF, bool b_BRS
     if (s32_DataLen > s32_MaxData)
         return ERROR_INVALID_PARAMETER;
 
+    // Remote frames do not exist in CAN FD
+    if (mb_BaudFDSet && b_RTR)
+        return ERROR_INVALID_PARAMETER;
+
+    // FDF and BRS flags require CAN FD
     if (!mb_BaudFDSet && (b_FDF || b_BRS))
         return ERROR_INVALID_PARAMETER;
 
@@ -484,8 +491,12 @@ DWORD Candlelight::SendPacket(DWORD u32_ID, bool b_29bit, bool b_FDF, bool b_BRS
     if (u32_ID > u32_MaxID)
         return ERROR_INVALID_PARAMETER;
 
-    if (b_29bit) u32_ID |= CAN_ID_29Bit;  // 29 bit CAN ID
-    if (b_RTR)   u32_ID |= CAN_ID_RTR;    // Remote Transmission Request
+    if (b_29bit) u32_ID |= CAN_ID_29Bit; // 29 bit CAN ID
+    if (b_RTR)
+    {
+        u32_ID |= CAN_ID_RTR;              // Remote Transmission Request
+        s32_DataLen = min(s32_DataLen, 1); // only 0 or 1 bytes are allowed
+    }
 
     int s32_PadLen = s32_DataLen;
          if (s32_DataLen > 48) s32_PadLen = 64;
@@ -523,8 +534,7 @@ DWORD Candlelight::SendPacket(DWORD u32_ID, bool b_29bit, bool b_FDF, bool b_BRS
 
     mu8_EchoMarker ++;
 
-    CString s_Data = FormatHexBytes(u8_TxMemory + sizeof(kTxFrameElmue), s32_PadLen);
-    *ps_Packet = FormatFrame(pk_TxFrame->can_id, pk_TxFrame->flags, s_Data);
+    *ps_Packet = FormatFrame(pk_TxFrame->can_id, pk_TxFrame->flags, u8_TxMemory + sizeof(kTxFrameElmue), s32_PadLen);
     return ERROR_SUCCESS;
 }
 
@@ -535,13 +545,13 @@ DWORD Candlelight::SendPacket(DWORD u32_ID, bool b_29bit, bool b_FDF, bool b_BRS
 // WinUSB is different from other Windows API's.
 // An overlapped read operation with WinUsb_ReadPipe() is totally different from the usual overlapped read operation on Windows.
 // This extremely important detail is not documented by Microsoft, nor does Microsoft give us any useful sample code.
-// Therefore you find this implemented totally wrong in Cangaroo and in Candle.NET.
+// Therefore you find this implemented totally wrong in Cangaroo and in Candle.NET on Github.
 // You cannot use the typical scheme ReadPipe() --> ERROR_IO_PENDING --> WaitForSingleObject(Timeout) --> GetOverlappedResult().
 // If you do this with a short timeout (50 ms) you will receive NOTHING !!!
 // If you do it with a longer timeout (500 ms) it will work mostly, but some USB IN packets will be lost.
 // To not lose USB packets the timeout for WaitForSingleObject() *MUST* be INIFINTE.
 // The reason is that WinUSB starts polling the USB IN endpoint when you call WinUsb_ReadPipe().
-// But when this operation is aborted by an elapsed timeout, any USB IN packet that were about to arrive will be dropped.
+// But when this operation is aborted by an elapsed timeout, any USB IN packet that was about to arrive will be dropped.
 // WinUSB does NOT have an internal buffer to store packets that arrive between calls to WinUsb_ReadPipe().
 // So the unusual is here that we use an overlapped read operation with an INFINITE timeout.
 // This requires to run in a thread and the overlapped event is required to abort the thread.
@@ -944,8 +954,7 @@ CString Candlelight::FormatRxPacket(kRxFrameElmue* pk_RxFrame)
     if (!mb_McuTimestamp) s32_PackSize -= 4;
 
     BYTE*  u8_DataStart = (BYTE*)pk_RxFrame + s32_PackSize;
-    CString s_Data = FormatHexBytes(u8_DataStart, pk_RxFrame->header.size - s32_PackSize);
-    return FormatFrame(pk_RxFrame->can_id, pk_RxFrame->flags, s_Data);
+    return FormatFrame(pk_RxFrame->can_id, pk_RxFrame->flags, u8_DataStart, pk_RxFrame->header.size - s32_PackSize);
 }
 
 CString Candlelight::FormatTxEcho(kTxEchoElmue* pk_Echo)
@@ -953,21 +962,33 @@ CString Candlelight::FormatTxEcho(kTxEchoElmue* pk_Echo)
     BYTE* u8_TxMemory = mk_EchoFrames[pk_Echo->marker].u8_TxMemory;
     kTxFrameElmue* pk_TxFrame = (kTxFrameElmue*)u8_TxMemory;
 
-    CString s_Data = FormatHexBytes(u8_TxMemory + sizeof(kTxFrameElmue), pk_TxFrame->header.size - sizeof(kTxFrameElmue));
-    return FormatFrame(pk_TxFrame->can_id, pk_TxFrame->flags, s_Data);
+    return FormatFrame(pk_TxFrame->can_id, pk_TxFrame->flags, 
+                       u8_TxMemory + sizeof(kTxFrameElmue), pk_TxFrame->header.size - sizeof(kTxFrameElmue));
 }
 
-CString Candlelight::FormatFrame(DWORD u32_ID, BYTE u8_Flags, CString s_Data)
+CString Candlelight::FormatFrame(DWORD u32_ID, BYTE u8_Flags, BYTE* u8_Data, int s32_DataLen)
 {
-    const WCHAR* s_Format = (u32_ID & CAN_ID_29Bit) ? L"%08X: %s" : L"%03X: %s";
-
     CString s_Frame;
-    s_Frame.Format(s_Format, u32_ID & CAN_MASK_29, s_Data);
+    if (u32_ID & CAN_ID_29Bit) s_Frame.Format(L"%08X: ", u32_ID & CAN_MASK_29);
+    else                       s_Frame.Format(L"%03X: ", u32_ID & CAN_MASK_11);
 
-    if ((u32_ID & CAN_ID_RTR) > 0) s_Frame += L" RTR"; // Remote Transmission Request
-    if ((u8_Flags  & FRM_FDF) > 0) s_Frame += L" FDF"; // Flexible Datarate Frame
-    if ((u8_Flags  & FRM_BRS) > 0) s_Frame += L" BRS"; // Bitrate Switch
-    if ((u8_Flags  & FRM_ESI) > 0) s_Frame += L" ESI"; // Error Indicator
+    // For remote frames the DLC (0...8) is transmitted in the first data byte.
+    // The display of "7E8: RTR [5]" means that a remote request with DLC = 5 has been sent/received
+    if ((u32_ID & CAN_ID_RTR) > 0)
+    {
+        s_Frame += L"RTR ["; // Remote Transmission Request
+        if (s32_DataLen > 0) s_Frame += (WCHAR)(u8_Data[0] + '0');
+        else                 s_Frame += "0";
+        s_Frame += L"]";
+    }
+    else
+    {
+        s_Frame += FormatHexBytes(u8_Data, s32_DataLen);
+
+        if ((u8_Flags & FRM_FDF) > 0) s_Frame += L" FDF"; // Flexible Datarate Frame
+        if ((u8_Flags & FRM_BRS) > 0) s_Frame += L" BRS"; // Bitrate Switch
+        if ((u8_Flags & FRM_ESI) > 0) s_Frame += L" ESI"; // Error Indicator
+    }
     return s_Frame;
 }
 

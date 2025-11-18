@@ -133,7 +133,7 @@ typedef enum // sent as 4 bit
 typedef enum // sent as 8 bit 
 {
     APP_CanRxFail       = 0x01, // the HAL reports an error receiving a CAN packet.
-    APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or HAL error
+    APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or invalid Tx packet or HAL error
     APP_CanTxOverflow   = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
     APP_UsbInOverflow   = 0x08, // a USB IN packet could not be sent because CAN traffic is faster than USB transfer.
     APP_CanTxTimeout    = 0x10, // A packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
@@ -378,7 +378,7 @@ typedef enum // 3 bit
 {
     CAN_ID_Error = 0x20000000, // the frame is an error frame which does not contain CAN bus data.
     CAN_ID_RTR   = 0x40000000, // the frame is a Remote Transmission Request
-    CAN_ID_29Bit = 0x80000000, // the frame has an extended CAN ID with a 29 bit
+    CAN_ID_29Bit = 0x80000000, // the frame has an extended CAN ID with 29 bit
     CAN_MASK_11  = 0x000007FF, // Mask for standard 11 bit ID
     CAN_MASK_29  = 0x1FFFFFFF, // Mask for extended 29 bit ID
 } eCanIdFlags;
@@ -573,7 +573,8 @@ typedef struct
 } __packed __aligned(1) kHeader;
 
 // this struct is received on endpoint 02 (OUT) from the host
-// A DLC byte is not required: count of transferred data bytes is calculated as: header.size - sizeof(kTxFrameElmue)
+// A DLC byte is not required. The count of transferred data bytes is calculated as: header.size - sizeof(kTxFrameElmue)
+// For remote frames the host can write the DLC value into the first data byte, otherwise DLC = 0 is sent.
 // see buf_process_can_bus()
 typedef struct 
 {
@@ -584,7 +585,8 @@ typedef struct
 } __packed __aligned(1) kTxFrameElmue;
 
 // this struct is transmitted on endpoint 81 (IN) to the host
-// A DLC byte is not required: count of transferred data bytes is calculated as: header.size - sizeof(kRxFrameElmue)
+// A DLC byte is not required. The count of transferred data bytes is calculated as: header.size - sizeof(kRxFrameElmue)
+// For remote frames the DLC from the Rx packet is transmitted in the first data byte to the host.
 // if timestamps are not used subtract 4 additional bytes
 // see buf_store_rx_packet()
 typedef struct 
