@@ -1131,7 +1131,9 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <tr><td>Receive</td><td>7E0: 11 22 33 44 55 66 77 88</td><td>"<span class="Magenta">b</span><span class="Green">7E0</span><span class="Orange">8</span><span class="Blue">1122334455667788</span><span class="Red">S</span>\r"</td><td>FDF, BRS, <span class="Red">ESI</span></td></tr>
 <tr><td>Transmit</td><td>7E0: 11 22 33 44 55 66</td><td>"<span class="Magenta">t</span><span class="Green">7E0</span><span class="Orange">6</span><span class="Blue">112233445566</span><span class="Red">3F</span>\r"</td><td>Marker = <span class="Red">3F</span></td></tr>
 </table>
-
+<p>
+<div><span class="Error">ATTENTION:</span> If there are any additional characters behind the valid packet data, this is a syntax error.</div>
+<p>
 <a name="Marker_Example"></a>
 <div><b>Example:</b></div>
 <table class="Pre" style="white-space: nowrap;">
@@ -1141,7 +1143,6 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>Rx: "M3F\r" &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;—— receive echo marker 3F</div>
 </td></tr>
 </table>
-
 
 <a name="Slcan_Errors"></a>
 <h3>Slcan Error Reports</h3>
@@ -1368,6 +1369,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <ul>
 <li><div><b>Version 25.09.14</b>: Initial release</div>
 <li><div><b>Version 25.10.23</b>: Allows to modify one filter after the adapter is already open.</div>
+<li><div><b>Version 25.11.16</b>: Support of remote frames, Bugfix Slcan baudrate Y0, Report error when sending FD packet in Classic mode.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
