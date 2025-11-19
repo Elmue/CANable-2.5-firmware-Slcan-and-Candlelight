@@ -217,8 +217,7 @@
         <div>— &nbsp; <a href="#HUD_ECU_Hacker"       class="MenuLink" onClick="ShowMenu(false)">HUD ECU Hacker</a></div>
         <div>— &nbsp; <a href="#CAN_Settings"         class="MenuLink" onClick="ShowMenu(false)">CAN bus Settings</a></div>
         <div>— &nbsp; <a href="#Filter"               class="MenuLink" onClick="ShowMenu(false)">CAN Filter</a></div>
-        <div>— &nbsp; <a href="#Samplepoint"          class="MenuLink" onClick="ShowMenu(false)">Samplepoint</a></div>
-        <div>— &nbsp; <a href="#Baudrates"            class="MenuLink" onClick="ShowMenu(false)">Baudrates</a></div>
+        <div>— &nbsp; <a href="#Sample_Baud"          class="MenuLink" onClick="ShowMenu(false)">Samplepoint &amp; Baudrate</a></div>
         <div>— &nbsp; <a href="#CAN_Errors"           class="MenuLink" onClick="ShowMenu(false)">CAN bus Errors</a></div>
         <div>— &nbsp; <a href="#Transmit_Timeout"     class="MenuLink" onClick="ShowMenu(false)">Transmit Timeout</a></div>
         <div>— &nbsp; <a href="#Echo_Marker"          class="MenuLink" onClick="ShowMenu(false)">Tx Echo Marker</a></div>
@@ -685,12 +684,13 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>The STM32 processor does not allow to modify filters after the adapter has been opened.</div>
 <div>The only exception is that a single filter can be replaced by another filter of the same type (11 / 29 bit).</div>
 
-<a name="Samplepoint"></a>
-<h3>Samplepoint</h3>
+<a name="Sample_Baud"></a>
+<h3>Samplepoint &amp; Baudrate</h3>
 
 <div>The samplepoint is not really important for classic CAN.</div>
-<div>But if you plan to use <b>CAN FD</b> you must enter the correct samplepoints, otherwise you will get problems</div>
+<div>But if you plan to use <b>CAN FD</b> you must enter the correct samplepoints, otherwise you get bus errors</div>
 <div>because on a CAN bus many controllers must <b>synchronize</b> to each other using the exactly same settings.</div>
+<div>The correct samplepoints are absolutely <b>crucial</b> to connect to a CAN FD bus.</div>
 <p>
 <img src="Images/CanFdSamplepoint.png" alt="CAN Samplepoint" width="662" height="158">
 <p>
@@ -703,10 +703,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>But the major problem is that CAN FD <b>switches the baudrate</b> exactly at the samplepoint of the BRS bit.</div>
 <div>If you did not enter the two samplepoints correctly you will not be able to communicate with the CAN bus.</div>
 <div>You find a more detailed description with an oscilloscope screenshot in my <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer#DecodeCAN" target="_blank">Oszi Waveform Analyzer manual</a>.</div>
-
-<a name="Baudrates"></a>
-<h3>Baudrates</h3>
-
+<p>
 <div>The processor needs 3 settings to configure baudrate and samplepoint:</div>
 <ol>
     <li><div><b>Bitrate Prescaler</b>: the CAN clock is divided by the prescaler which gives the clock for one Time Quantum.</div>
@@ -735,22 +732,36 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>It is <b>recommended</b> by ST Microelectronics that the nominal and the data baudrate use the <b>same prescaler</b>.</div>
 <div>The baudrate is switched exactly at the samplepoint of the BRS bit.</div>
 <div>If the baudrates do not use the same prescaler, a <b>phase shift</b> will be the consequence which may corrupt the timing.</div>
+<p>
 <div>Another recommendation is that the <b>prescaler</b> should be as low as possible.</div>
 <div>And the <b>Synchronization Jump Width</b> should be: SJW = min(Segment1, Segment2).</div>
+<div>The SJW defines the <b>maximum</b> interval that the processor is allowed to accept phase jitters for resynchronization.</div>
 <div>For more details read the PDF documents in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
 <p>
-<div>All this baudrate / samplepoint stuff is quite complex and I have found many bugs in legacy code, so I implemented a check.</div>
+<div>All this baudrate / samplepoint stuff is really complicated and I have found many bugs in legacy code, so I implemented a check.</div>
 <div>The host application sends the values for Prescaler, Segment 1 + 2 for the nominal and the data baudrate to the firmware.</div>
 <div>And the firmware calculates the exact values and reports them in a debug message back to the host application.</div>
 <div>When you open the adapter you see this debug message from the firmware:</div>
 <p>
 <table class="Pre">
-    <tr><td>Nominal: 500k baud, 87.5%; Data: 2M baud, 50.0%; Perfect match: Yes</td></tr>
+    <tr><td>Nominal: 500k baud, 87.5%; Data: 2M baud, 75.0%; Perfect match: Yes</td></tr>
 </table>
 <p>
-<div>When you see <b>Perfect Match: Yes</b>, this means that both baudrates use the same prescaler.</div>
-<div>HUD ECU Hacker implements a complex algorithm that does all this calculation for you.</div>
-<div>HUD ECU Hacker tries to find the perfect settings for your nominal/data baudrates/samplepoints.</div>
+<div>When you see <b>Perfect Match: Yes</b>, this means that Nominal and Data use the same prescaler as recommended.</div>
+<p>
+<div class="Error">ATTENTION:</div>
+<div>To achive the above settings multiple calculations are possible, for example:</div>
+<ol>
+<li><div>Nominal = [Prescaler:2, Seg1:139, Seg2:20, SJW:20] and Data = [Prescaler:2, Seg1:29, Seg2:10, SJW:10]</div>
+<li><div>Nominal = [Prescaler:10, Seg1:27, Seg2:4, SJW:4] and Data = [Prescaler:10, Seg1:5, Seg2:2, SJW:2]</div>
+</ol>
+<div>With both examples you get the same baudrate and samplpoint.</div>
+<div>But the first example works while the second produces <b>Bus Off</b> errors when sending packets with BRS!</div>
+<div>Always chose the smallest possible prescaler which gives in a finer <b>granularity</b> for resynchronization.</div>
+<p>
+<div>You don't have to care about this math stuff if you let HUD ECU Hacker find the best values for you.</div>
+<div>HUD ECU Hacker implements a complex <b>algorithm</b> that does all this calculation for you.</div>
+<div> You enter baudrates and samplepoints and HUD ECU Hacker calculates the perfect settings for you.</div>
 <div>If a samplepoint cannot be matched exactly, it shows a <b>warning</b> and uses the nearest value that is possible.</div>
 <div>If a baudrate cannot be matched it shows an <b>error</b>.</div>
 
@@ -977,24 +988,24 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <tr><td>"Ms\r"</td><td>Open/Closed</td><td>100</td><td>Disable ESI report</td><td>No ESI report</td></tr>
 <tr><td>"MDEFMS\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug, Error, Feedback, Echo, ESI reports</td><td>You can set all modes at once in one command</td></tr>
 <tr><th>Set Baudrates</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"Y4\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 4 Mbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"Y5\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 5 Mbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"Y8\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 8 Mbaud</td><td>Samplepoint 50% &nbsp; (75% does not work on STM32G431)</td></tr>
-<tr><td>"s4,69,10,7\r"</td><td>Closed</td><td>100</td><td>Set nominal bitrate: Prescaler=4,<br>Seg1=69, Seg2=10, Synchr. Jump Width=7</td><td>Set 500 kbaud, Samplepoint 87.5%<br>See <a href="#Samplepoint">Samplepoint</a></td></tr>
-<tr><td>"y4,9,10,7\r"</td><td>Closed</td><td>100</td><td>Set data bitrate: Prescaler=4,<br>Seg1=9, Seg2=10, Synchr. Jump Width=7</td><td>Set 2 Mbaud, Samplepoint 50%<br>See <a href="#Samplepoint">Samplepoint</a></td></tr>
+<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated, see below</span></td></tr>
+<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"Y4\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 4 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"Y5\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 5 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"Y8\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 8 Mbaud</td><td>Samplepoint 50% (75% does not work) <span class="Red">deprecated</span></td></tr>
+<tr><td>"s4,69,10,7\r"</td><td>Closed</td><td>100</td><td>Set nominal bitrate: Prescaler=4,<br>Seg1=69, Seg2=10, Synchr. Jump Width=7</td><td>Set 500 kbaud, Samplepoint 87.5%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
+<tr><td>"y4,9,10,7\r"</td><td>Closed</td><td>100</td><td>Set data bitrate: Prescaler=4,<br>Seg1=9, Seg2=10, Synchr. Jump Width=7</td><td>Set 2 Mbaud, Samplepoint 50%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
 <tr><th>Set Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
     <div>You can set up to <b>8 mask filters</b> separated by semicolons.</div>
@@ -1018,6 +1029,13 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <tr><td>"Bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
 <tr><td>"bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
 </table>
+
+<div><span class="Error">ATTENTION:</span> The commands <code>S</code> and <code>Y</code> to set the baudrate are deprecated.</div>
+<div>You can use them to make tests between 2 adapters on your desk, but not if you want to connect to a <b>real CAN FD bus</b>.</div>
+<div>If you want to connect for example to a car that uses CAN FD, you MUST know the TWO samplepoints that the CAN bus uses.<div>
+<div>Then you must calculate the Prescaler, Segment 1 and Segment 2 for the required baudrates and samplepoints and use commands <code>s</code> and <code>y</code>.</div>
+<div>If you connect with wrong settings to a CAN FD bus you will get <b>Bus Passive</b> or even <b>Bus Off</b> errors. Read chapter <a href="#Sample_Baud">Baudrates</a>.</div>
+<div>
 
 <a name="Slcan_Responses"></a>
 <h3>Slcan Responses and Events</h3>
@@ -1106,7 +1124,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
     <div>Each processor has different limits for Prescaler, Segment1, Segment2 and Synchr. Jump Width.</div>
     <div>Nominal baudrate: max Prescaler= 512, max Seg1 = 256, max Seg2= 128, max SJW = 128</div>
     <div>FD Data baudrate: max Prescaler= 32, max Seg1 = 32, max Seg2= 16, max SJW = 16</div>
-    <div>See <a href="#Samplepoint">Samplepoint</a></div></td></tr>
+    <div>See <a href="#Sample_Baud">Samplepoint</a></div></td></tr>
 </table>
 
 <a name="Slcan_Packets"></a>
@@ -1132,7 +1150,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <tr><td>Transmit</td><td>7E0: 11 22 33 44 55 66</td><td>"<span class="Magenta">t</span><span class="Green">7E0</span><span class="Orange">6</span><span class="Blue">112233445566</span><span class="Red">3F</span>\r"</td><td>Marker = <span class="Red">3F</span></td></tr>
 </table>
 <p>
-<div><span class="Error">ATTENTION:</span> If there are any additional characters behind the valid packet data, this is a syntax error.</div>
+<div><span class="Error">ATTENTION:</span> If there are any additional characters behind the packet data, this is a syntax error.</div>
 <p>
 <a name="Marker_Example"></a>
 <div><b>Example:</b></div>
@@ -1210,7 +1228,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <li><div>Send command "MF\r" to enable <b>feedback mode</b> (or "MADEFMS\r" with all the other modes that you need)</div>
     <div>This will be the first command that sends a feedback.</div>
     <div>From now on you must wait for the feedback "#\r" and check for errors before sending the next command.</div>
-<li><div>Send command 'S' or 's' to set the <b>nominal</b> <a href="#Baudrates">baudrate</a>.</div>
+<li><div>Send command 'S' or 's' to set the <b>nominal</b> <a href="#Sample_Baud">baudrate</a>.</div>
 <li><div>If you also send command 'Y' or 'y' to set the <b>data baudrate</b>, the firmware will switch automatically into CAN FD mode.</div>
 <li><div>Now you can optionally set <a href="#Filter">filters</a></div>
 <li><div>Finally execute command "ON\r" to <b>open</b> the device in normal mode.</div>
@@ -1370,6 +1388,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <li><div><b>Version 25.09.14</b>: Initial release</div>
 <li><div><b>Version 25.10.23</b>: Allows to modify one filter after the adapter is already open.</div>
 <li><div><b>Version 25.11.16</b>: Support of remote frames, Bugfix Slcan baudrate Y0, Report error when sending FD packet in Classic mode.</div>
+<li><div><b>Version 25.11.18</b>: Fixed calculation of all Slcan baudrates for commands S and Y. Fix of legacy Candlelight packet size.
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
