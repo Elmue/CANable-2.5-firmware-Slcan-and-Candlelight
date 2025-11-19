@@ -22,4 +22,9 @@ Please read the detailed
 - Candlelight Developer Manual
 - Firmware Developer Manual
 
-https://netcult.ch/elmue/CANable%20Firmware%20Update/
+https://netcult.ch/elmue/CANable%20Firmware%20Update
+
+________________________
+
+Latest Updates:
+You find the version history at the bottom when you click the above link.
