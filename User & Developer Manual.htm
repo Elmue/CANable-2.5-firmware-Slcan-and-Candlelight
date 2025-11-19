@@ -988,16 +988,16 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <tr><td>"Ms\r"</td><td>Open/Closed</td><td>100</td><td>Disable ESI report</td><td>No ESI report</td></tr>
 <tr><td>"MDEFMS\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug, Error, Feedback, Echo, ESI reports</td><td>You can set all modes at once in one command</td></tr>
 <tr><th>Set Baudrates</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated, see below</span></td></tr>
-<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 87.5% <span class="Red">&nbsp; deprecated</span></td></tr>
+<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 87.5%</td></tr>
 <tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
 <tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
 <tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
@@ -1030,7 +1030,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <tr><td>"bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
 </table>
 
-<div><span class="Error">ATTENTION:</span> The commands <code>S</code> and <code>Y</code> to set the baudrate are deprecated.</div>
+<div><span class="Error">ATTENTION:</span> Do not use the commands <code>S</code> and <code>Y</code> for CAN FD. They do not allow to chose the correct sameplpoint.</div>
 <div>You can use them to make tests between 2 adapters on your desk, but not if you want to connect to a <b>real CAN FD bus</b>.</div>
 <div>If you want to connect for example to a car that uses CAN FD, you MUST know the TWO samplepoints that the CAN bus uses.<div>
 <div>Then you must calculate the Prescaler, Segment 1 and Segment 2 for the required baudrates and samplepoints and use commands <code>s</code> and <code>y</code>.</div>
