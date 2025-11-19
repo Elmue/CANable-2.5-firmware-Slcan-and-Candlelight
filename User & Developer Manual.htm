@@ -734,6 +734,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>If the baudrates do not use the same prescaler, a <b>phase shift</b> will be the consequence which may corrupt the timing.</div>
 <p>
 <div>Another recommendation is that the <b>prescaler</b> should be as low as possible.</div>
+<p>
 <div>And the <b>Synchronization Jump Width</b> should be: SJW = min(Segment1, Segment2).</div>
 <div>The SJW defines the <b>maximum</b> interval that the processor is allowed to accept phase jitters for resynchronization.</div>
 <div>For more details read the PDF documents in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
@@ -755,7 +756,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <li><div>Nominal = [Prescaler:2, Seg1:139, Seg2:20, SJW:20] and Data = [Prescaler:2, Seg1:29, Seg2:10, SJW:10]</div>
 <li><div>Nominal = [Prescaler:10, Seg1:27, Seg2:4, SJW:4] and Data = [Prescaler:10, Seg1:5, Seg2:2, SJW:2]</div>
 </ol>
-<div>With both examples you get the same baudrate and samplpoint.</div>
+<div>With both examples you get the same baudrates and samplpoints.</div>
 <div>But the first example works while the second produces <b>Bus Off</b> errors when sending packets with BRS!</div>
 <div>Always chose the smallest possible prescaler which gives a finer <b>granularity</b> for resynchronization.</div>
 <p>
@@ -943,7 +944,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <h2>2.) Application Developer Manual - Slcan</h2>
 
 <div>This manual is for software developers who want to communicate with the CANable 2.5 from a computer.</div>
-<div>In Slcan all commands and responses are sent as <b>ASCII</b> strings which is slow. See <a href="#Speed_Comparison">Comparison</a>.</div>
+<div>Slcan uses the USB CDC interface where all commands and responses are sent as <b>ASCII</b> strings which is slow. See <a href="#Speed_Comparison">Comparison</a>.</div>
 <div>For professional applications use Candlelight and not Slcan.</div>
 <p>
 <div>The <b>first character</b> is the command to execute. The <b>last character</b> is always a Carriage Return.</div>
