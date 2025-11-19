@@ -23,3 +23,20 @@ Please read the detailed
 - Firmware Developer Manual
 
 https://netcult.ch/elmue/CANable%20Firmware%20Update/
+
+## Updating Firmware on Linux & macOS
+
+_Source: [CANtact](https://cantact.io/cantact/users-guide.html#linux--macos). Make sure to have your device in DFU mode._
+
+Flashing on Linux and macOS requires `dfu-util`:
+
+- On macOS, this can be installed from Brew: `brew install dfu-util`.
+- On Ubuntu, install dfu-util with: `sudo apt install dfu-util`.
+
+Once `dfu-util` is installed, use it to flash the device:
+
+```sh
+sudo dfu-util -d 0483:df11 -a 0 -s 0x08000000:leave -D FIRMWARE_FILE.bin
+```
+
+The latest .bin files can be downloaded from the [Releases](https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/releases) section.
