@@ -562,6 +562,7 @@ void can_timer_100ms()
 
 // ----------------------------------------------------------------------------------------------
 
+// ATTENTION: Deprecated! Read the manual.
 // Set the nominal bitrate of the CAN peripheral
 // Always samplepoint 87.5%
 // See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
@@ -569,43 +570,55 @@ eFeedback can_set_baudrate(can_nom_bitrate bitrate)
 {
     if (can_is_open)
         return FBK_AdapterMustBeClosed; // cannot set bitrate while on bus
+    
+    can_bitrate_nominal.Seg1 = 174;
+    can_bitrate_nominal.Seg2 =  25;   
 
-    can_bitrate_nominal.Seg1 = 27; // (1 + 27) / (1 + 27 + 4) = 87.5%
-    can_bitrate_nominal.Seg2 =  4;
-
+    // IMPORTANT:
+    // The same setting "Nominal: 500k baud, 87.5%; Data: 2M baud, 75.0%;" can be achieved with different values:
+    // If you set Nominal = [P:2,  S1:139, S2:20, J:20] and Data = [P:2,  S1:29, S2:10, J:10] a transfer with BRS works fine.
+    // But with   Nominal = [P:10, S1:27,  S2:4,  J:4]  and Data = [P:10, S1:5,  S2:2,  J:2]  you get Bus Off errors !!!
     switch (bitrate)
     {
         case CAN_BITRATE_10K:
-            can_bitrate_nominal.Brp  = 500; // 160 MHz / 500 / (1 + 27 + 4) = 10 kBaud
+            can_bitrate_nominal.Brp  = 80;
             break;
         case CAN_BITRATE_20K:
-            can_bitrate_nominal.Brp  = 250;
-            break;
-        case CAN_BITRATE_50K:
-            can_bitrate_nominal.Brp  = 100;
-            break;
-        case CAN_BITRATE_83K:
-            can_bitrate_nominal.Brp  = 60; // 160 MHz / 60 / (1 + 27 + 4) = 83.333 kBaud
-            break;
-        case CAN_BITRATE_100K:
-            can_bitrate_nominal.Brp  = 50;
-            break;
-        case CAN_BITRATE_125K:
             can_bitrate_nominal.Brp  = 40;
             break;
+        case CAN_BITRATE_50K:
+            can_bitrate_nominal.Brp  = 16;
+            break;
+        case CAN_BITRATE_83K:
+            can_bitrate_nominal.Brp  = 8;  
+            can_bitrate_nominal.Seg1 = 209;
+            can_bitrate_nominal.Seg2 = 30;
+            break;
+        case CAN_BITRATE_100K:
+            can_bitrate_nominal.Brp  = 8;
+            break;
+        case CAN_BITRATE_125K:
+            can_bitrate_nominal.Brp  = 5;   // 160 MHz / 5 / (1 + 223 + 32) = 125 kBaud
+            can_bitrate_nominal.Seg1 = 223; // (1 + 223)   / (1 + 223 + 32) = 87.5%
+            can_bitrate_nominal.Seg2 = 32;
+            break;
         case CAN_BITRATE_250K:
-            can_bitrate_nominal.Brp  = 20;
+            can_bitrate_nominal.Brp  = 4;
+            can_bitrate_nominal.Seg1 = 139;
+            can_bitrate_nominal.Seg2 = 20;
             break;
         case CAN_BITRATE_500K:
-            can_bitrate_nominal.Brp  = 10;
+            can_bitrate_nominal.Brp  = 2;
+            can_bitrate_nominal.Seg1 = 139;
+            can_bitrate_nominal.Seg2 = 20;
             break;
         case CAN_BITRATE_800K:
-            can_bitrate_nominal.Brp  =  5; // 160 MHz / 5 / (1 + 34 + 5) = 800 kBaud
-            can_bitrate_nominal.Seg1 = 34; // (1 + 34)    / (1 + 34 + 5) = 87.5%
-            can_bitrate_nominal.Seg2 =  5;
+            can_bitrate_nominal.Brp  = 1;
             break;
         case CAN_BITRATE_1000K:
-            can_bitrate_nominal.Brp  =  5; // 160 MHz / 5 / (1 + 27 + 4) = 1 MBaud
+            can_bitrate_nominal.Brp  = 1;
+            can_bitrate_nominal.Seg1 = 139;
+            can_bitrate_nominal.Seg2 = 20;
             break;
         default:
             return FBK_InvalidParameter;
@@ -626,6 +639,7 @@ eFeedback can_set_baudrate(can_nom_bitrate bitrate)
     return FBK_Success; 
 }
 
+// ATTENTION: Deprecated! Read the manual.
 // Set the data bitrate of the CAN peripheral
 // Samplepoint = 75%, except for 8 MBaud it must be 50% because 75% does not work.
 // See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
@@ -634,34 +648,40 @@ eFeedback can_set_data_baudrate(can_data_bitrate bitrate)
     if (can_is_open)
         return FBK_AdapterMustBeClosed; // cannot set bitrate while on bus
 
-    can_bitrate_data.Seg1 = 5; // (1 + 5) / (1 + 5 + 2) = 75%
-    can_bitrate_data.Seg2 = 2;
+    can_bitrate_data.Seg1 = 29;
+    can_bitrate_data.Seg2 = 10;
 
+    // IMPORTANT:
+    // The same setting "Nominal: 500k baud, 87.5%; Data: 2M baud, 75.0%;" can be achieved with different values:
+    // If you set Nominal = [P:2,  S1:139, S2:20, J:20] and Data = [P:2,  S1:29, S2:10, J:10] a transfer with BRS works fine.
+    // But with   Nominal = [P:10, S1:27,  S2:4,  J:4]  and Data = [P:10, S1:5,  S2:2,  J:2]  you get Bus Off errors !!!
     switch (bitrate)
     {
-        // maximum for data BRP is 32 !
         case CAN_DATA_BITRATE_500K: 
-            can_bitrate_data.Brp  = 20; // 160 MHz / 20 / (1 + 11 + 4) = 500 kBaud
-            can_bitrate_data.Seg1 = 11; // (1 + 11)     / (1 + 11 + 4) = 75%
-            can_bitrate_data.Seg2 = 4;
+            can_bitrate_data.Brp  = 8;
             break;
         case CAN_DATA_BITRATE_1M:
-            can_bitrate_data.Brp  = 20; // 160 MHz / 20 / (1 + 5 + 2) = 1 MBaud
+            can_bitrate_data.Brp  = 4;
             break;
         case CAN_DATA_BITRATE_2M:
-            can_bitrate_data.Brp  = 10;
+            can_bitrate_data.Brp  = 2;
             break;
         case CAN_DATA_BITRATE_4M:
-            can_bitrate_data.Brp  =  5; // 160 MHz / 5 / (1 + 5 + 2) = 4 MBaud
+            can_bitrate_data.Brp  = 2;  // 160 MHz / 2 / (1 + 14 + 5) = 4 MBaud
+            can_bitrate_data.Seg1 = 14; // (1 + 14)    / (1 + 14 + 5) = 75%
+            can_bitrate_data.Seg2 = 5;
             break;
         case CAN_DATA_BITRATE_5M:
-            can_bitrate_data.Brp  =  4;
+            can_bitrate_data.Brp  = 2;
+            can_bitrate_data.Seg1 = 11;
+            can_bitrate_data.Seg2 = 4;
             break;
         // For any strange reason the STM32G431 works at 8 Mbaud only if the samplepoint is 50%.
         // But at 10 Mbaud it works with 75%. Very weird!
         case CAN_DATA_BITRATE_8M:
-            can_bitrate_data.Brp  =  5; // 160 MHz / 5 / (1 + 1 + 2) = 8 MBaud
-            can_bitrate_data.Seg1 =  1; // (1 + 1)     / (1 + 1 + 2) = 50%
+            can_bitrate_data.Brp  = 2; // 160 MHz / 2 / (1 + 4 + 5) = 8 MBaud
+            can_bitrate_data.Seg1 = 4; // (1 + 4)     / (1 + 4 + 5) = 50%
+            can_bitrate_data.Seg2 = 5;
             break;
         default:
             return FBK_InvalidParameter;
