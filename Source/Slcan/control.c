@@ -213,6 +213,7 @@ eFeedback control_parse_str(char buf[], int len)
         // ----------------------------
 
         // Set baudrate (always samplepoint nominal: 87.5%, data: 75%)
+        // ATTENTION: Deprecated! Read the manual.        
         case 'S':
             if (len == 2) e_Ret = can_set_baudrate((can_nom_bitrate)(buf[1] - '0')); // "S1"
             return e_Ret;
