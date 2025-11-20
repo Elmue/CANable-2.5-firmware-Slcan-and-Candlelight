@@ -102,7 +102,7 @@ flash: all
 CUBELIB = $(CUBELIB_BUILD_DIR)/libstm32cube.a
 
 # List of stm32 driver objects
-CUBELIB_DRIVER_OBJS = $(addprefix $(CUBELIB_BUILD_DIR)/, $(patsubst %.c, %.o, $(notdir $(wildcard $(DRIVER_PATH)/Src/*.c))))
+CUBELIB_DRIVER_OBJS = $(addprefix $(CUBELIB_BUILD_DIR)/, $(patsubst %.c, %.o, $(notdir $(filter-out %/stm32g4xx_hal_timebase_tim_template.c,$(wildcard $(DRIVER_PATH)/Src/*.c)))))
 
 # shortcut for building core library (make cubelib)
 cubelib: $(CUBELIB)
