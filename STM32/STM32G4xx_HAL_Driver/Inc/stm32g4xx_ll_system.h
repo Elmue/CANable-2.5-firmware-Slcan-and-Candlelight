@@ -3,6 +3,17 @@
   * @file    stm32g4xx_ll_system.h
   * @author  MCD Application Team
   * @brief   Header file of SYSTEM LL module.
+  ******************************************************************************
+  * @attention
+  *
+  * Copyright (c) 2019 STMicroelectronics.
+  * All rights reserved.
+  *
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
+  *
+  ******************************************************************************
   @verbatim
   ==============================================================================
                      ##### How to use this driver #####
@@ -16,17 +27,6 @@
       (+) Access to VREFBUF registers
 
   @endverbatim
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
-  * All rights reserved.</center></h2>
-  *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
-  *
   ******************************************************************************
   */
 
@@ -208,6 +208,8 @@ extern "C" {
 #define LL_SYSCFG_CCMSRAMWRP_PAGE17        SYSCFG_SWPR_PAGE17 /*!< CCMSRAM Write protection page 17 */
 #define LL_SYSCFG_CCMSRAMWRP_PAGE18        SYSCFG_SWPR_PAGE18 /*!< CCMSRAM Write protection page 18 */
 #define LL_SYSCFG_CCMSRAMWRP_PAGE19        SYSCFG_SWPR_PAGE19 /*!< CCMSRAM Write protection page 19 */
+#endif /* SYSCFG_SWPR_PAGE10 */
+#if defined(SYSCFG_SWPR_PAGE20)
 #define LL_SYSCFG_CCMSRAMWRP_PAGE20        SYSCFG_SWPR_PAGE20 /*!< CCMSRAM Write protection page 20 */
 #define LL_SYSCFG_CCMSRAMWRP_PAGE21        SYSCFG_SWPR_PAGE21 /*!< CCMSRAM Write protection page 21 */
 #define LL_SYSCFG_CCMSRAMWRP_PAGE22        SYSCFG_SWPR_PAGE22 /*!< CCMSRAM Write protection page 22 */
@@ -220,7 +222,7 @@ extern "C" {
 #define LL_SYSCFG_CCMSRAMWRP_PAGE29        SYSCFG_SWPR_PAGE29 /*!< CCMSRAM Write protection page 29 */
 #define LL_SYSCFG_CCMSRAMWRP_PAGE30        SYSCFG_SWPR_PAGE30 /*!< CCMSRAM Write protection page 30 */
 #define LL_SYSCFG_CCMSRAMWRP_PAGE31        SYSCFG_SWPR_PAGE31 /*!< CCMSRAM Write protection page 31 */
-#endif /* SYSCFG_SWPR_PAGE10 */
+#endif /* SYSCFG_SWPR_PAGE20 */
 /**
   * @}
   */
@@ -261,7 +263,9 @@ extern "C" {
 #if defined(I2C2)
 #define LL_DBGMCU_APB1_GRP1_I2C2_STOP      DBGMCU_APB1FZR1_DBG_I2C2_STOP   /*!< The I2C2 SMBus timeout is frozen*/
 #endif /* I2C2 */
+#if defined(I2C3)
 #define LL_DBGMCU_APB1_GRP1_I2C3_STOP      DBGMCU_APB1FZR1_DBG_I2C3_STOP   /*!< The I2C3 SMBus timeout is frozen*/
+#endif /* I2C3 */
 #define LL_DBGMCU_APB1_GRP1_LPTIM1_STOP    DBGMCU_APB1FZR1_DBG_LPTIM1_STOP /*!< The counter clock of LPTIM1 is stopped when the core is halted*/
 /**
   * @}
@@ -305,7 +309,7 @@ extern "C" {
   */
 #define LL_VREFBUF_VOLTAGE_SCALE0          ((uint32_t)0x00000000) /*!< Voltage reference scale 0 (VREFBUF_OUT = 2.048V) */
 #define LL_VREFBUF_VOLTAGE_SCALE1          VREFBUF_CSR_VRS_0      /*!< Voltage reference scale 1 (VREFBUF_OUT = 2.5V)   */
-#define LL_VREFBUF_VOLTAGE_SCALE2          VREFBUF_CSR_VRS_1      /*!< Voltage reference scale 2 (VREFBUF_OUT = 2.8V)   */
+#define LL_VREFBUF_VOLTAGE_SCALE2          VREFBUF_CSR_VRS_1      /*!< Voltage reference scale 2 (VREFBUF_OUT = 2.9V)   */
 /**
   * @}
   */
@@ -902,7 +906,6 @@ __STATIC_INLINE void LL_SYSCFG_UnlockCCMSRAMWRP(void)
   WRITE_REG(SYSCFG->SKR, 0xCA);
   WRITE_REG(SYSCFG->SKR, 0x53);
 }
-
 /**
   * @}
   */
@@ -1514,4 +1517,3 @@ __STATIC_INLINE void LL_FLASH_DisableSleepPowerDown(void)
 
 #endif /* __STM32G4xx_LL_SYSTEM_H */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
