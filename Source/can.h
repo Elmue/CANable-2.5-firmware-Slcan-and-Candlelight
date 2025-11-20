@@ -10,10 +10,19 @@
 #include "settings.h"
 #include "system.h"
 
+// The DLC_SHIFT changed with stm32g4xx-hal-driver v1.2.3 from 16 to 0
+// The define USB_EP0StartXfer was also removed with v1.2.3. Use this
+// as an indicator for the HAL version
+
+#ifdef USB_EP0StartXfer
 // FDCAN_TxHeaderTypeDef.DataLength needs the DLC value to be shifted up by 16 bits.
 // It is stupid that ST Microelectronics did not implement this shift operation into the HAL.
 // Will other ST processor models also need the DLC to be shifted 16 bits up ??
 #define DLC_SHIFT        16
+#else
+#define DLC_SHIFT        0
+#endif
+
 #define DLC_TO_HAL(DLC) ((DLC & 0xF) << DLC_SHIFT)
 #define HAL_TO_DLC(LEN) ((LEN >> DLC_SHIFT) & 0xF)
 
