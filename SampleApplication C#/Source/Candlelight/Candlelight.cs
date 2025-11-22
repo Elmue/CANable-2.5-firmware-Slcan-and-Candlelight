@@ -763,7 +763,7 @@ namespace CANable
         bool           mb_InitDone;
         bool           mb_Started;
         bool           mb_BaudFDSet;
-        bool           mb_TxOverflow;  // firmware Tx buffer is full (64 + 3 packets sent)
+        Stopwatch      mi_TxOverflow;  // firmware Tx buffer is full (64 + 3 packets sent)
         bool           mb_McuTimestamp;
         Byte           mu8_EchoMarker; // counter 0...255
         CanPacket[]    mi_TxEcho;      // the last 256 Tx packets
@@ -827,10 +827,10 @@ namespace CANable
 
             mk_Info           = new kDevInfo();
             ms_Details        = new StringBuilder();
+            mi_TxOverflow     = new Stopwatch();
             mb_InitDone       = false;
             mb_BaudFDSet      = false;
             mb_Started        = false;
-            mb_TxOverflow     = false;
             ms64_LastMcuStamp = -1;
             ms64_McuRollOver  =  0;
             ms64_ClockOffset  = -1;
@@ -1206,9 +1206,14 @@ namespace CANable
             if (!mb_BaudFDSet && (i_Packet.mb_FDF || i_Packet.mb_BRS))
                 throw new Exception("CAN FD frames can only be sent when a data baudrate has been set.");
 
-            // 3 + 64 messages have been sent to the firmware which were not acknowledged. The adapter is blocked.
-            if (mb_TxOverflow)
+            // 3 + 64 messages have been sent to the firmware which were not acknowledged. 
+            // The adapter is blocked --> report error once only.
+            // If no errors were reported in the last 3 seconds the buffer is not full anymore
+            if (mi_TxOverflow.IsRunning && mi_TxOverflow.ElapsedMilliseconds < 4000)
+            {
+                mi_TxOverflow.Stop();
                 throw new Exception("Sending is not possible because the Tx buffer is full.");
+            }
 
             eCanIdFlags e_MaxID = i_Packet.mb_29bit ? eCanIdFlags.MASK_29 : eCanIdFlags.MASK_11;
             if (i_Packet.ms32_ID > (int)e_MaxID)
@@ -1409,9 +1414,13 @@ namespace CANable
             eErrFlagsByte2 e_Byte2 = (eErrFlagsByte2)i_Error.mu8_ErrData[2];
             eErrorAppFlags e_App   = (eErrorAppFlags)i_Error.mu8_ErrData[5];
 
-            mb_TxOverflow = (e_App & eErrorAppFlags.CAN_Tx_overflow) > 0; // block sending further packets
-            e_BusStatus   = eBusStatus.Active;
-            e_Level       = eErrorLevel.Low;
+            if ((e_App & eErrorAppFlags.CAN_Tx_overflow) > 0)
+                mi_TxOverflow.Restart(); // block sending further packets
+            else
+                mi_TxOverflow.Stop();
+
+            e_BusStatus = eBusStatus.Active;
+            e_Level     = eErrorLevel.Low;
 
             String s_Mesg = "";
             if ((e_ID & eErrFlagsCanID.Bus_Off) > 0)
