@@ -221,6 +221,8 @@ void CandlelightDemo()
     PrintConsole(YELLOW, L"The Windows console is very slow. It cannot display fast CAN bus traffic.\n");
     PrintConsole(YELLOW, L"If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
     PrintConsole(YELLOW, L"HUD ECU Hacker has an ultra fast speed-optimized trace pane.\n\n");
+    
+    PrintConsole(YELLOW, L"A left click into the console stops output, right click continues.\n\n");
 
     PrintConsole(LIME,   L"Lime  = Sent packets\n");
     PrintConsole(GREEN,  L"Green = Echo of sent packets that have been ACKnowledged\n");
