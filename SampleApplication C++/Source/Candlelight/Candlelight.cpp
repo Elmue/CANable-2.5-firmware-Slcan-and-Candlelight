@@ -184,10 +184,10 @@ DWORD Candlelight::Open(CString s_DevicePath)
     ms64_PerfTimeStart  = -1;
     ms64_LastMcuStamp   = -1;
     ms64_ClockOffset    = -1;
+    mu32_TxOverflow     = 0;    
     mh_ThreadEvent      = NULL;
     mb_FifoOverflow     = false;
     mb_BaudFDSet        = false;
-    mb_TxOverflow       = false;
     mb_InitDone         = false;
     mb_Started          = false;
     me_LastError        = FBK_Success;
@@ -529,10 +529,13 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp,
     if (!mb_BaudFDSet && (pk_Packet->mb_FDF || pk_Packet->mb_BRS))
         return ERROR_INVALID_PARAMETER;
 
-    if (mb_TxOverflow)
+    // 3 + 64 messages have been sent to the firmware which were not acknowledged. 
+    // The adapter is blocked --> report error once only.
+    // If no errors were reported in the last 3 seconds the buffer is not full anymore
+    if (mu32_TxOverflow > 0 && (GetTickCount() - mu32_TxOverflow) < 4000)
     {
-        // 3 + 64 messages have been sent to the firmware which were not acknowledged. The adapter is blocked.
-        me_LastError = FBK_TxBufferFull;
+        mu32_TxOverflow = 0;
+        me_LastError    = FBK_TxBufferFull;
         return ERROR_CODE_IN_FEEDBACK;
     }
 
@@ -1071,7 +1074,9 @@ CString Candlelight::FormatCanErrors(kErrorElmue* pk_Error, eErrorBusStatus* pe_
     eErrFlagsByte2 e_Byte2 = (eErrFlagsByte2)pk_Error->err_data[2];
     eErrorAppFlags e_App   = (eErrorAppFlags)pk_Error->err_data[5];
 
-    mb_TxOverflow = (e_App & APP_CanTxOverflow) > 0; // block sending further packets
+    if (e_App & APP_CanTxOverflow) mu32_TxOverflow = GetTickCount(); // block sending further packets
+    else                           mu32_TxOverflow = 0;    
+    
     *pe_BusStatus = BUS_StatusActive;
     *pe_Level     = LEVEL_Low;
 

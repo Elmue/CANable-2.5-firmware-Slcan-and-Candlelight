@@ -105,9 +105,9 @@ private:
     BYTE                     mu8_Interface;
     bool                     mb_McuTimestamp;
     bool                     mb_BaudFDSet;
-    bool                     mb_TxOverflow;
     bool                     mb_InitDone;
     bool                     mb_Started;
+    DWORD                    mu32_TxOverflow;    
     eFeedback                me_LastError;
     __int64                  ms64_LastMcuStamp;    // the last MCU timestamp
     __int64                  ms64_McuRollOver;     // offset for 32 bit firmware timestamp
