@@ -199,6 +199,8 @@ class Program
             Print(ConsoleColor.Yellow, "If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
             Print(ConsoleColor.Yellow, "HUD ECU Hacker has an ultra fast speed-optimized trace pane.\n\n");
 
+            Print(ConsoleColor.Yellow, "A left click into the console stops output, right click continues.\n\n");
+
             Print(ConsoleColor.Green,     "Lime  = Sent packets\n");
             Print(ConsoleColor.DarkGreen, "Green = Echo of sent packets that have been ACKnowledged\n");
             Print(ConsoleColor.Cyan,      "Cyan  = Received packets\n\n");
