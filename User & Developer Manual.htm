@@ -231,7 +231,7 @@
         <div>— &nbsp; <a href="#Slcan_Errors"         class="MenuLink" onClick="ShowMenu(false)">Error Reports</a></div>
         <div>— &nbsp; <a href="#Slcan_Initialization" class="MenuLink" onClick="ShowMenu(false)">Initialization</a></div>
         <div><a href="#Candlelight_Manual"            class="MenuLink" onClick="ShowMenu(false)">3.) Candlelight Developer Manual</a></div>
-        <div>— &nbsp; <a href="#Demo_Application"     class="MenuLink" onClick="ShowMenu(false)">C++ Demo Application</a></div>
+        <div>— &nbsp; <a href="#Demo_Application"     class="MenuLink" onClick="ShowMenu(false)">Demo Applications C++ and C#</a></div>
         <div>— &nbsp; <a href="#Candle_NewProto"      class="MenuLink" onClick="ShowMenu(false)">The New Protocol</a></div>
         <div>— &nbsp; <a href="#Candle_DFU"           class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>        
         <div><a href="#Firmware_Manual"               class="MenuLink" onClick="ShowMenu(false)">4.) Firmware Developer Manual</a></div>
@@ -893,7 +893,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>However, I recommend to use timestamps created by the <a href="https://learn.microsoft.com/en-us/windows/win32/api/profileapi/nf-profileapi-queryperformancecounter" target="_blank">performance counter</a> in the computer CPU.</div>
 <div>This 64 bit counter has a precision of nanoseconds.</div>
 <div>When a packet arrives over USB you attach a timestamp to it.</div>
-<div>The <a href="#Demo_Application">C++ Demo Application</a> shows both: How to use timestamps from firmware and from performance counter.</div>
+<div>The <a href="#Demo_Application">Demo Applications</a> show both: How to use timestamps from firmware and from performance counter.</div>
 
 <p>
 <a name="Enter_DFU"></a>
@@ -1261,8 +1261,8 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>There are lots of structures and enums. Explaining them all here would explode this manual.</div>
 
 <a name="Demo_Application"></a>
-<h3>C++ Demo Application</h3>
-<div>Therefore I wrote a <b>ready-to-use C++ Candlelight class</b> that you can copy and paste into your project.</div>
+<h3>Demo Applications C++ and C#</h3>
+<div>Therefore I wrote <b>ready-to-use C++ and C# Candlelight classes</b> that you can copy and paste into your project.</div>
 <div>This robust and well tested class demonstrates all the features that the new firmware offers:</div>
 <ul>
 <li>Detect and enumerate all connected Candlelight devices
@@ -1276,12 +1276,12 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 </ul>
 <div>The <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/SampleApplication%20C%2B%2B" target="_blank">source code</a> is full of <b>detailed comments</b> so you can easily understand how it works.</div>
 <p>
-<div>The C++ demo also shows how to <b>use WinUSB.dll correctly</b> which is more complex than it seems at the first look.</div>
+<div>The demo also shows how to <b>use WinUSB.dll correctly</b> which is more complex than it seems at the first look.</div>
 <div>For example in Cangaroo and in Candle.NET they use WinUSB wrongly which results in packet loss or wrong packet order.</div>
 <div>WinUSB requires an unusal programming that is not documented by Microsoft.</div>
 
 <p>
-<img src="Images/Candlelight Cpp demo.png" alt="Candlelight C++ demo project" width="722" height="572">
+<img src="Images/Candlelight Cpp demo.png" alt="Candlelight demo project" width="722" height="572">
 <p>
 
 <a name="Candle_NewProto"></a>
@@ -1386,10 +1386,11 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <a name="Source_Code"></a>
 <h3>Source Code</h3>
 <ul>
-<li><div><b>Version 25.09.14</b>: Initial release</div>
-<li><div><b>Version 25.10.23</b>: Allows to modify one filter after the adapter is already open.</div>
-<li><div><b>Version 25.11.16</b>: Support of remote frames, Bugfix Slcan baudrate Y0, Report error when sending FD packet in Classic mode.</div>
-<li><div><b>Version 25.11.18</b>: Fixed calculation of all Slcan baudrates for commands S and Y. Fix of legacy Candlelight packet size.
+<li><div><b>25.09.14</b>: Initial firmware release</div>
+<li><div><b>25.10.23</b>: New firmware allows to modify one filter after the adapter is already open.</div>
+<li><div><b>25.11.16</b>: New firmware supports remote frames, Bugfix Slcan baudrate Y0, Report error when sending FD packet in Classic mode.</div>
+<li><div><b>25.11.18</b>: New firmware fixes calculation of all Slcan baudrates for commands S and Y. Fix of legacy Candlelight packet size.
+<li><div><b>25.11.21</b>: Many improvements in C++ demo, added new C# demo
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
