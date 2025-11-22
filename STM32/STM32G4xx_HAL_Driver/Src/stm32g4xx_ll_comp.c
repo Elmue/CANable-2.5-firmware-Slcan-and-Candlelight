@@ -6,16 +6,16 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2019 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
+
 #if defined(USE_FULL_LL_DRIVER)
 
 /* Includes ------------------------------------------------------------------*/
@@ -25,7 +25,7 @@
 #include "stm32_assert.h"
 #else
 #define assert_param(expr) ((void)0U)
-#endif
+#endif /* USE_FULL_ASSERT */
 
 /** @addtogroup STM32G4xx_LL_Driver
   * @{
@@ -49,78 +49,98 @@
 /* Check of parameters for configuration of COMP hierarchical scope:          */
 /* COMP instance.                                                             */
 
-/* Note: On this STM32 serie, comparator input plus parameters are            */
+/* Note: On this STM32 series, comparator input plus parameters are           */
 /*       the same on all COMP instances.                                      */
 /*       However, comparator instance kept as macro parameter for             */
-/*       compatibility with other STM32 families.                             */
+/*       compatibility with other STM32 series.                               */
 #define IS_LL_COMP_INPUT_PLUS(__COMP_INSTANCE__, __INPUT_PLUS__)               \
-  (   ((__INPUT_PLUS__) == LL_COMP_INPUT_PLUS_IO1)                             \
+  (((__INPUT_PLUS__) == LL_COMP_INPUT_PLUS_IO1)                                \
    || ((__INPUT_PLUS__) == LL_COMP_INPUT_PLUS_IO2)                             \
   )
-#if defined(STM32G474xx) || defined(STM32G484xx) || defined(STM32G473xx) || defined(STM32G483xx)
-#define IS_LL_COMP_INPUT_MINUS(__COMP_INSTANCE__, __INPUT_MINUS__)           \
-                  (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_4VREFINT)  || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_2VREFINT)  || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_3_4VREFINT)  || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_VREFINT)     || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO1)         || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO2)         || \
-                   (((__COMP_INSTANCE__) == COMP1)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP2)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH2)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP3)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP4)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP5)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH2)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC4_CH1))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP6)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC2_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC4_CH2))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP7)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC2_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC4_CH1))     \
-                   ))
-#elif defined(STM32GBK1CB) || defined(STM32G431xx) || defined(STM32G441xx) || defined(STM32G471xx)
-#define IS_LL_COMP_INPUT_MINUS(__COMP_INSTANCE__, __INPUT_MINUS__)           \
-                  (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_4VREFINT)  || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_2VREFINT)  || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_3_4VREFINT)  || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_VREFINT)     || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO1)         || \
-                   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO2)         || \
-                   (((__COMP_INSTANCE__) == COMP1)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP2)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH2)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP3)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))     \
-                   )                                                      || \
-                   (((__COMP_INSTANCE__) == COMP4)                        && \
-                    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  || \
-                    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))     \
-                   ))
+#if defined(STM32G414xx) || defined(STM32G474xx) || defined(STM32G484xx) || defined(STM32G473xx) || defined(STM32G483xx)
+#define IS_LL_COMP_INPUT_MINUS(__COMP_INSTANCE__, __INPUT_MINUS__)             \
+  (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_4VREFINT)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_2VREFINT)  ||                  \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_3_4VREFINT)  ||                  \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_VREFINT)     ||                  \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO1)         ||                  \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO2)         ||                  \
+    (((__COMP_INSTANCE__) == COMP1)                        &&                  \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))                       \
+    )                                                      ||                  \
+    (((__COMP_INSTANCE__) == COMP2)                        &&                  \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH2)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))                       \
+    )                                                      ||                  \
+    (((__COMP_INSTANCE__) == COMP3)                        &&                  \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))                       \
+    )                                                      ||                  \
+    (((__COMP_INSTANCE__) == COMP4)                        &&                  \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))                       \
+    )                                                      ||                  \
+    (((__COMP_INSTANCE__) == COMP5)                        &&                  \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH2)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC4_CH1))                       \
+    )                                                      ||                  \
+    (((__COMP_INSTANCE__) == COMP6)                        &&                  \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC2_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC4_CH2))                       \
+    )                                                      ||                  \
+    (((__COMP_INSTANCE__) == COMP7)                        &&                  \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC2_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC4_CH1))                       \
+      ))
+#elif defined(STM32GBK1CB) || defined(STM32G431xx) || defined(STM32G441xx) || defined(STM32G471xx) || defined(STM32G491xx) || defined(STM32G4A1xx)
+#define IS_LL_COMP_INPUT_MINUS(__COMP_INSTANCE__, __INPUT_MINUS__)             \
+  (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_4VREFINT)  ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_2VREFINT)  ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_3_4VREFINT)  ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_VREFINT)     ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO1)         ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO2)         ||                   \
+   (((__COMP_INSTANCE__) == COMP1)                        &&                   \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))                       \
+   )                                                      ||                   \
+   (((__COMP_INSTANCE__) == COMP2)                        &&                   \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH2)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))                       \
+   )                                                      ||                   \
+   (((__COMP_INSTANCE__) == COMP3)                        &&                   \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))                       \
+   )                                                      ||                   \
+   (((__COMP_INSTANCE__) == COMP4)                        &&                   \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))                       \
+   ))
+#elif defined(STM32G411xB) || defined(STM32G411xC)
+#define IS_LL_COMP_INPUT_MINUS(__COMP_INSTANCE__, __INPUT_MINUS__)             \
+  (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_4VREFINT)  ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_1_2VREFINT)  ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_3_4VREFINT)  ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_VREFINT)     ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO1)         ||                   \
+   ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_IO2)         ||                   \
+   (((__COMP_INSTANCE__) == COMP1)                        &&                   \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))                       \
+   )                                                      ||                   \
+   (((__COMP_INSTANCE__) == COMP2)                        &&                   \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH2)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH2))                       \
+   )                                                      ||                   \
+   (((__COMP_INSTANCE__) == COMP3)                        &&                   \
+    (((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC1_CH1)  ||                   \
+    ((__INPUT_MINUS__) == LL_COMP_INPUT_MINUS_DAC3_CH1))                       \
+   ))
 #endif
 
 #define IS_LL_COMP_INPUT_HYSTERESIS(__INPUT_HYSTERESIS__)                      \
-  (   ((__INPUT_HYSTERESIS__) == LL_COMP_HYSTERESIS_NONE)                      \
+  (((__INPUT_HYSTERESIS__) == LL_COMP_HYSTERESIS_NONE)                         \
    || ((__INPUT_HYSTERESIS__) == LL_COMP_HYSTERESIS_10MV)                      \
    || ((__INPUT_HYSTERESIS__) == LL_COMP_HYSTERESIS_20MV)                      \
    || ((__INPUT_HYSTERESIS__) == LL_COMP_HYSTERESIS_30MV)                      \
@@ -131,96 +151,152 @@
   )
 
 #define IS_LL_COMP_OUTPUT_POLARITY(__POLARITY__)                               \
-  (   ((__POLARITY__) == LL_COMP_OUTPUTPOL_NONINVERTED)                        \
+  (((__POLARITY__) == LL_COMP_OUTPUTPOL_NONINVERTED)                           \
    || ((__POLARITY__) == LL_COMP_OUTPUTPOL_INVERTED)                           \
   )
 
-#if defined(STM32G474xx) || defined(STM32G484xx) || defined(STM32G473xx) || defined(STM32G483xx)
-#define IS_LL_COMP_OUTPUT_BLANKING_SOURCE(__INSTANCE__, __OUTPUT_BLANKING_SOURCE__)  \
-     ((((__INSTANCE__) == COMP1) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP1)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP1)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP1)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP1)))        \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP2) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP2)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP2)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP2)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP2)))        \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP3) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP3)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP3)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP3)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP3)))        \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP4) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP4)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC4_COMP4)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP4)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1_COMP4)))       \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP5) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP5)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP5)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP5)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP5)))        \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP6) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP6)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP6)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP6)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC2_COMP6)))       \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP7) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP7)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP7)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP7)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC2_COMP7)))       \
-      || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM20_OC5)             \
-      || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1)             \
-      || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM4_OC3)              \
-      )
+#if defined(STM32G414xx) || defined(STM32G474xx) || defined(STM32G484xx) || defined(STM32G473xx) || defined(STM32G483xx)
+#define IS_LL_COMP_OUTPUT_BLANKING_SOURCE(__INSTANCE__, __OUTPUT_BLANKING_SOURCE__)      \
+  ((((__INSTANCE__) == COMP1) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP1)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP2) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP2)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP3) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP3)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP4) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC4_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1_COMP4)))             \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP5) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP5)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP5)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP5)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP5)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP6) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP6)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP6)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP6)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC2_COMP6)))             \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP7) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP7)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP7)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP7)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC2_COMP7)))             \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM20_OC5)                    \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1)                    \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM4_OC3)                     \
+  )
 #elif defined(STM32GBK1CB) || defined(STM32G431xx) || defined(STM32G441xx) || defined(STM32G471xx)
-#define IS_LL_COMP_OUTPUT_BLANKING_SOURCE(__INSTANCE__, __OUTPUT_BLANKING_SOURCE__)  \
-     ((((__INSTANCE__) == COMP1) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP1)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP1)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP1)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP1)))        \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP2) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP2)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP2)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP2)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP2)))        \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP3) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP3)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP3)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP3)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP3)))        \
-      ||                                                                             \
-      (((__INSTANCE__) == COMP4) &&                                                  \
-      (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP4)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC4_COMP4)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP4)  ||      \
-       ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1_COMP4)))       \
-      || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1)             \
-      || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM4_OC3)              \
-      )
+#define IS_LL_COMP_OUTPUT_BLANKING_SOURCE(__INSTANCE__, __OUTPUT_BLANKING_SOURCE__)      \
+  ((((__INSTANCE__) == COMP1) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP1)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP2) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP2)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP3) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP3)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP4) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC4_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1_COMP4)))             \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1)                    \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM4_OC3)                     \
+  )
+#elif defined(STM32G491xx) || defined(STM32G4A1xx)
+#define IS_LL_COMP_OUTPUT_BLANKING_SOURCE(__INSTANCE__, __OUTPUT_BLANKING_SOURCE__)      \
+  ((((__INSTANCE__) == COMP1) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP1)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP2) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP2)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP3) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP3)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP4) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC4_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP4)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1_COMP4)))             \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM20_OC5)                    \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM15_OC1)                    \
+   || ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM4_OC3)                     \
+  )
+#elif defined(STM32G411xB) || defined(STM32G411xC)
+#define IS_LL_COMP_OUTPUT_BLANKING_SOURCE(__INSTANCE__, __OUTPUT_BLANKING_SOURCE__)      \
+  ((((__INSTANCE__) == COMP1) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP1)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP1)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP2) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP2)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP2)))              \
+   ||                                                                                    \
+   (((__INSTANCE__) == COMP3) &&                                                         \
+    (((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_NONE)            ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM1_OC5_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM2_OC4_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM3_OC3_COMP3)  ||            \
+     ((__OUTPUT_BLANKING_SOURCE__) == LL_COMP_BLANKINGSRC_TIM8_OC5_COMP3)))              \
+  )
 #endif
 /**
   * @}
@@ -286,7 +362,7 @@ ErrorStatus LL_COMP_DeInit(COMP_TypeDef *COMPx)
   *          - SUCCESS: COMP registers are initialized
   *          - ERROR: COMP registers are not initialized
   */
-ErrorStatus LL_COMP_Init(COMP_TypeDef *COMPx, LL_COMP_InitTypeDef *COMP_InitStruct)
+ErrorStatus LL_COMP_Init(COMP_TypeDef *COMPx, const LL_COMP_InitTypeDef *COMP_InitStruct)
 {
   ErrorStatus status = SUCCESS;
 
@@ -369,5 +445,3 @@ void LL_COMP_StructInit(LL_COMP_InitTypeDef *COMP_InitStruct)
   */
 
 #endif /* USE_FULL_LL_DRIVER */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
