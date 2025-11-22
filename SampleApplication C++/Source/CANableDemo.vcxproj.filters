@@ -5,6 +5,9 @@
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="Source Files\Candlelight">
+      <UniqueIdentifier>{8fc2eb44-26df-44f8-96ed-3e17d99d70d7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CANableDemo.h">
@@ -13,14 +16,14 @@
     <ClInclude Include="stdafx.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="Candlelight.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="Candlelight\Candlelight.h">
+      <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
-    <ClInclude Include="winusb.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="Candlelight\Candlelight_def.h">
+      <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
-    <ClInclude Include="Candlelight_def.h">
-      <Filter>Source Files</Filter>
+    <ClInclude Include="Candlelight\WinUSB_def.h">
+      <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -30,8 +33,8 @@
     <ClCompile Include="CANableDemo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Candlelight.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="Candlelight\Candlelight.cpp">
+      <Filter>Source Files\Candlelight</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

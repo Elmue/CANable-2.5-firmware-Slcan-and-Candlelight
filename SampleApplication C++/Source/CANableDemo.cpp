@@ -35,21 +35,27 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 
 #include "stdafx.h"
 #include "CANableDemo.h"
-#include "Candlelight.h"
-#include <setupapi.h>
-#pragma comment(lib, "SetupApi.lib")
+#include "Candlelight/Candlelight.h"
 
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
+// true  --> run Candlelight demo
+// false --> run DFU demo
+bool CANDLELIGHT_DEMO = true; 
+
+// true  --> Only packets with 11 bit CAN ID 0x7E8 will be received.
+bool SET_FILTERS = false;
+
+// Enable transfer of timestamps from the firmware (deprecated!)
+bool HW_TIMESTAMP = false;
 
 // forward declarations
-void  CandlelightDemo();
-void  DfuDemo();
-DWORD OpenDevice(BYTE u8_Interface);
+void CandlelightDemo();
+void DfuDemo();
+BOOL OpenDevice(BYTE u8_Interface);
 
-// global instance
+// global instances
 Candlelight gi_Candle;
+kDevInfo    gk_Info;
+int         gs32_DeviceIndex; // user selection if multiple devices connected
 
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -74,7 +80,7 @@ void PrintConsole(WORD u16_Color, const WCHAR* u16_Format, ...)
     vwprintf(u16_Format, args);
 }
 
-// The user closes the Console window --> close the CANable
+// The user closes the Console window with the mouse --> close the CANable
 BOOL WINAPI ConsoleHandler(DWORD signal) 
 {
     if (signal == CTRL_CLOSE_EVENT) 
@@ -96,6 +102,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
         return 0;
 	}
 
+    SetConsoleTitle(L"ElmüSoft Candlelight C++ Demo");
     SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
     // Increase console buffer for 3000 lines output with 200 chars per line
@@ -112,7 +119,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
     // This is required for wprintf() to show umlauts correctly
     setlocale(LC_ALL, "English_United States.1252");
 
-    if (true) 
+    if (CANDLELIGHT_DEMO) 
     {
         // Test interface 0 = Candlelight
         CandlelightDemo();
@@ -136,42 +143,15 @@ void CandlelightDemo()
     PrintConsole(YELLOW, L"               CANable 2.5 Candlelight C++ Demo by ElmüSoft                  \n");
     PrintConsole(YELLOW, L"=============================================================================\n");
 
-    DWORD u32_Error = OpenDevice(0);
-
-    // if error is ERROR_INVALID_FIRMWARE, a legacy device is connected --> display data of unsupported device
-    if (u32_Error == 0 || u32_Error == ERROR_INVALID_FIRMWARE)
-    {
-        PrintConsole(GREY, L"USB Endpoint IN:      %02X,  max packet size: %u\n", gi_Candle.mu8_EndpointIN, gi_Candle.mu16_MaxPackSizeIN);
-        PrintConsole(GREY, L"USB Endpoint OUT:     %02X,  max packet size: %u\n", gi_Candle.mu8_EndpointOUT,gi_Candle.mu16_MaxPackSizeOUT);
-
-        // If the processor clock is available -> display it
-        if (u32_Error && gi_Candle.mk_Capability.fclk_can > 0)
-            PrintConsole(GREY, L"CAN Clock:            %u MHz\n", gi_Candle.mk_Capability.fclk_can / 1000000);
-
-        PrintConsole(GREY, L"Hardware Version:     %s\n", gi_Candle.FormatBcdVersion(gi_Candle.mk_DeviceVersion.hw_version_bcd));          
-        PrintConsole(GREY, L"Firmware Version:     %s\n", gi_Candle.FormatBcdVersion(gi_Candle.mk_DeviceVersion.sw_version_bcd));
-        PrintConsole(GREY, L"Firmware Type:        %s\n", gi_Candle.mb_LegacyFirmware ? L"Legacy" : L"CANable 2.5");
-        PrintConsole(GREY, L"Supports CAN FD:      %s\n", gi_Candle.mb_SupportsFD     ? L"Yes"    : L"No");
-    }
-
-    if (u32_Error)
-    {
-        PrintConsole(RED, L"\n%s\n", gi_Candle.FormatLastError(u32_Error));
+    // open interface 0
+    if (!OpenDevice(0))
         return;
-    }
-
-    // The board info is only available with the new CANable 2.5 firmware
-    PrintConsole(GREY, L"Target Board:         %hs\n", gi_Candle.mk_BoardInfo.BoardName);
-    PrintConsole(GREY, L"Processor:            %hs, CAN Clock: %u MHz, DeviceID: 0x%X\n",
-                                                       gi_Candle.mk_BoardInfo.McuName,
-                                                       gi_Candle.mk_Capability.fclk_can / 1000000,
-                                                       gi_Candle.mk_BoardInfo.McuDeviceID);
 
     // -----------------------------------------
 
     CString s_Display;
     // Supposed the clock is 160 MHz this will set 500 kBaud and samplepoint 87.5%
-    u32_Error = gi_Candle.SetBitrate(false, 2, 139, 20, &s_Display);
+    DWORD u32_Error = gi_Candle.SetBitrate(false, 2, 139, 20, &s_Display);
     if (u32_Error)
     {
         PrintConsole(RED, L"Error setting nominal bitrate. %s\n", gi_Candle.FormatLastError(u32_Error));
@@ -205,7 +185,7 @@ void CandlelightDemo()
     // -----------------------------------------
 
     // optionally you can set filters here.
-    if (false)
+    if (SET_FILTERS)
     {
         // Only the 11 bit CAN ID 0x7E8 will pass through the filter.
         u32_Error = gi_Candle.AddMaskFilter(false, 0x7E8, 0x7FF);
@@ -224,7 +204,8 @@ void CandlelightDemo()
     // If you turn off GS_DevFlagTimestamp, Windows timestamps will be used.
     // Firmware timestamps produce more USB traffic and are not available for sent packets.
     // Read the comment of GetWinTimestamp()
-    // u32_DevFlags |= GS_DevFlagTimestamp;
+    if (HW_TIMESTAMP)
+        u32_DevFlags |= GS_DevFlagTimestamp;
 
     u32_Error = gi_Candle.Start((eDeviceFlags)u32_DevFlags);
     if (u32_Error)
@@ -247,22 +228,21 @@ void CandlelightDemo()
 
     PrintConsole(YELLOW, L"Press ENTER to abort and close the device.\n\n");
 
-    DWORD u32_TxID = 0x7E0;
-    BYTE u8_TxData[] = { 'E', 'l', 'm', 'u', 'S', 'o', 'f', 't' };
-
-    bool b_BootPin;
-    u32_Error = gi_Candle.IsBootPinEnabled(&b_BootPin);
-    if (u32_Error)
-        PrintConsole(RED,  L"Error %u getting status of pin BOOT0\n", u32_Error);
-    else
-    {
-        PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, gi_Candle.GetWinTimestamp()));
-        PrintConsole(WHITE, L" Info");
-        PrintConsole(GREY,  L" Pin BOOT0 is %s\n", b_BootPin ? L"enabled" : L"disabled");
-    }
+    kCanPacket k_TxPacket  = {0};
+    k_TxPacket.mu32_ID     = 0x7E0 + gs32_DeviceIndex;
+    k_TxPacket.mu8_DataLen = 8;
+    k_TxPacket.mu8_Data[0] = 'E';
+    k_TxPacket.mu8_Data[1] = 'l';
+    k_TxPacket.mu8_Data[2] = 'm';
+    k_TxPacket.mu8_Data[3] = 'u';
+    k_TxPacket.mu8_Data[4] = 'S';
+    k_TxPacket.mu8_Data[5] = 'o';
+    k_TxPacket.mu8_Data[6] = 'f';
+    k_TxPacket.mu8_Data[7] = 't';
 
     __int64 s64_LastStamp = 0;
     BYTE u8_RxData[RX_FIFO_BUF_SIZE]; // 128 byte
+    BYTE u8_LastEchoMarker;
 
     while (true)
     {
@@ -275,8 +255,7 @@ void CandlelightDemo()
             s64_LastStamp = s64_Now;
 
             __int64 s64_TxStamp; // only valid if no error returned
-            CString   s_TxPacket;
-            u32_Error = gi_Candle.SendPacket(u32_TxID, false, false, false, false, u8_TxData, sizeof(u8_TxData), &s_TxPacket, &s64_TxStamp);
+            u32_Error = gi_Candle.SendPacket(&k_TxPacket, &s64_TxStamp, &u8_LastEchoMarker);
             if (u32_Error)
             {
                 PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, gi_Candle.GetWinTimestamp()));
@@ -288,52 +267,52 @@ void CandlelightDemo()
                 // Timestamps for sending are only available if Windows timestamps are used
                 PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
                 PrintConsole(WHITE, L" Send");
-                PrintConsole(LIME,  L" %s\n", s_TxPacket);
+                PrintConsole(LIME,  L" %s\n", gi_Candle.FormatCanPacket(&k_TxPacket));
             }
 
             // pseudo random data
-            u8_TxData[0] ++;
-            u8_TxData[1] = u8_TxData[0] * 2;
-            u8_TxData[2] = u8_TxData[1] * 2;
-            u8_TxData[3] = u8_TxData[2] * 50;
-            u8_TxData[4] = u8_TxData[3] * 13;
-            u8_TxData[5] = u8_TxData[4] * 7;
-            u8_TxData[6] = u8_TxData[5] * 23;
-            u8_TxData[7] = u8_TxData[6] * 19;
+            k_TxPacket.mu8_Data[0] ++;
+            k_TxPacket.mu8_Data[1] = k_TxPacket.mu8_Data[0] * 3;
+            k_TxPacket.mu8_Data[2] = k_TxPacket.mu8_Data[1] * 2;
+            k_TxPacket.mu8_Data[3] = k_TxPacket.mu8_Data[2] * 51;
+            k_TxPacket.mu8_Data[4] = k_TxPacket.mu8_Data[3] * 11;
+            k_TxPacket.mu8_Data[5] = k_TxPacket.mu8_Data[4] * 7;
+            k_TxPacket.mu8_Data[6] = k_TxPacket.mu8_Data[5] * 25;
+            k_TxPacket.mu8_Data[7] = k_TxPacket.mu8_Data[6] * 17;
         }
 
         // Check for Rx data
-        __int64 s64_WinTimestamp;
+        __int64 s64_RxTimestamp;
         kHeader* pk_Header = (kHeader*)u8_RxData;
-        u32_Error = gi_Candle.ReceiveData(100, pk_Header, sizeof(u8_RxData), &s64_WinTimestamp);
+        u32_Error = gi_Candle.ReceiveData(100, pk_Header, sizeof(u8_RxData), &s64_RxTimestamp);
         if (u32_Error)
         {
             // Timeout means that no data was received during 100 ms. This is not an error.
             if (u32_Error != ERROR_TIMEOUT)
             {
                 // Error from WinUsb_ReadPipe() (e.g. USB device has been disconnected)
-                PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_WinTimestamp));
+                PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_RxTimestamp));
                 PrintConsole(WHITE, L" Recv");
                 PrintConsole(RED,   L" %s\n", gi_Candle.FormatLastError(u32_Error));
             }
         }
         else // pk_Header is valid
         {
-            PrintConsole(GREY, gi_Candle.FormatTimestamp(pk_Header, s64_WinTimestamp));
+            PrintConsole(GREY, gi_Candle.FormatTimestamp(pk_Header, s64_RxTimestamp));
             switch (pk_Header->msg_type)
             {
                 case MSG_RxFrame:
                 {
-                    CString s_RxPacket = gi_Candle.FormatRxPacket((kRxFrameElmue*)pk_Header);
+                    kCanPacket k_RxPacket = gi_Candle.RxFrameToCanPacket((kRxFrameElmue*)pk_Header);
                     PrintConsole(WHITE, L" Recv");
-                    PrintConsole(CYAN,  L" %s\n", s_RxPacket);
+                    PrintConsole(CYAN,  L" %s\n", gi_Candle.FormatCanPacket(&k_RxPacket));
                     break;
                 }
                 case MSG_TxEcho:
                 {
-                    CString s_EchoPacket = gi_Candle.FormatTxEcho((kTxEchoElmue*)pk_Header);
+                    kCanPacket k_EchoPacket = gi_Candle.GetTxEchoPacket((kTxEchoElmue*)pk_Header);
                     PrintConsole(WHITE, L" Echo");
-                    PrintConsole(GREEN, L" %s\n", s_EchoPacket);
+                    PrintConsole(GREEN, L" %s\n", gi_Candle.FormatCanPacket(&k_EchoPacket));
                     break;
                 }
                 case MSG_Error:
@@ -404,48 +383,47 @@ void CandlelightDemo()
 void DfuDemo()
 {
     PrintConsole(YELLOW, L"=============================================================================\n");
-    PrintConsole(YELLOW, L"                  CANable 2.5 Enter DFU Demo by ElmüSoft                     \n");
+    PrintConsole(YELLOW, L"                 CANable 2.5 Enter DFU C++ Demo by ElmüSoft                  \n");
     PrintConsole(YELLOW, L"=============================================================================\n");
 
-    DWORD u32_Error = OpenDevice(1);
+    // open interface 1
+    if (!OpenDevice(1))
+        return;
+
+    DWORD u32_Error = gi_Candle.EnterDfuMode();
     if (u32_Error)
     {
-        PrintConsole(RED, L"%s\n", gi_Candle.FormatLastError(u32_Error));
+        PrintConsole(RED, L"\n%s\n", gi_Candle.FormatLastError(u32_Error));
         return;
     }
 
-    u32_Error = gi_Candle.EnterDfuMode();
-    if (u32_Error)
-    {
-        PrintConsole(RED, L"%s\n", gi_Candle.FormatLastError(u32_Error));
-        return;
-    }
-
-    PrintConsole(LIME, L"Device has been switched successfully into DFU mode.\n");
+    PrintConsole(LIME, L"\nDevice has been switched successfully into DFU mode.\n");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-DWORD OpenDevice(BYTE u8_Interface)
+BOOL OpenDevice(BYTE u8_Interface)
 {
     CStringArray i_DispNames, i_DevicePaths;
     DWORD u32_Error = gi_Candle.EnumDevices(u8_Interface, &i_DispNames, &i_DevicePaths);
     if (u32_Error)
     {
-        PrintConsole(RED, L"%s\n", gi_Candle.FormatLastError(u32_Error));
-        return u32_Error;
+        PrintConsole(RED, L"Error enumerating USB devices. %s\n", gi_Candle.FormatLastError(u32_Error));
+        return FALSE;
     }
 
     if (i_DispNames.GetCount() == 0)
     {
-        PrintConsole(RED, L"No Candlelight device connected or in DFU mode or WinUSB driver not installed correctly.\n"
+        PrintConsole(RED, L"\nNo Candlelight device connected or in wrong operatiom mode or WinUSB driver not installed correctly.\n"
                           L"Legacy Candlelight firmware has bugs that prevent the correct driver installation.\n"
                           L"Make sure you have the new CANable 2.5 firmware from ElmüSoft.\n");
-        return ERROR_NO_MORE_ITEMS;
+        return FALSE;
     }
 
-    int s32_DeviceIndex = 0;
-    if (i_DispNames.GetCount() > 1)
+    // -----------------------------------------
+
+    gs32_DeviceIndex = 0;
+    if (i_DispNames.GetCount() > 1) // 2 ore more devices connected
     {
         while (true)
         {
@@ -455,30 +433,28 @@ DWORD OpenDevice(BYTE u8_Interface)
             {
                 PrintConsole(GREY, L"%u.) %s\n", i+1, i_DispNames[i]);
             }
-            s32_DeviceIndex = _getch() - '1';
+            gs32_DeviceIndex = _getch() - '1';
 
-            if (s32_DeviceIndex >= 0 && s32_DeviceIndex < i_DispNames.GetCount()) 
+            if (gs32_DeviceIndex >= 0 && gs32_DeviceIndex < i_DispNames.GetCount()) 
                 break;
             
             PrintConsole(RED, L"Invalid key!\n");
         }
     }
    
-    PrintConsole(GREY, L"\nDevice Path: \"%s\"\n", i_DevicePaths[s32_DeviceIndex]);
+    PrintConsole(GREY, L"\nDevice Path: \"%s\"\n", i_DevicePaths[gs32_DeviceIndex]);
 
     // -----------------------------------------
 
-    u32_Error = gi_Candle.Open(i_DevicePaths[s32_DeviceIndex]);
+    u32_Error = gi_Candle.Open(i_DevicePaths[gs32_DeviceIndex]);
+    gk_Info   = gi_Candle.GetDeviceInfo();
 
-    // if error is ERROR_INVALID_DEVICE, the device descriptor is valid --> display data of unsupported device
-    if (u32_Error == 0 || u32_Error == ERROR_INVALID_DEVICE || u32_Error == ERROR_INVALID_FIRMWARE)
+    PrintConsole(GREY, gi_Candle.GetDetails());
+
+    if (u32_Error)
     {
-        PrintConsole(GREY, L"USB Vendor:           %s\n",   gi_Candle.ms_Vendor);
-        PrintConsole(GREY, L"USB Product:          %s\n",   gi_Candle.ms_Product);
-        PrintConsole(GREY, L"USB Serial  Nº:       %s\n",   gi_Candle.ms_Serial);
-        PrintConsole(GREY, L"USB Vendor  ID:       %04X\n", gi_Candle.mk_DeviceDescr.idVendor);
-        PrintConsole(GREY, L"USB Product ID:       %04X\n", gi_Candle.mk_DeviceDescr.idProduct);
-        PrintConsole(GREY, L"USB Device Version:   %s\n",   gi_Candle.FormatBcdVersion(gi_Candle.mk_DeviceDescr.bcdDevice));
+        PrintConsole(RED, L"\n%s\n", gi_Candle.FormatLastError(u32_Error));
+        return FALSE;
     }
-    return u32_Error;
+    return TRUE;
 }

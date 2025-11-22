@@ -55,10 +55,15 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>
+      </ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>Candlelight/winusb.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -75,18 +80,19 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>Candlelight/winusb.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CANableDemo.h" />
-    <ClInclude Include="Candlelight.h" />
-    <ClInclude Include="Candlelight_def.h" />
+    <ClInclude Include="Candlelight\Candlelight.h" />
+    <ClInclude Include="Candlelight\Candlelight_def.h" />
+    <ClInclude Include="Candlelight\WinUSB_def.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="winusb.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CANableDemo.cpp" />
-    <ClCompile Include="Candlelight.cpp" />
+    <ClCompile Include="Candlelight\Candlelight.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
