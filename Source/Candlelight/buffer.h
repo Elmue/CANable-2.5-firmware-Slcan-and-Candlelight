@@ -55,7 +55,7 @@ static inline bool list_is_empty(const list_item *head)
 //     So after initialization the pool is full and the other list is empty.
 // }
 
-// for debugging: returns 0 ... CAN_QUEUE_SIZE / HOST_QUEUE_SIZE
+// for debugging: returns 0 ... CAN_QUEUE_SIZE or HOST_QUEUE_SIZE
 static inline int count_free_entries(const list_item *head)
 {
     list_item* item = head->next;
