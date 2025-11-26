@@ -934,7 +934,7 @@ namespace CANable
                                                                    mk_Info.mk_BoardInfo.McuName,
                                                                    mk_Info.mk_Capability.ms32_CanClock / 1000000,
                                                                    mk_Info.mk_BoardInfo.mu16_McuDeviceID);
-            ms_Details.AppendFormat("Pin BOOT0:            {0}\n", b_Enabled ? "Enabled" : "Disabeld");
+            ms_Details.AppendFormat("Pin BOOT0:            {0}\n", b_Enabled ? "Enabled" : "Disabled");
 
             if (mk_Info.mk_DeviceVersion.mu32_SoftVersionBcd < MIN_FIRMWARE)
                 throw new Exception("Please upload the latest firmware.");
