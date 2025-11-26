@@ -364,7 +364,7 @@ DWORD Candlelight::Open(CString s_DevicePath)
                                                   mk_Info.mk_Capability.fclk_can / 1000000,
                                                   mk_Info.mk_BoardInfo.McuDeviceID);         ms_Details += s_Line;
     s_Line.Format(L"Pin BOOT0:            %s\n",  (u16_PinStatus & PINST_Enabled) ? 
-                                                  L"Enabled" : L"Disabeld");                 ms_Details += s_Line;
+                                                  L"Enabled" : L"Disabled");                 ms_Details += s_Line;
 
     if (mk_Info.mk_DeviceVersion.sw_version_bcd < MIN_FIRMWARE)
         return ERROR_UPDATE_FIRMWARE;
