@@ -15,6 +15,7 @@
 #define ERROR_RX_FIFO_OVERFLOW  57013  // The application is polling ReceiveData() slower than USB IN packets arrive
 #define ERROR_CORRUPT_IN_DATA   57014  // Corrupt USB IN packet received from the firmware
 #define ERROR_UPDATE_FIRMWARE   57015  // The user must update the firmware
+#define ERROR_TOO_MANY_ERRORS   57016  // too many errors during WritePipe / ReadPipe
 
 #define RX_FIFO_MAX_COUNT          30  // up to 30 USB packets can be buffered
 #define RX_FIFO_BUF_SIZE          128  // max bytes that can be read from USB (should be multiple of max. endpoint packet size (=64))
@@ -108,6 +109,8 @@ private:
     bool                     mb_InitDone;
     bool                     mb_Started;
     DWORD                    mu32_TxOverflow;    
+    DWORD                    mu32_RxPipeErrors;   
+    DWORD                    mu32_TxPipeErrors;   
     eFeedback                me_LastError;
     __int64                  ms64_LastMcuStamp;    // the last MCU timestamp
     __int64                  ms64_McuRollOver;     // offset for 32 bit firmware timestamp

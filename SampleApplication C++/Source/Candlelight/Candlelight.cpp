@@ -185,6 +185,8 @@ DWORD Candlelight::Open(CString s_DevicePath)
     ms64_LastMcuStamp   = -1;
     ms64_ClockOffset    = -1;
     mu32_TxOverflow     = 0;    
+    mu32_RxPipeErrors   = 0;
+    mu32_TxPipeErrors   = 0;
     mh_ThreadEvent      = NULL;
     mb_FifoOverflow     = false;
     mb_BaudFDSet        = false;
@@ -591,8 +593,12 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp,
 
     DWORD u32_Transferred;
     if (!WinUsb_WritePipe(mh_WinUsb, mk_Info.mu8_EndpointOUT, u8_Transmit, k_TxFrame.header.size, &u32_Transferred, NULL))
+    {
+        mu32_TxPipeErrors ++;
         return GetLastError();
+    }
 
+    mu32_TxPipeErrors = 0;
     *pu8_EchoMarker = mu8_EchoMarker;
     mu8_EchoMarker ++;
     return ERROR_SUCCESS;
@@ -676,7 +682,9 @@ void Candlelight::ReadPipeThreadMember()
                         break;
 
                     case WAIT_OBJECT_0:
-                        if (!WinUsb_GetOverlappedResult(mh_WinUsb, &k_Overlapped, &u32_Read, FALSE))
+                        if (WinUsb_GetOverlappedResult(mh_WinUsb, &k_Overlapped, &u32_Read, FALSE))
+                            mu32_RxPipeErrors = 0;
+                        else
                             u32_Error = GetLastError();
                         break;
 
@@ -702,6 +710,7 @@ void Candlelight::ReadPipeThreadMember()
             // If the CANable has been disconnected an error ERROR_BAD_COMMAND or ERROR_GEN_FAILURE will be reported in each loop.
             // This high priority thread must be slowed down to avoid that it consumes
             // a lot of CPU power running in an endless loop and to avoid that the FIFO overflows with errors.
+            mu32_RxPipeErrors ++;
             Sleep(50);
         }
     } // while
@@ -722,6 +731,9 @@ DWORD Candlelight::ReceiveData(DWORD u32_Timeout, kHeader* pk_Header, DWORD u32_
 
     if (u32_BufSize < RX_FIFO_BUF_SIZE)
         return ERROR_INSUFFICIENT_BUFFER;
+
+    if (mu32_RxPipeErrors > 30 || mu32_TxPipeErrors > 30)
+        return ERROR_TOO_MANY_ERRORS;
 
     mi_Critical.Lock();
         kRxFifo* pk_FifoRead = &mk_RxFifo[ms32_FifoReadIdx];
@@ -1151,6 +1163,8 @@ CString Candlelight::FormatLastError(DWORD u32_Error)
             return L"Corrupt USB IN data received.";
         case ERROR_UPDATE_FIRMWARE:
             return L"Please upload the latest firmware.";
+        case ERROR_TOO_MANY_ERRORS:
+            return L"Too many errors. The CANable has a problem or has been disconnected.";
         case ERROR_CODE_IN_FEEDBACK:
         {
             switch (me_LastError)
