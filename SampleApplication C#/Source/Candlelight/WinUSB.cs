@@ -96,8 +96,8 @@ namespace CANable
         {
             Undefined        = 0x00, // Class defined in interface descriptor
             Audio            = 0x01,
-            CdcControl       = 0x02, // COM
-            HID              = 0x03,
+            CdcControl       = 0x02, // COM port
+            HID              = 0x03, // Mouse, Keybaord, etc.
             Physical         = 0x05,
             StillImaging     = 0x06, // PTP / Image
             Printer          = 0x07,
@@ -206,6 +206,7 @@ namespace CANable
 
         #region structs
 
+        // Common header for all descriptors
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public class kDescriptorHead
         {
@@ -293,6 +294,7 @@ namespace CANable
 
         // ---------------------------------------------------------------
 
+        // SETUP Control request sent on endoint 00
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         struct kSetup
         {
@@ -309,7 +311,7 @@ namespace CANable
             }
         }
         
-        // NOT Pack = 1 here !
+        // NOT "Pack = 1" here !
         [StructLayout(LayoutKind.Sequential, Pack = 2)]
         public struct kPipeInformation
         {

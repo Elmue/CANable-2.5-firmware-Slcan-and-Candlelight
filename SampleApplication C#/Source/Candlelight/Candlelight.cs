@@ -34,6 +34,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 */
 
 using System;
+using System.IO;
 using System.Text;
 using System.ComponentModel;
 using System.Collections.Generic;
@@ -619,7 +620,7 @@ namespace CANable
             }
 
             /// <summary>
-            /// The text message to printed to the Trace output
+            /// The text message to be printed to the Trace output
             /// </summary>
             public String Message
             {
@@ -1187,6 +1188,7 @@ namespace CANable
         /// CAN FD packets (mb_FDF) can only be sent if a data baudrate has been set before.
         /// For remote frames (mb_RTR = true) the first byte may contain the value for the DLC field.
         /// u8_EchoMarker returns the echo marker that you will get in a kTxEchoElmue struct back if ELM_DevFlagDisableTxEcho is not set.
+        /// If you get an IOException the device is dead --> abort and close the device and show the message to the user.
         /// </summary>
         public void SendPacket(CanPacket i_Packet, out Int64 s64_WinTimestamp, out Byte u8_EchoMarker)
         {
@@ -1194,6 +1196,9 @@ namespace CANable
 
             if (!mb_InitDone || !mb_Started)
                 throw new Exception("The device must be open and started.");
+
+            if (mi_PipeIn.PipeErrors > 30 || mi_PipeOut.PipeErrors > 30)
+                throw new IOException("Too many errors. The CANable has a problem or has been disconnected.");
 
             int s32_MaxData = mb_BaudFDSet ? 64 : 8;
             if (i_Packet.mi_Data.Count > s32_MaxData)
@@ -1259,11 +1264,15 @@ namespace CANable
         /// <summary>
         /// Receive a Rx packet, a Tx echo packet, an error frame, a debug message, a busload packet, or .......
         /// returns null on timeout 
+        /// If you get an IOException the device is dead --> abort and close the device and show the message to the user.
         /// </summary>
         public cHeader ReceiveData(int s32_Timeout, out Int64 s64_RxTimestamp)
         {
             if (!mb_InitDone || !mb_Started)
                 throw new Exception("The device must be open and started.");
+
+            if (mi_PipeIn.PipeErrors > 30 || mi_PipeOut.PipeErrors > 30)
+                throw new IOException("Too many errors. The CANable has a problem or has been disconnected.");
 
             Byte[] u8_RxData = mi_PipeIn.Receive(s32_Timeout, out s64_RxTimestamp);
             if (u8_RxData == null)
