@@ -734,9 +734,12 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <div>If the baudrates do not use the same prescaler, a <b>phase shift</b> will be the consequence which may corrupt the timing.</div>
 <p>
 <div>Another recommendation is that the <b>prescaler</b> should be as low as possible.</div>
+<div>This results in a shorter TQ and allows finer adjustement to phase shifts.</div>
+<div>CAN controllers synchronize on received edges from recessive to dominant.</div>
+<div>The <b>SJW</b> defines the maximum deviation of a signal edge that the processor still allows for re-synchronization.</div>
+<div>The <b>TQ</b> defines the minimum step at which the processor can adjust to the incoming signal edge.</div>
 <p>
-<div>And the <b>Synchronization Jump Width</b> should be: SJW = min(Segment1, Segment2).</div>
-<div>The SJW defines the <b>maximum</b> interval that the processor is allowed to accept phase jitters for resynchronization.</div>
+<div>And it is recommended that the <b>Synchronization Jump Width</b> should be: SJW = min(Segment1, Segment2).</div>
 <div>For more details read the PDF documents in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
 <p>
 <div>All this baudrate / samplepoint stuff is really complicated and I have found many bugs in legacy code, so I implemented a check.</div>
