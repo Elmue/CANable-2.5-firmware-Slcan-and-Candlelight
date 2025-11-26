@@ -237,19 +237,19 @@ eFeedback can_open(uint32_t mode)
     }
 
     // -------------------- filters --------------------------
-    
+
     // Store all user filters in can_filters into the processor's memory
     if (!can_apply_filters())
         return FBK_ErrorFromHAL;
-    
+
     // the user can define up to 8 filters
     bool has_filters = (std_filter_count + ext_filter_count) > 0;
-    
+
     // If no user filters are defined --> accept all packets in FIFO 0 where they are sent over USB to the host.
     // Otherwise all packets that do not pass the user filters go to FIFO 1 where they only flash the blue LED.
     uint32_t non_matching = has_filters ? FDCAN_ACCEPT_IN_RX_FIFO1 : FDCAN_ACCEPT_IN_RX_FIFO0;
 
-    HAL_FDCAN_ConfigGlobalFilter(&can_handle, non_matching, non_matching, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);    
+    HAL_FDCAN_ConfigGlobalFilter(&can_handle, non_matching, non_matching, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
 
     // --------------------- timestamp -------------------------
 
@@ -310,12 +310,12 @@ void can_send_packet(FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
     HAL_StatusTypeDef status = HAL_FDCAN_AddMessageToTxFifoQ(&can_handle, tx_header, tx_data);
     if (status != HAL_OK) // may be busy (state = HAL_FDCAN_STATE_BUSY)
     {
-        // On error the HAL sets can_handle.ErrorCode to HAL_FDCAN_ERROR_FIFO_FULL or HAL_FDCAN_ERROR_NOT_STARTED        
+        // On error the HAL sets can_handle.ErrorCode to HAL_FDCAN_ERROR_FIFO_FULL or HAL_FDCAN_ERROR_NOT_STARTED
         // Both errors can never happen, because this function is only called when CAN has been initialized and the FIFO is not full.
         error_assert(APP_CanTxFail, true);
         return;
     }
-    
+
     if (can_handle.Init.AutoRetransmission == ENABLE)
     {
         last_tx_tick = HAL_GetTick();
@@ -359,7 +359,7 @@ void can_process(uint32_t tick_now)
             // for bus load calculation
             bit_cnt_message += can_calc_bit_count_in_frame(rx_header);
         }
-        
+
         if (tx_pending > 0)
         {
             last_tx_tick = tick_now;
@@ -419,20 +419,20 @@ void can_process(uint32_t tick_now)
     // ------------------------- Refresh Bus Status ---------------------------------
 
     HAL_FDCAN_GetProtocolStatus(&can_handle, &cur_status);
-   
+
     // ----------------------------- Transmit Timeout -----------------------------
-    
+
     // If a message hangs longer than a few milliseconds in the Tx FIFO this means that it was not acknowledged.
     // The processor continues to send the message !!ETERNALLY!! producing a bus load of 95%.
     // Tx requests must be canceled by firmware to free CAN bus from the congestion.
     // the processor will never stop alone sending the same packet over and over again.
     if (tx_pending > 0 && tick_now >= last_tx_tick + CAN_TX_TIMEOUT)
-    {  
+    {
         tx_pending = 0;
         HAL_FDCAN_AbortTxRequest(&can_handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
         buf_clear_can_buffer();
-        error_assert(APP_CanTxTimeout, false);        
-    }   
+        error_assert(APP_CanTxTimeout, false);
+    }
 
     // --------------------------- Calculate Cycle Time ---------------------------
 
@@ -530,7 +530,7 @@ void can_timer_100ms()
 {
     if (busload_interval == 0 || !can_is_open)
         return;
-    
+
     // The bus load calculation is very rough, as bit stuffing is not considered.
     // There may be 1 stuff bit for 5 payload bits.
     // This constant increases the busload by 10% to compensate this.
@@ -564,61 +564,52 @@ void can_timer_100ms()
 
 // ATTENTION: Deprecated! Read the manual.
 // Set the nominal bitrate of the CAN peripheral
-// Always samplepoint 87.5%
+// Always samplepoint 75%. (In previous versions 87.5% was used which may produce Rx/Tx errors)
 // See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
+// IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
 eFeedback can_set_baudrate(can_nom_bitrate bitrate)
 {
     if (can_is_open)
         return FBK_AdapterMustBeClosed; // cannot set bitrate while on bus
-    
-    can_bitrate_nominal.Seg1 = 174;
-    can_bitrate_nominal.Seg2 =  25;   
 
-    // IMPORTANT:
-    // The same setting "Nominal: 500k baud, 87.5%; Data: 2M baud, 75.0%;" can be achieved with different values:
-    // If you set Nominal = [P:2,  S1:139, S2:20, J:20] and Data = [P:2,  S1:29, S2:10, J:10] a transfer with BRS works fine.
-    // But with   Nominal = [P:10, S1:27,  S2:4,  J:4]  and Data = [P:10, S1:5,  S2:2,  J:2]  you get Bus Off errors !!!
+    can_bitrate_nominal.Seg1 = 239;
+    can_bitrate_nominal.Seg2 =  80;
+
     switch (bitrate)
     {
         case CAN_BITRATE_10K:
-            can_bitrate_nominal.Brp  = 80;
+            can_bitrate_nominal.Brp  = 50;
             break;
         case CAN_BITRATE_20K:
-            can_bitrate_nominal.Brp  = 40;
+            can_bitrate_nominal.Brp  = 25;
             break;
         case CAN_BITRATE_50K:
-            can_bitrate_nominal.Brp  = 16;
+            can_bitrate_nominal.Brp  = 10;
             break;
         case CAN_BITRATE_83K:
-            can_bitrate_nominal.Brp  = 8;  
-            can_bitrate_nominal.Seg1 = 209;
-            can_bitrate_nominal.Seg2 = 30;
+            can_bitrate_nominal.Brp  = 6;
             break;
         case CAN_BITRATE_100K:
-            can_bitrate_nominal.Brp  = 8;
+            can_bitrate_nominal.Brp  = 5;
             break;
         case CAN_BITRATE_125K:
-            can_bitrate_nominal.Brp  = 5;   // 160 MHz / 5 / (1 + 223 + 32) = 125 kBaud
-            can_bitrate_nominal.Seg1 = 223; // (1 + 223)   / (1 + 223 + 32) = 87.5%
-            can_bitrate_nominal.Seg2 = 32;
-            break;
+            can_bitrate_nominal.Brp  = 4;   // 160 MHz / 4 / (1 + 239 + 80) = 125 kBaud
+            break;                          // (1 + 239)   / (1 + 239 + 80) = 75%
         case CAN_BITRATE_250K:
-            can_bitrate_nominal.Brp  = 4;
-            can_bitrate_nominal.Seg1 = 139;
-            can_bitrate_nominal.Seg2 = 20;
+            can_bitrate_nominal.Brp  = 2;
             break;
         case CAN_BITRATE_500K:
-            can_bitrate_nominal.Brp  = 2;
-            can_bitrate_nominal.Seg1 = 139;
-            can_bitrate_nominal.Seg2 = 20;
+            can_bitrate_nominal.Brp  = 1;
             break;
         case CAN_BITRATE_800K:
             can_bitrate_nominal.Brp  = 1;
+            can_bitrate_nominal.Seg1 = 149;
+            can_bitrate_nominal.Seg2 = 50;
             break;
         case CAN_BITRATE_1000K:
             can_bitrate_nominal.Brp  = 1;
-            can_bitrate_nominal.Seg1 = 139;
-            can_bitrate_nominal.Seg2 = 20;
+            can_bitrate_nominal.Seg1 = 119;
+            can_bitrate_nominal.Seg2 = 40;
             break;
         default:
             return FBK_InvalidParameter;
@@ -626,7 +617,7 @@ eFeedback can_set_baudrate(can_nom_bitrate bitrate)
 
     bitlimits* limits = utils_get_bit_limits();
     can_bitrate_nominal.Sjw = MIN(can_bitrate_nominal.Seg2, limits->nom_sjw_max);
-    
+
     // Check if the settings are supported by the processor.
     // If not the user must call can_set_nom_bit_timing() instead.
     if (!IS_FDCAN_NOMINAL_PRESCALER(can_bitrate_nominal.Brp)  ||
@@ -636,13 +627,14 @@ eFeedback can_set_baudrate(can_nom_bitrate bitrate)
         can_bitrate_nominal.Brp = 0; // baudrate not valid
         return FBK_InvalidParameter;
     }
-    return FBK_Success; 
+    return FBK_Success;
 }
 
 // ATTENTION: Deprecated! Read the manual.
 // Set the data bitrate of the CAN peripheral
 // Samplepoint = 75%, except for 8 MBaud it must be 50% because 75% does not work.
 // See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
+// IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
 eFeedback can_set_data_baudrate(can_data_bitrate bitrate)
 {
     if (can_is_open)
@@ -651,13 +643,9 @@ eFeedback can_set_data_baudrate(can_data_bitrate bitrate)
     can_bitrate_data.Seg1 = 29;
     can_bitrate_data.Seg2 = 10;
 
-    // IMPORTANT:
-    // The same setting "Nominal: 500k baud, 87.5%; Data: 2M baud, 75.0%;" can be achieved with different values:
-    // If you set Nominal = [P:2,  S1:139, S2:20, J:20] and Data = [P:2,  S1:29, S2:10, J:10] a transfer with BRS works fine.
-    // But with   Nominal = [P:10, S1:27,  S2:4,  J:4]  and Data = [P:10, S1:5,  S2:2,  J:2]  you get Bus Off errors !!!
     switch (bitrate)
     {
-        case CAN_DATA_BITRATE_500K: 
+        case CAN_DATA_BITRATE_500K:
             can_bitrate_data.Brp  = 8;
             break;
         case CAN_DATA_BITRATE_1M:
@@ -689,7 +677,7 @@ eFeedback can_set_data_baudrate(can_data_bitrate bitrate)
 
     bitlimits* limits = utils_get_bit_limits();
     can_bitrate_data.Sjw = MIN(can_bitrate_data.Seg2, limits->fd_sjw_max);
-    
+
     // Check if the settings are supported by the processor.
     // If not the user must call can_set_data_bit_timing() instead.
     if (!IS_FDCAN_DATA_PRESCALER(can_bitrate_data.Brp)  ||
@@ -699,7 +687,7 @@ eFeedback can_set_data_baudrate(can_data_bitrate bitrate)
         can_bitrate_data.Brp = 0; // baudrate not valid
         return FBK_InvalidParameter;
     }
-    return FBK_Success; 
+    return FBK_Success;
 }
 
 // Set the nominal bitrate configuration of the CAN peripheral
@@ -788,12 +776,12 @@ void can_print_info()
         if (tdc_offset > 0)
             sprintf(buf, "TDC offset: %lu mtq", tdc_offset);
         else
-            strcpy(buf, "TDC: not used");   
-        
+            strcpy(buf, "TDC: not used");
+
         // Print enable status of pin BOOT0
         strcat(buf, ", Pin BOOT0: ");
         strcat(buf, (system_is_option_enabled(OPT_BOOT0_Enable)) ? "enabled" : "disabled");
-        
+
         control_send_debug_mesg(buf);
     }
 }
@@ -820,7 +808,7 @@ eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask)
     uint32_t maximum = extended ? 0x1FFFFFFF : 0x7FF;
     if (filter > maximum || mask > maximum)
         return FBK_InvalidParameter;
-    
+
     if (can_is_open)
     {
         // only one existing filter can be modified if the adapter is already open
@@ -830,9 +818,9 @@ eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask)
         // the filter to be modified must be from the same type
         if (extended != (ext_filter_count == 1))
             return FBK_AdapterMustBeClosed;
-        
+
         // modify the one and only filter at index 0
-        ext_filter_count = 0; 
+        ext_filter_count = 0;
         std_filter_count = 0;
         tot_filters      = 0;
     }
@@ -846,7 +834,7 @@ eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask)
 
     if (extended) ext_filter_count ++;
     else          std_filter_count ++;
-    
+
     if (can_is_open && !can_apply_filters())
         return FBK_ErrorFromHAL;
 
