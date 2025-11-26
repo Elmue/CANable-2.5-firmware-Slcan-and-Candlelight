@@ -992,16 +992,16 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <tr><td>"Ms\r"</td><td>Open/Closed</td><td>100</td><td>Disable ESI report</td><td>No ESI report</td></tr>
 <tr><td>"MDEFMS\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug, Error, Feedback, Echo, ESI reports</td><td>You can set all modes at once in one command</td></tr>
 <tr><th>Set Baudrates</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 87.5%</td></tr>
-<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 87.5%</td></tr>
+<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 75%</td></tr>
 <tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
 <tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
 <tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
@@ -1394,6 +1394,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <li><div><b>25.11.16</b>: New firmware supports remote frames, Bugfix Slcan baudrate Y0, Report error when sending FD packet in Classic mode.</div>
 <li><div><b>25.11.18</b>: New firmware fixes calculation of all Slcan baudrates for commands S and Y. Fix of legacy Candlelight packet size.
 <li><div><b>25.11.21</b>: Many improvements in C++ demo, added new C# demo
+<li><div><b>25.11.26</b>: Changed Slcan command S to use 75% samplepoint which is more reliable
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
