@@ -34,6 +34,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 */
 
 using System;
+using System.IO;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Text;
@@ -248,6 +249,9 @@ class Program
                     Print(ConsoleColor.Gray,  mi_Candle.FormatTimestamp(null, Utils.GetWinTimestamp()));
                     Print(ConsoleColor.White, " Send");
                     Print(ConsoleColor.Red,   " {0}\n", Ex.Message);
+
+                    if (Ex is IOException)
+                        return; // The CANable has been disconnected
                 }
 
                 // pseudo random data
@@ -274,6 +278,9 @@ class Program
                 Print(ConsoleColor.Gray,  mi_Candle.FormatTimestamp(null, s64_RxTimestamp));
                 Print(ConsoleColor.White, " Recv");
                 Print(ConsoleColor.Red,   " {0}\n", Ex.Message);
+
+                if (Ex is IOException)
+                    return; // The CANable has been disconnected
             }
 
             if (i_Header != null)
