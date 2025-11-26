@@ -263,6 +263,9 @@ void CandlelightDemo()
                 PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, gi_Candle.GetWinTimestamp()));
                 PrintConsole(WHITE, L" Send");
                 PrintConsole(RED,   L" %s\n", gi_Candle.FormatLastError(u32_Error));
+
+                if (u32_Error == ERROR_TOO_MANY_ERRORS)
+                    return; // The CANable has been disconnected
             }
             else
             {
@@ -297,6 +300,9 @@ void CandlelightDemo()
                 PrintConsole(WHITE, L" Recv");
                 PrintConsole(RED,   L" %s\n", gi_Candle.FormatLastError(u32_Error));
             }
+
+            if (u32_Error == ERROR_TOO_MANY_ERRORS)
+                return; // The CANable has been disconnected
         }
         else // pk_Header is valid
         {
