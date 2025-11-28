@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2018 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -48,6 +48,8 @@
 // #define HAL_CRC_MODULE_ENABLED   
 // #define HAL_CRYP_MODULE_ENABLED   
 // #define HAL_DAC_MODULE_ENABLED   
+// #define HAL_DMA_MODULE_ENABLED
+// #define HAL_EXTI_MODULE_ENABLED
 // #define HAL_FMAC_MODULE_ENABLED   
 // #define HAL_HRTIM_MODULE_ENABLED   
 // #define HAL_IRDA_MODULE_ENABLED   
@@ -70,8 +72,6 @@
 // #define HAL_UART_MODULE_ENABLED   
 // #define HAL_USART_MODULE_ENABLED   
 // #define HAL_WWDG_MODULE_ENABLED   
-// #define HAL_EXTI_MODULE_ENABLED
-// #define HAL_DMA_MODULE_ENABLED
 
 /* ########################## Register Callbacks selection ############################## */
 /**
@@ -155,7 +155,7 @@ The real value may vary depending on the variations in voltage and temperature.*
   *        This value is used by the UART, RTC HAL module to compute the system frequency
   */
 #if !defined  (LSE_VALUE)
-#define LSE_VALUE  (32768UL)    /*!< Value of the External Low Speed oscillator in Hz */
+#define LSE_VALUE  (32768UL)    /*!< Value of the External oscillator in Hz */
 #endif /* LSE_VALUE */     
 
 #if !defined  (LSE_STARTUP_TIMEOUT)
@@ -168,7 +168,7 @@ The real value may vary depending on the variations in voltage and temperature.*
   *        frequency, this source is inserted directly through I2S_CKIN pad.
   */
 #if !defined  (EXTERNAL_CLOCK_VALUE)
-#define EXTERNAL_CLOCK_VALUE    (12288000UL) /*!< Value of the External oscillator in Hz*/
+#define EXTERNAL_CLOCK_VALUE    (12288000UL) /*!< Value of the External clock source in Hz*/
 #endif /* EXTERNAL_CLOCK_VALUE */
 
 /* Tip: To avoid modifying this file each time you need to use different HSE,
@@ -179,6 +179,7 @@ The real value may vary depending on the variations in voltage and temperature.*
   * @brief This is the HAL system configuration section
   */     
 
+#define  USE_USB_DOUBLE_BUFFER        1
 #define  VDD_VALUE                   (3300UL) /*!< Value of VDD in mv */
 #define  TICK_INT_PRIORITY           (0UL)    /*!< tick interrupt priority (lowest by default)  */            
 #define  USE_RTOS                     0U
@@ -377,5 +378,6 @@ void assert_failed(uint8_t *file, uint32_t line);
 #endif
 
 #endif /* STM32G4xx_HAL_CONF_H */
+
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2019 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -31,6 +30,8 @@ extern "C" {
 /** @addtogroup STM32G4xx_HAL_Driver
   * @{
   */
+
+#if defined (OPAMP1) || defined (OPAMP2) || defined (OPAMP3) || defined (OPAMP4) || defined (OPAMP5) || defined (OPAMP6)
 
 /** @addtogroup OPAMPEx OPAMPEx
   * @{
@@ -55,7 +56,12 @@ HAL_StatusTypeDef HAL_OPAMPEx_SelfCalibrateAll(OPAMP_HandleTypeDef *hopamp1, OPA
 #elif defined(STM32GBK1CB) || defined(STM32G431xx) || defined(STM32G441xx) || defined(STM32G471xx)
 HAL_StatusTypeDef HAL_OPAMPEx_SelfCalibrateAll(OPAMP_HandleTypeDef *hopamp1, OPAMP_HandleTypeDef *hopamp2,
                                                OPAMP_HandleTypeDef *hopamp3);
-#endif
+#elif defined(STM32G491xx) || defined(STM32G4A1xx)
+HAL_StatusTypeDef HAL_OPAMPEx_SelfCalibrateAll(OPAMP_HandleTypeDef *hopamp1, OPAMP_HandleTypeDef *hopamp2,
+                                               OPAMP_HandleTypeDef *hopamp3, OPAMP_HandleTypeDef *hopamp6);
+#elif defined(STM32G411xB) || defined(STM32G411xC)
+HAL_StatusTypeDef HAL_OPAMPEx_SelfCalibrateAll(OPAMP_HandleTypeDef *hopamp1);
+#endif /* STM32G473xx || STM32G474xx || STM32G483xx || STM32G484xx */
 
 /**
   * @}
@@ -69,10 +75,11 @@ HAL_StatusTypeDef HAL_OPAMPEx_SelfCalibrateAll(OPAMP_HandleTypeDef *hopamp1, OPA
   * @}
   */
 
+#endif /* OPAMP1 || OPAMP2 || OPAMP3 || OPAMP4  || OPAMP5 || OPAMP6 */
+
 /**
   * @}
   */
-
 
 #ifdef __cplusplus
 }
@@ -80,5 +87,3 @@ HAL_StatusTypeDef HAL_OPAMPEx_SelfCalibrateAll(OPAMP_HandleTypeDef *hopamp1, OPA
 
 
 #endif /* STM32G4xx_HAL_OPAMP_EX_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -47,7 +47,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251118 = 18.nov.2025)
-const DWORD MIN_FIRMWARE = 0x251118;
+const DWORD MIN_FIRMWARE = 0x251128;
 
 const WORD LANGUAGE_ENGLISH_USA = 0x409;
 

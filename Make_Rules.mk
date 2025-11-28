@@ -102,7 +102,10 @@ flash: all
 CUBELIB = $(CUBELIB_BUILD_DIR)/libstm32cube.a
 
 # List of stm32 driver objects
-CUBELIB_DRIVER_OBJS = $(addprefix $(CUBELIB_BUILD_DIR)/, $(patsubst %.c, %.o, $(notdir $(wildcard $(DRIVER_PATH)/Src/*.c))))
+# The HAL driver comes with some template files that are not meant to be compiled, like stm32g4xx_hal_timebase_tim_template.c
+# STM did not put these templates into a separate subdirectory. If we filter them out here, this allows 
+# building against an external driver directory without further modification.
+CUBELIB_DRIVER_OBJS = $(addprefix $(CUBELIB_BUILD_DIR)/, $(patsubst %.c, %.o, $(notdir $(filter-out %/*_template.c,$(wildcard $(DRIVER_PATH)/Src/*.c)))))
 
 # shortcut for building core library (make cubelib)
 cubelib: $(CUBELIB)

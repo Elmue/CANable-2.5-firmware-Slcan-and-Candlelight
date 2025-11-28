@@ -429,7 +429,7 @@ eFeedback control_parse_str(char buf[], int len)
     if (tx_header->FDFormat == FDCAN_CLASSIC_CAN && dlc_code > 8)
         return FBK_InvalidParameter;
     
-    tx_header->DataLength = DLC_TO_HAL(dlc_code);
+    tx_header->DataLength = dlc_code;
 
     // remote frames may have DLC > 0 but never send data bytes
     if (tx_header->TxFrameType != FDCAN_REMOTE_FRAME)

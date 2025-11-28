@@ -10,13 +10,6 @@
 #include "settings.h"
 #include "system.h"
 
-// FDCAN_TxHeaderTypeDef.DataLength needs the DLC value to be shifted up by 16 bits.
-// It is stupid that ST Microelectronics did not implement this shift operation into the HAL.
-// Will other ST processor models also need the DLC to be shifted 16 bits up ??
-#define DLC_SHIFT        16
-#define DLC_TO_HAL(DLC) ((DLC & 0xF) << DLC_SHIFT)
-#define HAL_TO_DLC(LEN) ((LEN >> DLC_SHIFT) & 0xF)
-
 // Classic CAN / CANFD nominal bitrates
 // always samplepoint 87.5%
 typedef enum 

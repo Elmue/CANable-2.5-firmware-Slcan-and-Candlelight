@@ -6,13 +6,12 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2019 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * Copyright (c) 2019 STMicroelectronics.
+  * All rights reserved.
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * This software is licensed under terms that can be found in the LICENSE file
+  * in the root directory of this software component.
+  * If no LICENSE file comes with this software, it is provided AS-IS.
   *
   ******************************************************************************
   */
@@ -54,7 +53,8 @@ typedef struct
   uint32_t DataType;                   /*!< 32-bit data, 16-bit data, 8-bit data or 1-bit string.
                                         This parameter can be a value of @ref CRYP_Data_Type */
   uint32_t KeySize;                    /*!< Used only in AES mode : 128, 192 or 256 bit key length in CRYP1.
-                                        128 or 256 bit key length in TinyAES This parameter can be a value of @ref CRYP_Key_Size */
+                                        128 or 256 bit key length in TinyAES
+                                        This parameter can be a value of @ref CRYP_Key_Size */
   uint32_t *pKey;                      /*!< The key used for encryption/decryption */
   uint32_t *pInitVect;                 /*!< The initialization vector used also as initialization
                                          counter in CTR mode */
@@ -64,9 +64,10 @@ typedef struct
   uint32_t *Header;                    /*!< used only in AES GCM and CCM Algorithm for authentication,
                                         GCM : also known as Additional Authentication Data
                                         CCM : named B1 composed of the associated data length and Associated Data. */
-  uint32_t HeaderSize;                 /*!< The size of header buffer in word  */
+  uint32_t HeaderSize;                 /*!< The size of header buffer */
   uint32_t *B0;                        /*!< B0 is first authentication block used only  in AES CCM mode */
-  uint32_t DataWidthUnit;              /*!< Data With Unit, this parameter can be value of @ref CRYP_Data_Width_Unit*/
+  uint32_t DataWidthUnit;              /*!< Payload Data Width Unit, this parameter can be value of @ref CRYP_Data_Width_Unit*/
+  uint32_t HeaderWidthUnit;            /*!< Header Width Unit, this parameter can be value of @ref CRYP_Header_Width_Unit*/
   uint32_t KeyIVConfigSkip;            /*!< CRYP peripheral Key and IV configuration skip, to config Key and Initialization
                                            Vector only once and to skip configuration for consecutive processings.
                                            This parameter can be a value of @ref CRYP_Configuration_Skip */
@@ -96,7 +97,7 @@ typedef enum
 {
   HAL_CRYP_SUSPEND_NONE            = 0x00U,    /*!< CRYP processing suspension not requested */
   HAL_CRYP_SUSPEND                 = 0x01U     /*!< CRYP processing suspension requested     */
-}HAL_SuspendTypeDef;
+} HAL_SuspendTypeDef;
 #endif /* USE_HAL_CRYP_SUSPEND_RESUME */
 
 /**
@@ -106,9 +107,9 @@ typedef enum
 typedef struct __CRYP_HandleTypeDef
 #else
 typedef struct
-#endif
+#endif /* USE_HAL_CRYP_REGISTER_CALLBACKS */
 {
-  AES_TypeDef                       *Instance;            /*!< AES Register base address */
+  AES_TypeDef                       *Instance;        /*!< AES Register base address */
 
   CRYP_ConfigTypeDef                Init;             /*!< CRYP required parameters */
 
@@ -119,13 +120,13 @@ typedef struct
 
   uint32_t                          *pCrypOutBuffPtr; /*!< Pointer to CRYP processing (encryption, decryption,...) buffer */
 
-  __IO uint16_t                     CrypHeaderCount;   /*!< Counter of header data */
+  __IO uint16_t                     CrypHeaderCount;  /*!< Counter of header data in words */
 
-  __IO uint16_t                     CrypInCount;      /*!< Counter of input data */
+  __IO uint16_t                     CrypInCount;      /*!< Counter of input data in words */
 
-  __IO uint16_t                     CrypOutCount;     /*!< Counter of output data */
+  __IO uint16_t                     CrypOutCount;     /*!< Counter of output data in words */
 
-  uint16_t                          Size;             /*!< length of input data in words */
+  uint16_t                          Size;             /*!< Length of input data */
 
   uint32_t                          Phase;            /*!< CRYP peripheral phase */
 
@@ -182,9 +183,11 @@ typedef struct
 
   uint32_t                    Key_saved[8];            /*!< copy of key registers */
 
-  uint32_t                    Size_saved;              /*!< copy of input buffer size */
+  uint16_t                    Size_saved;              /*!< copy of input buffer size */
 
   uint16_t                    CrypHeaderCount_saved;   /*!< copy of CRYP header data counter when processing is suspended */
+
+  uint32_t                    SizesSum_saved;          /*!< copy of SizesSum when processing is suspended */
 
   uint32_t                    ResumingFlag;            /*!< resumption flag to bypass steps already carried out */
 
@@ -258,6 +261,17 @@ typedef  void (*pCRYP_CallbackTypeDef)(CRYP_HandleTypeDef *hcryp);    /*!< point
 
 #define CRYP_DATAWIDTHUNIT_WORD   0x00000000U  /*!< By default, size unit is word */
 #define CRYP_DATAWIDTHUNIT_BYTE   0x00000001U  /*!< By default, size unit is byte */
+
+/**
+  * @}
+  */
+
+/** @defgroup CRYP_Header_Width_Unit CRYP Header Width Unit
+  * @{
+  */
+
+#define CRYP_HEADERWIDTHUNIT_WORD   0x00000000U  /*!< By default, header size unit is word */
+#define CRYP_HEADERWIDTHUNIT_BYTE   0x00000001U  /*!< By default, header size unit is byte */
 
 /**
   * @}
@@ -394,7 +408,7 @@ typedef  void (*pCRYP_CallbackTypeDef)(CRYP_HandleTypeDef *hcryp);    /*!< point
   *            @arg CRYP_FLAG_OFNE: Output FIFO is not empty
   *            @arg CRYP_FLAG_OFFU: Output FIFO is full
   *            @arg CRYP_FLAG_OUTRIS: Input FIFO service raw interrupt is pending
- * @retval The state of __FLAG__ (TRUE or FALSE).
+  * @retval The state of __FLAG__ (TRUE or FALSE).
   */
 
 #define CRYP_FLAG_MASK  0x0000001FU
@@ -421,7 +435,8 @@ typedef  void (*pCRYP_CallbackTypeDef)(CRYP_HandleTypeDef *hcryp);    /*!< point
   * @retval State of interruption (TRUE or FALSE).
   */
 
-#define __HAL_CRYP_GET_IT_SOURCE(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->CR & (__INTERRUPT__)) == (__INTERRUPT__))
+#define __HAL_CRYP_GET_IT_SOURCE(__HANDLE__, __INTERRUPT__) (((__HANDLE__)->Instance->CR &\
+                                                              (__INTERRUPT__)) == (__INTERRUPT__))
 
 /** @brief  Check whether the specified CRYP interrupt is set or not.
   * @param  __HANDLE__ specifies the CRYP handle.
@@ -490,7 +505,8 @@ void HAL_CRYP_MspDeInit(CRYP_HandleTypeDef *hcryp);
 HAL_StatusTypeDef HAL_CRYP_SetConfig(CRYP_HandleTypeDef *hcryp, CRYP_ConfigTypeDef *pConf);
 HAL_StatusTypeDef HAL_CRYP_GetConfig(CRYP_HandleTypeDef *hcryp, CRYP_ConfigTypeDef *pConf);
 #if (USE_HAL_CRYP_REGISTER_CALLBACKS == 1U)
-HAL_StatusTypeDef HAL_CRYP_RegisterCallback(CRYP_HandleTypeDef *hcryp, HAL_CRYP_CallbackIDTypeDef CallbackID, pCRYP_CallbackTypeDef pCallback);
+HAL_StatusTypeDef HAL_CRYP_RegisterCallback(CRYP_HandleTypeDef *hcryp, HAL_CRYP_CallbackIDTypeDef CallbackID,
+                                            pCRYP_CallbackTypeDef pCallback);
 HAL_StatusTypeDef HAL_CRYP_UnRegisterCallback(CRYP_HandleTypeDef *hcryp, HAL_CRYP_CallbackIDTypeDef CallbackID);
 #endif /* USE_HAL_CRYP_REGISTER_CALLBACKS */
 #if (USE_HAL_CRYP_SUSPEND_RESUME == 1U)
@@ -507,8 +523,10 @@ HAL_StatusTypeDef HAL_CRYP_Resume(CRYP_HandleTypeDef *hcryp);
   */
 
 /* encryption/decryption ***********************************/
-HAL_StatusTypeDef HAL_CRYP_Encrypt(CRYP_HandleTypeDef *hcryp, uint32_t *Input, uint16_t Size, uint32_t *Output, uint32_t Timeout);
-HAL_StatusTypeDef HAL_CRYP_Decrypt(CRYP_HandleTypeDef *hcryp, uint32_t *Input, uint16_t Size, uint32_t *Output, uint32_t Timeout);
+HAL_StatusTypeDef HAL_CRYP_Encrypt(CRYP_HandleTypeDef *hcryp, uint32_t *Input, uint16_t Size, uint32_t *Output,
+                                   uint32_t Timeout);
+HAL_StatusTypeDef HAL_CRYP_Decrypt(CRYP_HandleTypeDef *hcryp, uint32_t *Input, uint16_t Size, uint32_t *Output,
+                                   uint32_t Timeout);
 HAL_StatusTypeDef HAL_CRYP_Encrypt_IT(CRYP_HandleTypeDef *hcryp, uint32_t *Input, uint16_t Size, uint32_t *Output);
 HAL_StatusTypeDef HAL_CRYP_Decrypt_IT(CRYP_HandleTypeDef *hcryp, uint32_t *Input, uint16_t Size, uint32_t *Output);
 HAL_StatusTypeDef HAL_CRYP_Encrypt_DMA(CRYP_HandleTypeDef *hcryp, uint32_t *Input, uint16_t Size, uint32_t *Output);
@@ -564,6 +582,13 @@ uint32_t HAL_CRYP_GetError(CRYP_HandleTypeDef *hcryp);
 
 #define IS_CRYP_INIT(CONFIG)(((CONFIG) == CRYP_KEYIVCONFIG_ALWAYS) || \
                              ((CONFIG) == CRYP_KEYIVCONFIG_ONCE))
+
+#define IS_CRYP_BUFFERSIZE(ALGO, DATAWIDTH, SIZE)                                             \
+  (((((ALGO) == CRYP_AES_CTR)) &&                                             \
+    ((((DATAWIDTH) == CRYP_DATAWIDTHUNIT_WORD) && (((SIZE) % 4U) == 0U))           || \
+     (((DATAWIDTH) == CRYP_DATAWIDTHUNIT_BYTE) && (((SIZE) % 16U) == 0U))))        || \
+   (((ALGO) == CRYP_AES_ECB) || ((ALGO) == CRYP_AES_CBC)                  || \
+    ((ALGO)== CRYP_AES_GCM_GMAC) || ((ALGO) == CRYP_AES_CCM)))
 
 /**
   * @}
@@ -623,5 +648,3 @@ uint32_t HAL_CRYP_GetError(CRYP_HandleTypeDef *hcryp);
 #endif
 
 #endif /* STM32G4xx_HAL_CRYP_H */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

@@ -19,7 +19,7 @@
 
 @copy /Y "Build_STM32G431xx_Slcan_MksMakerbase\*.bin" %COPY_DIRECTORY%
 @echo:
-@echo Finished.
+@echo Finished. Press Enter to compile also Openlightlabs firmware
 @pause
 
 @echo:

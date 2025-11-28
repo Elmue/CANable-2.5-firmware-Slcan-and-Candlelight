@@ -181,7 +181,7 @@ void buf_process_can_bus()
             tx_header.BitRateSwitch = FDCAN_BRS_ON;
     }
 
-    tx_header.DataLength = DLC_TO_HAL(can_dlc);
+    tx_header.DataLength = can_dlc;
     
     // Check if the user tries to send an FD packet in classic mode (data baudrate has not been set)
     if (!can_using_FD() && (tx_header.FDFormat == FDCAN_FD_CAN || can_dlc > 8))
@@ -255,7 +255,7 @@ void buf_store_rx_packet(FDCAN_RxHeaderTypeDef *rx_header, uint8_t *frame_data)
         if (rx_header->ErrorStateIndicator == FDCAN_ESI_PASSIVE) flags |= FRM_ESI;
     }
 
-    uint8_t can_dlc = HAL_TO_DLC(rx_header->DataLength);
+    uint8_t can_dlc = rx_header->DataLength;
 
     // ------------------------
 

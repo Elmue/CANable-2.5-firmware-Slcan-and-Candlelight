@@ -236,7 +236,7 @@ void buf_store_rx_packet(FDCAN_RxHeaderTypeDef *rx_header, uint8_t *frame_data)
     uint8_t pos = 1 + id_len;
     
     // Add DLC
-    uint32_t dlc_code = HAL_TO_DLC(rx_header->DataLength);
+    uint32_t dlc_code = rx_header->DataLength;
     buf[pos++]        = utils_nibble_to_ascii(dlc_code);
 
     // Add data bytes (not for remote frames)

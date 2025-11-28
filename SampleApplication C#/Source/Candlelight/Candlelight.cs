@@ -754,7 +754,7 @@ namespace CANable
         // Adapt this to the latest available CANable 2.5 firmware version.
         // It shows an error to upload the latest firmware to the adapter.
         // The version number is BCD encoded (0x251118 = 18.nov.2025)
-        public const int MIN_FIRMWARE = 0x251118;
+        public const int MIN_FIRMWARE = 0x251128;
 
         WinUSB         mi_WinUSB;
         kDevInfo       mk_Info;

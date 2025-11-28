@@ -146,7 +146,7 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
   hpcd_USB_FS.Instance = USB;
   hpcd_USB_FS.Init.dev_endpoints = 8;
   hpcd_USB_FS.Init.speed = PCD_SPEED_FULL;
-  hpcd_USB_FS.Init.ep0_mps = DEP0CTL_MPS_64;
+  hpcd_USB_FS.Init.ep0_mps = PCD_EP0MPS_64;
   hpcd_USB_FS.Init.phy_itface = PCD_PHY_EMBEDDED;
   hpcd_USB_FS.Init.Sof_enable = ENABLE;
   hpcd_USB_FS.Init.low_power_enable = DISABLE;

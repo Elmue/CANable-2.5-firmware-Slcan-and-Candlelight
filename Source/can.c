@@ -848,7 +848,8 @@ bool can_apply_filters()
     int tot_filters = std_filter_count + ext_filter_count;
     for (int i=0; i<tot_filters; i++)
     {
-        if (HAL_FDCAN_ConfigFilter(&can_handle, &can_filters[i]) != HAL_OK) return false; // error detail in can_handle.ErrorCode
+        if (HAL_FDCAN_ConfigFilter(&can_handle, &can_filters[i]) != HAL_OK) 
+            return false; // error detail in can_handle.ErrorCode
     }
     return true;
 }
@@ -965,7 +966,7 @@ uint16_t can_calc_bit_count_in_frame(FDCAN_RxHeaderTypeDef* header)
     if (busload_interval == 0)
         return 0;
 
-    uint32_t byte_count = utils_dlc_to_byte_count(HAL_TO_DLC(header->DataLength));
+    uint32_t byte_count = utils_dlc_to_byte_count(header->DataLength);
 
     uint16_t time_msg, time_data;
     if (header->RxFrameType == FDCAN_REMOTE_FRAME && header->IdType == FDCAN_STANDARD_ID)

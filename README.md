@@ -26,5 +26,6 @@ https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 ________________________
 
-Latest Updates:
-You find the version history at the bottom when you click the above link.
+---- Latest Updates ----
+You find the version history here:
+https://netcult.ch/elmue/CANable%20Firmware%20Update#Source_Code
