@@ -4,7 +4,7 @@
 ######################################
 #
 # This makefile compiles for the CANable boards from 
-# MKS Makerbase, Walfront, DSD Tech where the green LED is at pin A0
+# MKS Makerbase, Walfront, DSD Tech, Jhoinrch where the green LED is at pin A0
 #
 # Compile this by typing:
 # make -s -f Make_G431_Candle_MksMakerbase

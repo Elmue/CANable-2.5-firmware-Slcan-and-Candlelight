@@ -130,7 +130,7 @@ typedef enum // sent as 8 bit
     #define ISOLATOR_ON         GPIO_PIN_SET    // turn on power supply of isolator chip
     #define ISOLATOR_OFF        GPIO_PIN_RESET
     
-// MKS Makerbase + Walfront + DSD Tech
+// MKS Makerbase + Walfront + DSD Tech + Jhoinrch 
 #elif defined(MksMakerbase)
 
     // green LED is at pin A0
