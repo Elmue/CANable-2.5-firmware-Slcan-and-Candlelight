@@ -76,22 +76,12 @@ typedef enum // sent as 8 bit
 
     #include "stm32g4xx.h"
     #include "stm32g4xx_hal.h"
-    
-#elif defined(STM32G0B1xx)
+        
+#elif defined(STM32G473xx)
 
-    #include "stm32g0xx.h"
-    #include "stm32g0xx_hal.h"
-    
-#elif defined(STM32F407xx)
-
-    #include "stm32f4xx.h"
-    #include "stm32f4xx_hal.h"
-    
-#elif defined(STM32F072xB)
-
-    #include "stm32f0xx.h"
-    #include "stm32f0xx_hal.h"
-    
+    #include "stm32g4xx.h"
+    #include "stm32g4xx_hal.h"
+        
 #else
     #error "TARGET_MCU not defined in makefile"
 #endif
@@ -124,7 +114,7 @@ typedef enum // sent as 8 bit
     #define TERMINATOR_ON       GPIO_PIN_SET    // turn on termination resistor
     #define TERMINATOR_OFF      GPIO_PIN_RESET
     // The power supply of the isolator chip can be disabled when not in use.
-    // If the board has no isolation set ISOLATOR_PWR_Pin = -1
+    // If the board has no isolation power switch transistor set ISOLATOR_PWR_Pin = -1
 	#define ISOLATOR_PWR_Port   GPIOC
 	#define ISOLATOR_PWR_Pin    GPIO_PIN_13  
     #define ISOLATOR_ON         GPIO_PIN_SET    // turn on power supply of isolator chip
@@ -153,7 +143,7 @@ typedef enum // sent as 8 bit
     #define TERMINATOR_ON       GPIO_PIN_SET
     #define TERMINATOR_OFF      GPIO_PIN_RESET
     // The power supply of the isolator chip can be disabled when not in use.
-    // If the board has no isolation set ISOLATOR_PWR_Pin = -1
+    // If the board has no isolation power switch transistor set ISOLATOR_PWR_Pin = -1
 	#define ISOLATOR_PWR_Port   GPIOC
 	#define ISOLATOR_PWR_Pin    GPIO_PIN_13
     #define ISOLATOR_ON         GPIO_PIN_SET    // turn on power supply of isolator chip
