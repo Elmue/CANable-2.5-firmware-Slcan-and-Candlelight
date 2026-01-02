@@ -1,5 +1,5 @@
 # CANable-2.5-firmware-Slcan-and-Candlelight
-Two new high quality, speed optmimized firmwares for CANable adapters with lots of new features.
+Two new high quality, speed optimized firmwares for CANable adapters with lots of new features.
 
 ![CANable Adapter](https://github.com/user-attachments/assets/061f60ba-14a2-4896-866f-6226fc9123f6)
 
@@ -9,7 +9,7 @@ Dozens of bugs have been fixed.
 Dozens of new features have been added.
 This is the first Candlelight firmware for the STM32G431 processor that supports CAN FD and works without bugs.
 However the new firmware is still 100% backward compatible with legacy Slcan / Candlelight firmware.
-The firmware has been tested on the STM32G431 on the MKS Makerbase isolated board up to 10 Mbaud.
+The firmware has been tested on the STM32G431 on the MKS Makerbase and Jhoinrch isolated boards up to 10 Mbaud.
 The firmware has been designed to be easily expandable for future processors and boards.
 Precompiled binary firmware files can be uploaded to the CANable with the new Firmware Updater.
 
