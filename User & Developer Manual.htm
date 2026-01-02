@@ -300,13 +300,22 @@
 <a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a>.
 </div>
 <div>If you buy one make sure that it is a CANable 2.0 or CANable 2.0 pro and has the <b>STM32G431</b> processor.</div>
-<div>Do not buy the older CANable 1.0 adapters which are obsolete because they don't support CAN FD.</div>
+<div>Do not buy the older CANable 1.0 adapters with STM32<b>F</b>xxx processors. They are obsolete and don't support CAN FD.</div>
 <p>
 <div>I recommend the MKS Makerbase because it has a <b>robust case</b> and CAN bus is electrically <b>isolated</b> from USB.</div>
 <div>It uses an ADM3050E isolated CAN Transceiver (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>)
 and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
 <div>It has a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
 <div>I tested it thoroughly and it works perfectly up to <b>10 Mega baud</b>.</div>
+
+<h3>Jhoinrch RH02</h3>
+<div>Jhoinrch is the first company that sells their CANable adapters with my new CANable 2.5 firmware.</div>
+<table class="TblImage">
+    <tr><td><img src="Images/Jhoinrch RH02 Elite.jpg" alt="CANable - Jhoinrch RH02" width="239" height="90"></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Jhoinrch RH02 Elite.jpg')">Show Full Size</span></td></tr>
+</table>
+<div>Jhoinrch allows me to publish the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02</a>.</div>
+
 
 <a name="Hardware"></a>
 <h3>Hardware Misdesign</h3>
@@ -1397,6 +1406,7 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
 <li><div><b>26.11.2025</b>: New firmware changes Slcan command <code>S</code> to use samplepoint 75% instead of 87.5% which is more robust.
 <li><div><b>28.11.2025</b>: New firmware uses HAL 1.2.5 with improved double buffering, fixes lost Tx packets under Linux. (thanks to Marc)
 <li><div><b>29.12.2025</b>: Added HAL files for STM32G473
+<li><div><b>02.01.2026</b>: Jhoinrch is the first company that sells their CANable adpters with the new Elmüsoft 2.5 firmware.
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
