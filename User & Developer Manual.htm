@@ -301,12 +301,6 @@
 </div>
 <div>If you buy one make sure that it is a CANable 2.0 or CANable 2.0 pro and has the <b>STM32G431</b> processor.</div>
 <div>Do not buy the older CANable 1.0 adapters with STM32<b>F</b>xxx processors. They are obsolete and don't support CAN FD.</div>
-<p>
-<div>I recommend the MKS Makerbase because it has a <b>robust case</b> and CAN bus is electrically <b>isolated</b> from USB.</div>
-<div>It uses an ADM3050E isolated CAN Transceiver (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>)
-and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
-<div>It has a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
-<div>I tested it thoroughly and it works perfectly up to <b>10 Mega baud</b>.</div>
 
 <h3>Jhoinrch RH02</h3>
 <div><a href="https://jhoinrch.net" target="_blank">Jhoinrch</a> is the first company that uses Slcan 2.5 as the stock firmware for their CAN adapters.</div>
@@ -314,7 +308,16 @@ and a B05050S-1WR3 isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B
     <tr><td><img src="Images/Jhoinrch RH02 Elite.jpg" alt="CANable - Jhoinrch RH02" width="239" height="90"></td></tr>
     <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Jhoinrch RH02 Elite.jpg')">Show Full Size</span></td></tr>
 </table>
-<div>Jhoinrch allows me to publish the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02</a> (PDF).</div>
+
+<h3>Diagram</h3>
+<div>I asked MKS Makerbase using all their email addresses to send me a diagram of their adapter, but they never responded.</div>
+<div>But Jhoinrch allows me to publish the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02</a> (PDF).</div>
+<div>Both adapters <b>isolate</b> the CAN side from the USB side and use the same chips:</div>
+<div>The ADM3050E is an isolated CAN Transceiver (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>)
+and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
+<p>
+<div>Both boards have a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
+<div>I tested them thoroughly and they work perfectly up to <b>10 Mega baud</b>.</div>
 
 
 <a name="Hardware"></a>
