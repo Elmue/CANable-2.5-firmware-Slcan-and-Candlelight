@@ -294,13 +294,17 @@
 </table>
 
 <div>The CANable is a very cheap ($15 US) CAN bus adapter with <b>CAN FD</b> support.</div>
-<div>Several Chinese companies sell different versions like:
+<div>Several Chinese and Japanese companies sell different versions like:
 <a href="https://www.aliexpress.com/w/wholesale-canable-makerbase.html" target="_blank">MKS Makerbase</a>,&nbsp;
 <a href="https://www.deshide.com/product-details_SH-C31A.html" target="_blank">DSD Tech</a>,&nbsp;
 <a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a>.
 </div>
 <div>If you buy one make sure that it is a CANable 2.0 or CANable 2.0 pro and has the <b>STM32G431</b> processor.</div>
-<div>Do not buy the older CANable 1.0 adapters with STM32<b>F</b>xxx processors. They are obsolete and don't support CAN FD.</div>
+<p>
+<div>All these adapters have a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
+<div>When you connect to the CAN bus of a <b>vehicle</b> you must turn this resistor OFF!</div>
+<p>
+<div>Do not buy the older CANable 1.0 adapters with STM32<span class="Red"><b>F</b></span>xxx processors. They are obsolete and do not support CAN FD.</div>
 
 <h3>Jhoinrch RH02</h3>
 <div><a href="https://jhoinrch.net" target="_blank">Jhoinrch</a> is the first company that uses Slcan 2.5 as the stock firmware for their CAN adapters.</div>
@@ -310,14 +314,12 @@
 </table>
 
 <h3>Diagram</h3>
-<div>I asked MKS Makerbase using all their email addresses to send me a diagram of their adapter, but they never responded.</div>
-<div>But Jhoinrch allows me to publish the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02</a> (PDF).</div>
+<div>I asked <b>MKS Makerbase</b> using all their email addresses to send me a diagram of their adapter, but they never responded.</div>
+<div>But <b>Jhoinrch</b> allows me to publish the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02</a> (PDF).</div>
 <div>Both adapters <b>isolate</b> the CAN side from the USB side and use the same chips:</div>
 <div>The ADM3050E is an isolated CAN Transceiver (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>)
 and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
-<p>
-<div>Both boards have a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
-<div>I tested them thoroughly and they work perfectly up to <b>10 Mega baud</b>.</div>
+<div>Boards that use these chips support CAN traffic up to <b>10 Mega baud</b>.</div>
 
 
 <a name="Hardware"></a>
