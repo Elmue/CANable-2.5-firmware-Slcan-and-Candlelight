@@ -103,16 +103,16 @@ bool system_init(void)
 
     // ------------------------------------------
 
-    RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_ON;
-    RCC_OscInitStruct.PLL.PLLP       = RCC_PLLP_DIV2; // PLL output P = VCO / 2 = 160 MHz (for ADC)
-    RCC_OscInitStruct.PLL.PLLQ       = RCC_PLLQ_DIV2; // PLL output Q = VCO / 2 = 160 MHz (for USB / FDCAN)
-    RCC_OscInitStruct.PLL.PLLR       = RCC_PLLR_DIV2; // PLL output R = VCO / 2 = 160 MHz (for SYSCLK)
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLP     = RCC_PLLP_DIV2; // PLL output P = VCO / 2 = 160 MHz (for ADC)
+    RCC_OscInitStruct.PLL.PLLQ     = RCC_PLLQ_DIV2; // PLL output Q = VCO / 2 = 160 MHz (for USB / FDCAN)
+    RCC_OscInitStruct.PLL.PLLR     = RCC_PLLR_DIV2; // PLL output R = VCO / 2 = 160 MHz (for SYSCLK)
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
         return false;
 
     // Bugfix: The legacy firmware used a PCLK1 and PCLK2 of 160 MHz which is outside the guaranteed operating conditions.
     // The maximum is 80 MHz otherwise these buses are heavily overclocked.
-    // HCLK  == SystemCoreClock is used for Cortex-M4, Memory, DMA, Flash, SRAM, SysTick timer, High-speed peripherals.
+    // HCLK == SystemCoreClock is used for Cortex-M4, Memory, DMA, Flash, SRAM, SysTick timer, High-speed peripherals.
     // PCLK1 is used for Lower -speed peripherals: I2C, USART2/3, LPUART, SPI2/3, CAN/FDCAN, DAC, TIM2–TIM7.
     // PCLK2 is used for Higher-speed peripherals: USART1, SPI1, TIM1, TIM8, ADCs.
     // See "STM32G4 Series - Clock Generation.png" in subfolder "Documentation"
@@ -235,7 +235,7 @@ void FDCAN1_IT0_IRQHandler(void)
 }
 
 // overwrite weak callback dummy
-// This callback is called by interrupt every 65 ms
+// This callback is called by interrupt every 65.536 ms
 void HAL_FDCAN_TimestampWraparoundCallback(FDCAN_HandleTypeDef *hfdcan)
 {
     timestamp_wrap ++;
