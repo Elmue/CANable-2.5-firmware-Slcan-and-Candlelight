@@ -15,6 +15,9 @@
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
+// ============================================================================================
+// The following enums are used for Slcan and Candlelight
+
 typedef enum 
 {
     false = 0,
@@ -70,87 +73,81 @@ typedef enum // sent as 8 bit
 } eErrorAppFlags;
 
 // ============================================================================================
-
 // TARGET_MCU is defined in the Makefile
+
 #if defined(STM32G431xx)
-
     #include "stm32g4xx.h"
     #include "stm32g4xx_hal.h"
-        
 #elif defined(STM32G473xx)
-
     #include "stm32g4xx.h"
     #include "stm32g4xx_hal.h"
-        
 #else
     #error "TARGET_MCU not defined in makefile"
 #endif
 
 // ============================================================================================
-
 // TARGET_BOARD is defined in Makefile
 
-// OpenlightLabs
-#if defined(OpenlightLabs)
-
-    // green LED is at pin B11
+#if defined(Multiboard)
+    // MKS Makerbase + Walfront + DSD Tech use default settings
+#elif defined(Jhoinrch)    
+    // The Jhoinrch board has a 25 MHz quartz crystal. The make file sets: QUARTZ_FREQU = 25000000
+#elif defined(OpenlightLabs)
+    // OpenlightLabs has the green LED at pin B11
     #define LED_TX_Pin          GPIO_PIN_11  
     #define LED_TX_Port         GPIOB
-    // blue Led is at pin A15
+#else
+    #error "TARGET_BOARD not defined in makefile"
+#endif
+
+// ============================================================================================
+// Load default settings if no board-specific settings are defined
+
+// green Tx LED is at pin A0
+#ifndef LED_TX_Pin
+    #define LED_TX_Pin          GPIO_PIN_0   
+    #define LED_TX_Port         GPIOA
+#endif
+
+// blue Rx Led is at pin A15
+#ifndef LED_RX_Pin
     #define LED_RX_Pin          GPIO_PIN_15
     #define LED_RX_Port         GPIOA      
-    // PP = Push/Pull, OD = Open Drain
+#endif
+
+// PP = Push/Pull, OD = Open Drain
+#ifndef LED_Mode
     #define LED_Mode            GPIO_MODE_OUTPUT_PP
-    // Some boards use inverted voltage (Low = ON)
+#endif
+
+// Some boards use inverted voltage (Low = ON)
+#ifndef LED_ON
     #define LED_ON              GPIO_PIN_RESET
     #define LED_OFF             GPIO_PIN_SET
-    // The CAN interface (some processors have 3 CAN interfaces)
+#endif
+
+// The CAN interface (some processors have 3 CAN interfaces)
+#ifndef CAN_INTERFACE
     #define CAN_INTERFACE       FDCAN1
-    // Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
-    // The board from Openlight Labs does not support this --> set TERM_Pin = -1
+#endif
+
+// Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
+// If the board does not support this --> set TERMINATOR_Pin = -1
+#ifndef TERMINATOR_Port
     #define TERMINATOR_Port     GPIOB
     #define TERMINATOR_Pin      -1 // GPIO_PIN_3
     #define TERMINATOR_Mode     GPIO_MODE_OUTPUT_PP
     #define TERMINATOR_ON       GPIO_PIN_SET    // turn on termination resistor
     #define TERMINATOR_OFF      GPIO_PIN_RESET
-    // The power supply of the isolator chip can be disabled when not in use.
-    // If the board has no isolation power switch transistor set ISOLATOR_PWR_Pin = -1
-	#define ISOLATOR_PWR_Port   GPIOC
-	#define ISOLATOR_PWR_Pin    GPIO_PIN_13  
-    #define ISOLATOR_ON         GPIO_PIN_SET    // turn on power supply of isolator chip
-    #define ISOLATOR_OFF        GPIO_PIN_RESET
-    
-// MKS Makerbase + Walfront + DSD Tech + Jhoinrch 
-#elif defined(MksMakerbase)
+#endif
 
-    // green LED is at pin A0
-    #define LED_TX_Pin          GPIO_PIN_0   
-    #define LED_TX_Port         GPIOA
-    // blue Led is at pin A15
-    #define LED_RX_Pin          GPIO_PIN_15
-    #define LED_RX_Port         GPIOA
-    // PP = Push/Pull, OD = Open Drain
-    #define LED_Mode            GPIO_MODE_OUTPUT_PP
-    // Some boards use inverted voltage (Low = ON)
-    #define LED_ON              GPIO_PIN_RESET
-    #define LED_OFF             GPIO_PIN_SET
-    // The CAN interface (some processors have 3 CAN interfaces)
-    #define CAN_INTERFACE       FDCAN1
-    // Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
-    // The board from MKS Makerbase Labs has a manual switch --> set TERM_Pin = -1
-    #define TERMINATOR_Port     GPIOB
-    #define TERMINATOR_Pin      -1 // GPIO_PIN_3
-    #define TERMINATOR_ON       GPIO_PIN_SET
-    #define TERMINATOR_OFF      GPIO_PIN_RESET
-    // The power supply of the isolator chip can be disabled when not in use.
-    // If the board has no isolation power switch transistor set ISOLATOR_PWR_Pin = -1
+// On some boards the power supply of the isolator chip can be disabled when not using CAN bus.
+// If the board has no isolation power switch transistor set ISOLATOR_PWR_Pin = -1
+#ifndef ISOLATOR_PWR_Port
 	#define ISOLATOR_PWR_Port   GPIOC
-	#define ISOLATOR_PWR_Pin    GPIO_PIN_13
+	#define ISOLATOR_PWR_Pin    -1 // GPIO_PIN_13  
     #define ISOLATOR_ON         GPIO_PIN_SET    // turn on power supply of isolator chip
     #define ISOLATOR_OFF        GPIO_PIN_RESET
-    
-#else
-    #error "TARGET_BOARD not defined in makefile"
 #endif
 
 // ============================================================================================
@@ -160,7 +157,7 @@ typedef enum // sent as 8 bit
 // The year and month are stored in the device descriptor.
 // The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
 // Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
-#define FIRMWARE_VERSION_BCD   0x251128 
+#define FIRMWARE_VERSION_BCD   0x260113
 
 // ATTENTION: 
 // This version defines which Slcan commands are available.

@@ -376,7 +376,7 @@ typedef enum // transferred as 4 bit
 // These flags are OR'ed with the CAN ID
 typedef enum // 3 bit
 {
-    CAN_ID_Error = 0x20000000, // the frame is an error frame which does not contain CAN bus data.
+    CAN_ID_Error = 0x20000000, // the frame is an error frame which does not contain CAN bus data (only used in kHostFrameLegacy).
     CAN_ID_RTR   = 0x40000000, // the frame is a Remote Transmission Request
     CAN_ID_29Bit = 0x80000000, // the frame has an extended CAN ID with 29 bit
     CAN_MASK_11  = 0x000007FF, // Mask for standard 11 bit ID
@@ -472,7 +472,7 @@ typedef struct
 {
     uint16_t McuDeviceID;   // 0x468
     char     McuName  [25]; // "STM32G431xx" from makefile
-    char     BoardName[25]; // "MksMakerbase", "OpenlightLabs" from makefile
+    char     BoardName[25]; // "Multiboard", "OpenlightLabs", "Jhoinrch" from makefile
 } __packed __aligned(1) kBoardInfo;
 
 // -----------------------------------------

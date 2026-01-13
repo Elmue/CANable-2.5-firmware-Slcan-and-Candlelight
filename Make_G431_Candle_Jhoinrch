@@ -4,23 +4,23 @@
 ######################################
 #
 # This makefile compiles for the CANable board from 
-# OpenlighLabs where the green LED is at pin B11
+# Jhoinrch which has a 25 MHz quartz
 #
 # Compile this by typing:
-# make -s -f Make_G431_Candle_Openlightlabs
+# make -s -f Make_G431_Candle_Jhoinrch
 #
 #######################################
 
 # TARGET_BOARD and TARGET_MCU: maximum 24 characters!
 
 TARGET_FIRMWARE = Candlelight
-TARGET_BOARD    = OpenlightLabs
+TARGET_BOARD    = Jhoinrch
 TARGET_MCU      = STM32G431xx
 
-# This board has no quartz. It uses the RC oscillator in the processor.
-QUARTZ_FREQU    = 0
+# This board has a 25 MHz quartz.
+QUARTZ_FREQU    = 25000000
 
 # name of the compiled files (*.bin, *.hex, *.elf)
-TARGET_FILE = STM32G431_Candlelight2.5_OpenlightLabs
+TARGET_FILE = STM32G431_Candlelight2.5_Jhoinrch
 
 include GCC_Rules.mk

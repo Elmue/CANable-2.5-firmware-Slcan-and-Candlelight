@@ -3,21 +3,24 @@
 
 ######################################
 #
-# This makefile compiles for the CANable boards from 
-# MKS Makerbase, Walfront, DSD Tech, Jhoinrch where the green LED is at pin A0
+# This makefile compiles for the CANable board from 
+# Jhoinrch which has a 25 MHz quartz
 #
 # Compile this by typing:
-# make -s -f Make_G431_Slcan_MksMakerbase
+# make -s -f Make_G431_Slcan_Jhoinrch
 #
 #######################################
 
 # TARGET_BOARD and TARGET_MCU: maximum 24 characters!
 
 TARGET_FIRMWARE = Slcan
-TARGET_BOARD    = MksMakerbase
+TARGET_BOARD    = Jhoinrch
 TARGET_MCU      = STM32G431xx
 
-# name of the compiled files (*.bin, *.hex, *.elf)
-TARGET_FILE = STM32G431_Slcan2.5_MksMakerbase
+# This board has a 25 MHz quartz.
+QUARTZ_FREQU    = 25000000
 
-include Make_Rules.mk
+# name of the compiled files (*.bin, *.hex, *.elf)
+TARGET_FILE = STM32G431_Slcan2.5_Jhoinrch
+
+include GCC_Rules.mk

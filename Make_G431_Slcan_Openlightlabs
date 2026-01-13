@@ -17,7 +17,10 @@ TARGET_FIRMWARE = Slcan
 TARGET_BOARD    = OpenlightLabs
 TARGET_MCU      = STM32G431xx
 
+# This board has no quartz. It uses the RC oscillator in the processor.
+QUARTZ_FREQU    = 0
+
 # name of the compiled files (*.bin, *.hex, *.elf)
 TARGET_FILE = STM32G431_Slcan2.5_OpenlightLabs
 
-include Make_Rules.mk
+include GCC_Rules.mk

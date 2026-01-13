@@ -10,6 +10,7 @@ del "Output\*.ilk"
 del "*.vshost.exe"
 del "*.vshost.exe.manifest"
 
+rmdir "Output" /S /Q
 rmdir "Debug" /S /Q
 rmdir "Release" /S /Q
 rmdir "ipch" /S /Q

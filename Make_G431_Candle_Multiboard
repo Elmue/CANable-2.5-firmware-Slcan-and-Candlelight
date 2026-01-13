@@ -4,20 +4,23 @@
 ######################################
 #
 # This makefile compiles for the CANable boards from 
-# MKS Makerbase, Walfront, DSD Tech, Jhoinrch where the green LED is at pin A0
+# MKS Makerbase, Walfront, DSD Tech where the green LED is at pin A0
 #
 # Compile this by typing:
-# make -s -f Make_G431_Candle_MksMakerbase
+# make -s -f Make_G431_Candle_Multiboard
 #
 #######################################
 
 # TARGET_BOARD and TARGET_MCU: maximum 24 characters.
 
 TARGET_FIRMWARE = Candlelight
-TARGET_BOARD    = MksMakerbase
+TARGET_BOARD    = Multiboard
 TARGET_MCU      = STM32G431xx
 
-# name of the compiled files (*.bin, *.hex, *.elf)
-TARGET_FILE = STM32G431_Candlelight2.5_MksMakerbase
+# This board has no quartz. It uses the RC oscillator in the processor.
+QUARTZ_FREQU    = 0
 
-include Make_Rules.mk
+# name of the compiled files (*.bin, *.hex, *.elf)
+TARGET_FILE = STM32G431_Candlelight2.5_Multiboard
+
+include GCC_Rules.mk

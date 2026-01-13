@@ -275,7 +275,7 @@ void buf_store_rx_packet(FDCAN_RxHeaderTypeDef *rx_header, uint8_t *frame_data)
         frame->header.msg_type = MSG_RxFrame;
         frame->flags           = flags;
         frame->can_id          = can_id;
-        frame->timestamp       = system_get_timestamp();
+        frame->timestamp       = rx_header->RxTimestamp; // 32 bit
 
         if (USER_Flags & USR_Timestamp)
         {
@@ -299,9 +299,9 @@ void buf_store_rx_packet(FDCAN_RxHeaderTypeDef *rx_header, uint8_t *frame_data)
         memcpy(frame->raw_data, frame_data, 64);
 
         if (rx_header->FDFormat == FDCAN_FD_CAN)
-            frame->pack_FD.timestamp_us = system_get_timestamp();
+            frame->pack_FD.timestamp_us = rx_header->RxTimestamp; // 32 bit
         else // classic frame
-            frame->pack_classic.timestamp_us = system_get_timestamp();
+            frame->pack_classic.timestamp_us = rx_header->RxTimestamp; // 32 bit
     }
 
     // add the frame to list_to_host with IRQs disabled
@@ -322,7 +322,7 @@ void buf_store_tx_echo(FDCAN_TxEventFifoTypeDef* tx_event)
     frame->header.size     = sizeof(kTxEchoElmue);
     frame->header.msg_type = MSG_TxEcho;
     frame->marker          = tx_event->MessageMarker;
-    frame->timestamp       = system_get_timestamp();
+    frame->timestamp       = tx_event->TxTimestamp; // 32 bit
 
     if ((USER_Flags & USR_Timestamp) == 0)
         frame->header.size -= 4;

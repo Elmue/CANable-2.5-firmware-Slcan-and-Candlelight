@@ -80,7 +80,7 @@ void control_init()
 
     ELM_BoardInfo.McuDeviceID = (uint16_t)HAL_GetDEVID();
     strcpy(ELM_BoardInfo.McuName,   utils_get_MCU_name()); // "STM32G431"  (from makefile)
-    strcpy(ELM_BoardInfo.BoardName, TARGET_BOARD);         // "MksMakerbase", "OpenlightLabs"  (from makefile)
+    strcpy(ELM_BoardInfo.BoardName, TARGET_BOARD);         // "Multiboard", "OpenlightLabs", "Jhoinrch"  (from makefile)
 }
 
 // A SETUP vendor request packet has been received (first stage).
@@ -150,6 +150,8 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
             len = sizeof(kDeviceVersion);
             break;
         case GS_ReqGetTimestamp:
+            // Bugfix: The legacy firmware used a timestamp created only when a USB SOF packet was received.
+            // This is totally stupid, because the timestamp has a precision of 1 µs, but SOF packets are received once every millisecond.
             value32 = system_get_timestamp();
             src = &value32;
             len = sizeof(uint32_t);

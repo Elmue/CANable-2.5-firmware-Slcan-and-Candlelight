@@ -142,6 +142,7 @@ eFeedback can_open(uint32_t mode)
 
     buf_clear_can_buffer();
     error_init();
+    led_blink_identify(false);
 
     can_handle.Init.ClockDivider          = FDCAN_CLOCK_DIV1;
     can_handle.Init.Mode                  = mode;
@@ -188,10 +189,21 @@ eFeedback can_open(uint32_t mode)
 
     busload_ppm  = 0;
 
-    // ------------------ init FDCAN ----------------------
+    // ------------------ Init FDCAN ----------------------
 
     // sets can_handle.State == HAL_FDCAN_STATE_READY
     if (HAL_FDCAN_Init(&can_handle) != HAL_OK)
+        return FBK_ErrorFromHAL; // error detail in can_handle.ErrorCode
+    
+    // ---------------- Rx/Tx Timestamps ------------------
+
+    HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ  (FDCAN1_IT0_IRQn);
+
+    if (HAL_FDCAN_ConfigTimestampCounter(&can_handle, FDCAN_TIMESTAMP_PRESC_1)  != HAL_OK || // use no prescaler 
+        HAL_FDCAN_EnableTimestampCounter(&can_handle, FDCAN_TIMESTAMP_EXTERNAL) != HAL_OK || // use timer TIM3
+        HAL_FDCAN_ConfigInterruptLines  (&can_handle, FDCAN_IT_GROUP_MISC, FDCAN_INTERRUPT_LINE0) != HAL_OK ||
+        HAL_FDCAN_ActivateNotification  (&can_handle, FDCAN_IT_LIST_MISC | FDCAN_IT_TIMESTAMP_WRAPAROUND, 0) != HAL_OK) // wrap callback
         return FBK_ErrorFromHAL; // error detail in can_handle.ErrorCode
 
     // ---------------- TDC compensation ------------------
@@ -250,14 +262,6 @@ eFeedback can_open(uint32_t mode)
     uint32_t non_matching = has_filters ? FDCAN_ACCEPT_IN_RX_FIFO1 : FDCAN_ACCEPT_IN_RX_FIFO0;
 
     HAL_FDCAN_ConfigGlobalFilter(&can_handle, non_matching, non_matching, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
-
-    // --------------------- timestamp -------------------------
-
-    // Create a timestamp that is equal to the CAN bitrate
-    // Only needed to calculate cycle time (disabled)
-    // HAL_FDCAN_ConfigTimestampCounter(&can_handle, FDCAN_TIMESTAMP_PRESC_1);
-    // Internal does not work to get time. External use TIM3 as source. See RM0440.
-    // HAL_FDCAN_EnableTimestampCounter(&can_handle, FDCAN_TIMESTAMP_EXTERNAL);
 
     // ---------------------- cleanup ---------------------------
 
@@ -335,7 +339,7 @@ void can_process(uint32_t tick_now)
 
     uint8_t can_data_buf[64] = {0};
     char    dbg_msg_buf[100];
-
+    
     // This was competely wrong in the original Candlelight firmware (fixed by Elmüsoft).
     // Instead of sending a Tx Event to the host in the moment when the processor has really sent the packet to the CAN bus
     // they have sent a fake event immediately after dispatching the packet, no matter if it really was sent or not.
@@ -347,7 +351,11 @@ void can_process(uint32_t tick_now)
         // "In DAR mode (Disable Auto Retransmission) all transmissions are automatically canceled after
         // they have been started on the CAN bus." (see "STM32G4 Series - Chapter FDCAN.pdf" in subfolder "Documentation")
         if (USER_Flags & USR_ReportTX)
+        {
+            // convert 16 bit timestamp --> 32 bit
+            tx_event.TxTimestamp = (system_get_timewrap() << 16) | tx_event.TxTimestamp;
             buf_store_tx_echo(&tx_event);
+        }
 
         // In loopback mode do not count the same packet twice (Tx == Rx at the same time without delay)
         // In bus montoring mode and restricted mode sending packets is not possible.
@@ -375,8 +383,10 @@ void can_process(uint32_t tick_now)
     FDCAN_RxHeaderTypeDef rx_header;
     if (HAL_FDCAN_GetRxMessage(&can_handle, FDCAN_RX_FIFO0, &rx_header, can_data_buf) == HAL_OK)
     {
+        // convert 16 bit timestamp --> 32 bit
+        rx_header.RxTimestamp = (system_get_timewrap() << 16) | rx_header.RxTimestamp;
         buf_store_rx_packet(&rx_header, can_data_buf);
-
+        
         // for bus load calculation
         bit_cnt_message += can_calc_bit_count_in_frame(&rx_header);
 

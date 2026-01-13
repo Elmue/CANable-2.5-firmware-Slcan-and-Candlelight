@@ -85,10 +85,12 @@ void led_blink_power_on()
 // This is a non-blocking function executed by USB command.
 void led_blink_identify(bool blink_on)
 {
-    led_next_blink  = HAL_GetTick() + IDENTIFY_DURATION;
-    led_identify = blink_on;
-    HAL_GPIO_WritePin(LED_RX, LED_ON);
-    HAL_GPIO_WritePin(LED_TX, LED_ON);
+    led_next_blink = HAL_GetTick() + IDENTIFY_DURATION;
+    led_identify   = blink_on;
+    
+    GPIO_PinState state = blink_on ? LED_ON : LED_OFF;
+    HAL_GPIO_WritePin(LED_RX, state);
+    HAL_GPIO_WritePin(LED_TX, state);
 }
 
 // Turn green LED on/off

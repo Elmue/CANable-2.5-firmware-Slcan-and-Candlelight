@@ -17,16 +17,8 @@ CONFIG_DIR = STM32/$(TARGET_MCU)_Config
 # location of the linker script
 LD_SCRIPT = $(CONFIG_DIR)/$(TARGET_MCU).ld
 
-# HSI48_VALUE = internal high speed oscillator frequency
-# HSE_VALUE   = external high speed oscillator frequency
-USER_DEFS = -D HSI48_VALUE=48000000 -D HSE_VALUE=16000000
-
 # user C flags (enable warnings, enable debug info)
 USER_CFLAGS = -Wall -g -ffunction-sections -fdata-sections -Os
-
-ifneq ($(EXTERNAL_OSCILLATOR), 1)
-USER_CFLAGS += -DINTERNAL_OSCILLATOR
-endif
 
 # user LD flags
 USER_LDFLAGS = -fno-exceptions -ffunction-sections -fdata-sections -Wl,--gc-sections
@@ -76,16 +68,17 @@ INCLUDES += -ISource
 INCLUDES += -ISource/USB
 INCLUDES += -ISource/$(TARGET_FIRMWARE)
 
-# macros for gcc
-DEFS = $(USER_DEFS) -D$(TARGET_MCU) -D$(TARGET_BOARD) -D$(TARGET_FIRMWARE)
-
 # compile gcc flags
-CFLAGS = $(DEFS) $(INCLUDES)
+CFLAGS =  $(INCLUDES)
 CFLAGS += -mcpu=$(CPU) -mthumb
 CFLAGS += $(USER_CFLAGS)
+CFLAGS += -D$(TARGET_BOARD)
+CFLAGS += -D$(TARGET_FIRMWARE)
+CFLAGS += -D$(TARGET_MCU)
 CFLAGS += -DTARGET_BOARD=\"$(TARGET_BOARD)\"
 CFLAGS += -DTARGET_FIRMWARE=\"$(TARGET_FIRMWARE)\"
 CFLAGS += -DTARGET_MCU=\"$(TARGET_MCU)\"
+CFLAGS += -DHSE_VALUE=$(QUARTZ_FREQU)
 
 # default action: build the user application
 all: $(BUILD_DIR)/$(TARGET_FILE).bin $(BUILD_DIR)/$(TARGET_FILE).hex

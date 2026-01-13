@@ -27,12 +27,8 @@ bool      system_is_option_enabled(eOptionBytes e_Option);
 eFeedback system_set_option_bytes (eOptionBytes e_Option);
 uint32_t  system_get_can_clock();
 eMcuSerie system_get_mcu_serie();
-
-// get timestamp with 1 µs precision
-static inline uint32_t system_get_timestamp()
-{
-    return TIM2->CNT;
-}
+uint32_t  system_get_timestamp();
+uint32_t  system_get_timewrap();
 
 // ARM's
 // "Application Note 321 ARM Cortex-M Programming Guide to Memory Barrier Instructions"

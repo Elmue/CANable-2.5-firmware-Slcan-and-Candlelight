@@ -299,15 +299,18 @@
 <a href="https://www.deshide.com/product-details_SH-C31A.html" target="_blank">DSD Tech</a>,&nbsp;
 <a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a>.
 </div>
-<div>If you buy one make sure that it is a CANable 2.0 or CANable 2.0 pro and has the <b>STM32G431</b> processor.</div>
+<div>These cheap boards have no quartz. The RC oscillator in the processor has only a precision of 1%.</div>
 <p>
 <div>All these adapters have a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
-<div>When you connect to the CAN bus of a <b>vehicle</b> you must turn this resistor OFF!</div>
+<div>When you connect to the CAN bus of a <b>vehicle</b> you must turn this resistor OFF.</div>
+<div>When you make tests between 2 adapters on your <b>desk</b> you must turn the resistors in both adaters ON.</div>
 <p>
+<div>If you buy another board make sure that it is a CANable 2.0 and has the <b>STM32G431</b> processor.</div>
 <div>Do not buy the older CANable 1.0 adapters with STM32<span class="Red"><b>F</b></span>xxx processors. They are obsolete and do not support CAN FD.</div>
 
 <h3>Jhoinrch RH02</h3>
-<div><a href="https://jhoinrch.net" target="_blank">Jhoinrch</a> is the first company that uses Slcan 2.5 as the stock firmware for their CAN adapters.</div>
+<div><a href="https://jhoinrch.net" target="_blank">Jhoinrch</a> is the first company that uses my Slcan 2.5 as stock firmware for their CAN adapters.</div>
+<div>This board offers a <b>high clock precision</b> because it has a 25 MHz quartz.</div>
 <table class="TblImage">
     <tr><td><img src="Images/Jhoinrch RH02 Elite.jpg" alt="CANable - Jhoinrch RH02" width="239" height="90"></td></tr>
     <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Jhoinrch RH02 Elite.jpg')">Show Full Size</span></td></tr>
@@ -495,20 +498,20 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 </table>
 
 <a name="FirmwareVersions"></a>
-<div>When you install HUD ECU Hacker you can chose between 4 different CANable 2.5 firmware versions:</div>
+<div>When you install HUD ECU Hacker you can chose between the following CANable 2.5 firmware versions:</div>
 
 <table class="DataTable">
-<tr><th>File Name</th><th>Destination Adapters</th></tr>
-<tr><td>STM32G431 - Slcan2.5 - MksMakerbase.dfu</td><td>MKS Makerbase, DSD Tech, Walfront, Jhoinrch</td></tr>
-<tr><td>STM32G431 - Slcan2.5 - OpenlightLabs.dfu</td><td>Openlight Labs</td></tr>
-<tr><td>STM32G431 - Candlelight2.5 - MksMakerbase.dfu</td><td>MKS Makerbase, DSD Tech, Walfront, Jhoinrch</td></tr>
-<tr><td>STM32G431 - Candlelight2.5 - OpenlightLabs.dfu</td><td>Openlight Labs</td></tr>
+<tr><th>File Name</th><th>Destination Adapters</th><th>Difference</th></tr>
+<tr><td>STM32G431 - Slcan2.5 - Multiboard.dfu</td><td rowspan="2">MKS Makerbase,<br>DSD Tech, Walfront</td><td rowspan="2">Green LED at pin A0<br>No quartz on board</td></tr>
+<tr><td>STM32G431 - Candlelight2.5 - Multiboard.dfu</td></tr>
+<tr><td>STM32G431 - Slcan2.5 - Jhoinrch.dfu</td><td rowspan="2">Jhoinrch</td><td rowspan="2">Uses 25 MHz quartz</td></tr>
+<tr><td>STM32G431 - Candlelight2.5 - Jhoinrch.dfu</td></tr>
+<tr><td>STM32G431 - Slcan2.5 - OpenlightLabs.dfu</td><td rowspan="2">Openlight Labs</td><td rowspan="2">Green LED at pin B11</td></tr>
+<tr><td>STM32G431 - Candlelight2.5 - OpenlightLabs.dfu</td></tr>
 </table>
 
-<div>The only difference between the adapters is the pin that is used for the <b>green LED</b>.</div>
-<div>Openlight Labs uses processor pin B11, while the other companies use pin A0.</div>
-<div>If you install the wrong firmware the green LED will always be off.</div>
-<div>If you have another adapter with a different pin assignment, send me an email, this can easily be adapted.</div>
+<div>If you install the wrong firmware the green LED will always be off or nothing works at all.</div>
+<div>If you have another adapter that needs different settings, send me an email, this can easily be added.</div>
 <p>
 <div>The firmware has been tested on the STM32G431 processor. But it should work on all processors of this serie:</div>
 <div>STM32G441, STM32G471, STM32G473, STM32G474, STM32G483, STM32G484, STM32G491, STM32G4A1.</div>
@@ -517,7 +520,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>The HUD ECU Hacker Firmware Updater can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
 <div>Flashing the CANable is no risk. The processor has a hard-coded bootloader that cannot be destroyed.</div>
 <div>When you connect the USB cable and the blue and green LED are not blinking alternatingly, the firmware is not working.</div>
-<div>This may happen when you upload the firmware to the wrong processor. In this case you can simply flash it again.</div>
+<div>This may happen when you uploaded the wrong firmware. In this case you can simply flash it again.</div>
 <div>Therefore it is strongly recommended that you first make a backup of the current firmware in the adapter.</div>
 <div>With the button 'Download' you can store the current firmware into a DFU file.</div>
 <div>This allows you to always revert the adapter to it's original state.</div>
@@ -1098,7 +1101,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <p>
 <table class="Pre">
 <tr><td style="white-space: nowrap;">
-<div>+Board: MksMakerbase\t</div>
+<div>+Board: Multiboard\t</div>
 <div>MCU: STM32G431\t</div>
 <div>DevID: 1128\t</div>
 <div>Firmware: 2427156\t</div>
@@ -1112,7 +1115,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 
 <table class="DataTable">
 <tr><th>Key</th><th>Value</th><th>Comment</th></tr>
-<tr><td>Board</td><td>MksMakerbase</td><td>
+<tr><td>Board</td><td>Multiboard</td><td>
     <div>This defines for which board the firmware was compiled.</div>
     <div>It may not match the real hardware if the user has uploaded the wrong firmware.</div>
     <div>See <a href="#FirmwareVersions">Firmware Versions</a></div></td></tr>
@@ -1156,8 +1159,8 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>Classic packets: DLC = '0' to '8', </div>
     <div>CAN FD: '8'= 8 byte, '9'= 12 bytes, 'A'= 16 bytes, 'B'= 20 byte, 'C'= 24 bytes, 'D'= 32 bytes, 'E'= 48 byte, 'F'= 64 byte.</div>
 <li><div><b><span class="Blue">Data bytes</span></b>: Classic packets: 0 to 8, CAN FD: 8 to 64 bytes.</div>
-<li><div>only for Tx packets and only if Tx <b><span class="Red">Echo Markers</span></b> are enabled: a 2 digit marker.</div>
 <li><div>only for Rx packets and only if <b><span class="Red">ESI</span></b> reporting is enabled: a character 'S' if the sending node is error passive.</div>
+<li><div>only for Tx packets and only if Tx <b><span class="Red">Echo Markers</span></b> are enabled: a 2 digit marker.</div>
 </ul>
 
 <table class="DataTable">
@@ -1351,13 +1354,18 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 
 <h3>Adding new boards</h3>
 <div>In the file <b>settings.h</b> you find the definitions for the boards.</div>
-<div>Currently there are the pin defintions for the boards from MKS Makerbase and Openlight Labs.</div>
+<div>Currently there are the pin definitions for the boards from MKS Makerbase and Openlight Labs.</div>
 <div>The new board must be defined in a new Make file as <code>TARGET_BOARD</code></div>
 
 <h3>Adding new processors</h3>
 <div>Also in <b>settings.h</b> are the includes of the HAL files (Hardware Abtraction Layer) from ST Microelectronics.</div>
 <div>For another processor serie the required HAL files must be added into a new subfolder.</div>
 <div>The new processor must be defined in a new Make file as <code>TARGET_MCU</code></div>
+
+<h3>Adding new quartz crystals</h3>
+<div>The cheap adapters have no quartz on board. They use the unprecise RC oscillator in the processor.</div>
+<div>The Jhoinrch firmware is configured to use a 25 MHz quartz.</div>
+<div>For another quartz frequency, create a new make file, set <code>QUARTZ_FREQU</code> and adapt <code>system.c</code></div>
 
 <h3>USB Interface</h3>
 <div>The USB interface is by far the most complicated code in the firmware.</div>
@@ -1406,12 +1414,14 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <li><div><b>14.09.2025</b>: Initial firmware release.</div>
 <li><div><b>23.10.2025</b>: New firmware allows to modify one filter after the adapter is already open.</div>
 <li><div><b>16.11.2025</b>: New firmware supports remote frames, Bugfix Slcan command <code>Y0</code>, Report error when sending FD packet in classic mode.</div>
-<li><div><b>18.11.2025</b>: New firmware fixes calculation of all Slcan baudrates for commands <code>S</code> and <code>Y</code>. Fix of legacy Candlelight packet size.
-<li><div><b>21.11.2025</b>: Many improvements in C++ demo, added new C# demo.
-<li><div><b>26.11.2025</b>: New firmware changes Slcan command <code>S</code> to use samplepoint 75% instead of 87.5% which is more robust.
-<li><div><b>28.11.2025</b>: New firmware uses HAL 1.2.5 with improved double buffering, fixes lost Tx packets under Linux. (thanks to Marc)
-<li><div><b>29.12.2025</b>: Added HAL files for STM32G473
-<li><div><b>02.01.2026</b>: Jhoinrch is the first company that sells their CANable adpters with the new Elmüsoft 2.5 firmware.
+<li><div><b>18.11.2025</b>: New firmware fixes calculation of all Slcan baudrates for commands <code>S</code> and <code>Y</code>. Fix of legacy Candlelight packet size.</div>
+<li><div><b>21.11.2025</b>: Many improvements in C++ demo, added new C# demo.</div>
+<li><div><b>26.11.2025</b>: New firmware changes Slcan command <code>S</code> to use samplepoint 75% instead of 87.5% which is more robust.</div>
+<li><div><b>28.11.2025</b>: New firmware uses HAL 1.2.5 with improved double buffering, fixes lost Tx packets under Linux. (thanks to Marc)</div>
+<li><div><b>29.12.2025</b>: Added HAL files for STM32G473</div>
+<li><div><b>02.01.2026</b>: Jhoinrch is the first company that sells their CANable adpter with the new Elmüsoft 2.5 firmware.</div>
+<li><div><b>08.01.2026</b>: Added support for boards with quartz crystal. New firmware for Jhoinrch adapter with 25 MHz quartz.</div>
+<li><div><b>13.01.2026</b>: Hardware timestamps use precise 16 bit time from processor.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 

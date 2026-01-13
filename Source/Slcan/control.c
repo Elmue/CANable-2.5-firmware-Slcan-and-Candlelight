@@ -191,7 +191,7 @@ eFeedback control_parse_str(char buf[], int len)
                 // HAL_GetDEVID() returns a unique identifier (DBG_IDCODE) for each processor family.
                 // The STM32G0xx serie uses 0x460, 0x465, 0x476, 0x477 and STM32G4xx uses 0x468, 0x469, 0x479.
                 // String responses start with '+', all other command responses start with '#'
-                sprintf(tempbuf, "+Board: "      TARGET_BOARD            // MksMakerbase           (from MakeFile)
+                sprintf(tempbuf, "+Board: "      TARGET_BOARD            // Multiboard             (from MakeFile)
                                  "\tMCU: %s"                             // STM32G431              (from MakeFile)
                                  "\tDevID: %lu"                          // 0x468                  (from processor)
                                  "\tFirmware: %u"                        // 0x250814               (from settings.h)

@@ -443,7 +443,7 @@ namespace CANable
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 25)]
             public Byte[]  mu8_McuName;         // "STM32G431xx"
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 25)]
-            public Byte[]  mu8_BoardName;       // "MksMakerbase", "OpenlightLabs"
+            public Byte[]  mu8_BoardName;       // "Multiboard", "OpenlightLabs", "Jhoinrh"
 
             public String McuName
             {
@@ -754,7 +754,7 @@ namespace CANable
         // Adapt this to the latest available CANable 2.5 firmware version.
         // It shows an error to upload the latest firmware to the adapter.
         // The version number is BCD encoded (0x251118 = 18.nov.2025)
-        public const int MIN_FIRMWARE = 0x251128;
+        public const int MIN_FIRMWARE = 0x260113;
 
         WinUSB         mi_WinUSB;
         kDevInfo       mk_Info;
