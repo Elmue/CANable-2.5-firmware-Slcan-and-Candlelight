@@ -235,7 +235,7 @@
         <div>— &nbsp; <a href="#Candle_NewProto"      class="MenuLink" onClick="ShowMenu(false)">The New Protocol</a></div>
         <div>— &nbsp; <a href="#Candle_DFU"           class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>        
         <div><a href="#Firmware_Manual"               class="MenuLink" onClick="ShowMenu(false)">4.) Firmware Developer Manual</a></div>
-        <div>— &nbsp; <a href="#Compile_Windows"      class="MenuLink" onClick="ShowMenu(false)">Compiling on Windows</a></div>
+        <div>— &nbsp; <a href="#Compiling"            class="MenuLink" onClick="ShowMenu(false)">Compiling the Code</a></div>
         <div>— &nbsp; <a href="#Source_Code"          class="MenuLink" onClick="ShowMenu(false)">Source Code</a></div>
     </div>
 </div>
@@ -1376,7 +1376,11 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>I recommend that you read the exellent <b>USB tutorial</b> in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
 
 
-<a name="Compile_Windows"></a>
+<a name="Compiling"></a>
+<h3>Compiling STM32 code on Linux</h3>
+<div>Just type: <code>make -s -f Make_G431_Candle_Multiboard</code></div>
+<div>The make file contains a command (dfu-util) that automatically uploads the compiled BIN file to the CANable.</div>
+
 <h3>Compiling STM32 code on Windows</h3>
 <div>You find a lot of instructions in internet how to compile the firmware on Linux.</div>
 <div>But there is nothing for Windows developers, although it is quite simple.</div>
@@ -1403,7 +1407,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>The folder into which CubeCLT has installed the file <b>arm-none-eabi-gcc.exe</b></div>
     <div>The folder into which MinGW has installed the file <b>make.exe</b></div>
     <div>You can also copy make.exe and mmkdir.exe and their DLLs into the CubCLT directory and you need only one folder.</div>
-<li><div>Now double click the file <b>Build_Slcan.cmd</b> in my project and the compilation should start.</div>
+<li><div>Now double click the file <b>Build.cmd</b> in my project and the compilation should start.</div>
     <div>This script copies the compiled <b>BIN files</b> automatically into the Firmware folder of HUD ECU Hacker.</div>
 <li><div>The <b>Firmware Updater</b> will convert the BIN files automatically into <b>DFU files</b> that you can upload.</div>
 </ol>
