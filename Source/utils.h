@@ -12,14 +12,13 @@
 // This enum is used for Slcan and for Candlelight
 typedef enum // 32 bit
 {
-    USR_Retransmit  = 0x01, // retransmit packets that have not been ACknowledged
+    USR_Retransmit  = 0x01, // re-transmit packets that have not been ACKnowledged
     USR_ReportTX    = 0x02, // report packets to the host that have been sent successfully (enable Tx Echo)
     USR_ReportESI   = 0x04, // report the ESI flag of received packets (Candlelight: always ON)
     USR_ErrorReport = 0x08, // report error status every 100 ms if it has changed, report unchanged errors every 3 seconds. (Candlelight: always ON)
     USR_DebugReport = 0x10, // enable ASCII debug messages to the host (Candlelight: enabled with ELM_DevFlagProtocolElmue)
     USR_Feedback    = 0x20, // enable feedback mode (return execution status of a command with enum eFeedback) (Candlelight uses ELM_ReqGetLastError instead)
-    USR_ProtoElmue  = 0x40, // enable the new ElmüSoft protocol for maximum USB throughput instead of the inefficient GS protocol (Candlelight only)
-    USR_Timestamp   = 0x80, // send timestamps to the host
+    USR_Timestamp   = 0x40, // send timestamps to the host
     // --------------------
     // IMPORTANT:
     // Never *EVER* modify these defaults!!! You will break all applications that have been written for CANable adapters!

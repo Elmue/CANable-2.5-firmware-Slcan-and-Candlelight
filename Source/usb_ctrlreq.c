@@ -16,25 +16,44 @@
 
 #include "usb_ctrlreq.h"
 #include "usb_ioreq.h"
+#include "usb_class.h"
+
+extern uint8_t USBD_DeviceDesc[];
+extern uint8_t USBD_ConfigDescFS[];
+// extern uint8_t USBD_ConfigDescHS[];        // only for High Speed USB devices
+// extern uint8_t USBD_OtherSpeedDesc[];      // only for High Speed USB devices
+// extern uint8_t USBD_DeviceQualifierDesc[]; // only for High Speed USB devices
+
+#define USBD_PRODUCT_STRING  "CANable 2.5 " TARGET_FIRMWARE
+
+// USB lang indentifier descriptor.
+__ALIGN_BEGIN uint8_t USBD_LangIDDesc[] __ALIGN_END =
+{
+     USB_LEN_LANGID_STR_DESC, // = 4
+     USB_DESC_TYPE_STRING,
+     LOBYTE(0x0409), // english
+     HIBYTE(0x0409)
+};
+
+// maximum 254 Unicode characters
+__ALIGN_BEGIN uint8_t USBD_StrDesc[512] __ALIGN_END;
 
 static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_SetAddress(USBD_HandleTypeDef *pdev,  USBD_SetupReqTypedef *req);
-static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_GetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-static void USBD_ClrFeature(USBD_HandleTypeDef *pdev,  USBD_SetupReqTypedef *req);
-static uint8_t USBD_GetLen(uint8_t *buf);
+static void USBD_SetAddress   (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+static void USBD_SetConfig    (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+static void USBD_GetConfig    (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+static void USBD_GetStatus    (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+static void USBD_SetFeature   (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+static void USBD_ClrFeature   (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
 
 // @brief  Handle standard usb device requests
 // @param  pdev: device instance
 // @param  req: usb request
-USBD_StatusTypeDef  USBD_StdDevReq(USBD_HandleTypeDef *pdev,
-                                   USBD_SetupReqTypedef *req)
+USBD_StatusTypeDef  USBD_StdDevReq(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
   USBD_StatusTypeDef ret = USBD_OK;
 
-  switch (req->bmRequest & USB_REQ_TYPE_MASK)
+  switch (req->bRequestType & USB_REQ_TYPE_MASK)
   {
     case USB_REQ_TYPE_CLASS:
     case USB_REQ_TYPE_VENDOR:
@@ -89,12 +108,11 @@ USBD_StatusTypeDef  USBD_StdDevReq(USBD_HandleTypeDef *pdev,
 // @brief  Handle standard usb interface requests
 // @param  pdev: device instance
 // @param  req: usb request
-USBD_StatusTypeDef  USBD_StdItfReq(USBD_HandleTypeDef *pdev,
-                                   USBD_SetupReqTypedef  *req)
+USBD_StatusTypeDef  USBD_StdItfReq(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef  *req)
 {
   USBD_StatusTypeDef ret = USBD_OK;
 
-  switch (req->bmRequest & USB_REQ_TYPE_MASK)
+  switch (req->bRequestType & USB_REQ_TYPE_MASK)
   {
     case USB_REQ_TYPE_CLASS:
     case USB_REQ_TYPE_VENDOR:
@@ -105,7 +123,12 @@ USBD_StatusTypeDef  USBD_StdItfReq(USBD_HandleTypeDef *pdev,
         case USBD_STATE_ADDRESSED:
         case USBD_STATE_CONFIGURED:
 
-          if (LOBYTE(req->wIndex) <= USBD_MAX_NUM_INTERFACES)
+          // wIndex = interface number
+          if (LOBYTE(req->wIndex) >= USBD_INTERFACES_COUNT)
+          {
+            USBD_CtlError(pdev, req);
+          }
+          else
           {
             ret = (USBD_StatusTypeDef)pdev->pClass->Setup(pdev, req);
 
@@ -113,10 +136,6 @@ USBD_StatusTypeDef  USBD_StdItfReq(USBD_HandleTypeDef *pdev,
             {
               USBD_CtlSendStatus(pdev);
             }
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
           }
           break;
 
@@ -137,15 +156,14 @@ USBD_StatusTypeDef  USBD_StdItfReq(USBD_HandleTypeDef *pdev,
 // @brief  Handle standard usb endpoint requests
 // @param  pdev: device instance
 // @param  req: usb request
-USBD_StatusTypeDef  USBD_StdEPReq(USBD_HandleTypeDef *pdev,
-                                  USBD_SetupReqTypedef  *req)
+USBD_StatusTypeDef  USBD_StdEPReq(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef  *req)
 {
   USBD_EndpointTypeDef *pep;
   uint8_t   ep_addr;
   USBD_StatusTypeDef ret = USBD_OK;
   ep_addr  = LOBYTE(req->wIndex);
 
-  switch (req->bmRequest & USB_REQ_TYPE_MASK)
+  switch (req->bRequestType & USB_REQ_TYPE_MASK)
   {
     case USB_REQ_TYPE_CLASS:
     case USB_REQ_TYPE_VENDOR:
@@ -153,8 +171,7 @@ USBD_StatusTypeDef  USBD_StdEPReq(USBD_HandleTypeDef *pdev,
       break;
 
     case USB_REQ_TYPE_STANDARD:
-      /* Check if it is a class request */
-      if ((req->bmRequest & 0x60U) == 0x20U)
+      if ((req->bRequestType & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_CLASS)
         return (USBD_StatusTypeDef)pdev->pClass->Setup(pdev, req);
 
       switch (req->bRequest)
@@ -287,7 +304,6 @@ USBD_StatusTypeDef  USBD_StdEPReq(USBD_HandleTypeDef *pdev,
       USBD_CtlError(pdev, req);
       break;
   }
-
   return ret;
 }
 
@@ -295,194 +311,118 @@ USBD_StatusTypeDef  USBD_StdEPReq(USBD_HandleTypeDef *pdev,
 // @brief  Handle Get Descriptor requests
 // @param  pdev: device instance
 // @param  req: usb request
-static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev,
-                               USBD_SetupReqTypedef *req)
+static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
-  uint16_t len = 0U;
-  uint8_t *pbuf = NULL;
-  uint8_t err = 0U;
+    uint16_t len  = 0;
+    uint8_t* pbuf = NULL;
 
-  switch (req->wValue >> 8)
-  {
-#if (USBD_LPM_ENABLED == 1U) // not used
-    case USB_DESC_TYPE_BOS:
-      if (pdev->pDesc->GetBOSDescriptor != NULL)
-      {
-        pbuf = pdev->pDesc->GetBOSDescriptor(pdev->dev_speed, &len);
-      }
-      else
-      {
-        USBD_CtlError(pdev, req);
-        err++;
-      }
-      break;
+    switch (req->wValue >> 8)
+    {
+        case USB_DESC_TYPE_DEVICE:
+            pbuf = USBD_DeviceDesc;
+            len  = USB_LEN_DEV_DESC; // always 18 byte
+            break;
+
+        case USB_DESC_TYPE_CONFIGURATION:
+            /*
+            if (pdev->dev_speed == USBD_SPEED_HIGH)
+                pbuf = USBD_ConfigDescHS;
+            else */
+                pbuf = USBD_ConfigDescFS;
+
+            // The primitive GCC is not able to compile sizeof(USBD_ConfigDescFS) so we use byte 2 = wTotalLength
+            len = pbuf[2];
+            break;
+
+        /*
+        // only needed for High Speed USB devices
+        case USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION:
+            pbuf = USBD_OtherSpeedDesc;
+            // The primitive GCC is not able to compile sizeof(USBD_OtherSpeedDesc) so we use byte 2 = wTotalLength
+            len  = pbuf[2];
+            break;
+
+        // only needed for High Speed USB devices
+        case USB_DESC_TYPE_DEVICE_QUALIFIER:
+            pbuf = USBD_DeviceQualifierDesc;
+            len  = USB_LEN_DEV_QUALIFIER_DESC;
+            break;
+        */
+
+        case USB_DESC_TYPE_BOS:
+            // TODO: Implement if needed
+            break;
+
+        case USB_DESC_TYPE_STRING:
+        {
+            switch ((uint8_t)req->wValue)
+            {
+                case USBD_IDX_LANGID_STR: // supported languages for strings
+                    pbuf = USBD_LangIDDesc;
+                    len  = sizeof(USBD_LangIDDesc);
+                    break;
+
+                case USBD_IDX_MFC_STR:     // USB Device Manufacrturer String
+                    pbuf = USBD_GetStringDescr("ElmueSoft (netcult.ch/elmue)", &len);
+                    break;
+
+                case USBD_IDX_PRODUCT_STR: // USB Device Product String
+                    pbuf = USBD_GetStringDescr(USBD_PRODUCT_STRING, &len);
+                    break;
+
+                case USBD_IDX_SERIAL_STR:  // USB Device Serial String
+                {
+                    // get the 96 bit serial number which is unique for each processor that ST Microelectrons has ever produced.
+                    uint32_t serial_0 = *(uint32_t*)(UID_BASE    );
+                    uint32_t serial_1 = *(uint32_t*)(UID_BASE + 4);
+                    uint32_t serial_2 = *(uint32_t*)(UID_BASE + 8);
+
+                    // reduce 96 bit to 64 bit
+                    serial_0 += serial_2;
+
+                    // Format USB serial number
+                    char s8_Serial[20];
+#if defined(Candlelight)
+                    // Depending on the firmware that the user uploads the same device may have one or multiple Candlelight interfaces.
+                    // The operating system must install different drivers per interface depending on the interface count.
+                    sprintf(s8_Serial, "%08lX%08lX%u", serial_0, serial_1, USBD_INTERFACES_COUNT);
+#else // Slcan
+                    sprintf(s8_Serial, "%08lX%08lX",   serial_0, serial_1);
 #endif
-    case USB_DESC_TYPE_DEVICE:
-      pbuf = pdev->pDesc->GetDeviceDescriptor(pdev->dev_speed, &len);
-      break;
-
-    case USB_DESC_TYPE_CONFIGURATION:
-      /* processor supports only USB full speed
-      if (pdev->dev_speed == USBD_SPEED_HIGH)
-      {
-        pbuf = pdev->pClass->GetHSConfigDescriptor(&len);
-        pbuf[1] = USB_DESC_TYPE_CONFIGURATION;
-      }
-      else
-      */
-      {
-        pbuf = pdev->pClass->GetFSConfigDescriptor(&len);
-        pbuf[1] = USB_DESC_TYPE_CONFIGURATION;
-      }
-      break;
-
-    case USB_DESC_TYPE_STRING:
-      switch ((uint8_t)(req->wValue))
-      {
-        case USBD_IDX_LANGID_STR:
-          if (pdev->pDesc->GetLangIDStrDescriptor != NULL)
-          {
-            pbuf = pdev->pDesc->GetLangIDStrDescriptor(pdev->dev_speed, &len);
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
-            err++;
-          }
-          break;
-
-        case USBD_IDX_MFC_STR:
-          if (pdev->pDesc->GetManufacturerStrDescriptor != NULL)
-          {
-            pbuf = pdev->pDesc->GetManufacturerStrDescriptor(pdev->dev_speed, &len);
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
-            err++;
-          }
-          break;
-
-        case USBD_IDX_PRODUCT_STR:
-          if (pdev->pDesc->GetProductStrDescriptor != NULL)
-          {
-            pbuf = pdev->pDesc->GetProductStrDescriptor(pdev->dev_speed, &len);
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
-            err++;
-          }
-          break;
-
-        case USBD_IDX_SERIAL_STR:
-          if (pdev->pDesc->GetSerialStrDescriptor != NULL)
-          {
-            pbuf = pdev->pDesc->GetSerialStrDescriptor(pdev->dev_speed, &len);
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
-            err++;
-          }
-          break;
-
-        case USBD_IDX_CONFIG_STR:
-          if (pdev->pDesc->GetConfigurationStrDescriptor != NULL)
-          {
-            pbuf = pdev->pDesc->GetConfigurationStrDescriptor(pdev->dev_speed, &len);
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
-            err++;
-          }
-          break;
-
-        case USBD_IDX_INTERFACE_STR:
-          if (pdev->pDesc->GetInterfaceStrDescriptor != NULL)
-          {
-            pbuf = pdev->pDesc->GetInterfaceStrDescriptor(pdev->dev_speed, &len);
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
-            err++;
-          }
-          break;
-
-        default:
-#if (USBD_SUPPORT_USER_STRING_DESC == 1U) // not used
-          if (pdev->pClass->GetUsrStrDescriptor != NULL)
-          {
-            pbuf = pdev->pClass->GetUsrStrDescriptor(pdev, (req->wValue), &len);
-          }
-          else
-          {
-            USBD_CtlError(pdev, req);
-            err++;
-          }
-          break;
-#else
-          USBD_CtlError(pdev, req);
-          err++;
+                    pbuf = USBD_GetStringDescr(s8_Serial, &len);
+                    break;
+                }
+                default: // Interface string descriptors and MS OS descriptors (Candlelight only)
+#if (USBD_SUPPORT_USER_STRING_DESC == 1U)
+                    pbuf = USBD_GetUserStringDescr(pdev, req->wValue, &len);
 #endif
-      }
-      break;
+                    break;
+            } // switch
+            break;
+        } // case USB_DESC_TYPE_STRING
+    } // switch
 
-    /*  
-    // not used for FULL speed USB
-    case USB_DESC_TYPE_DEVICE_QUALIFIER:
-      if (pdev->dev_speed == USBD_SPEED_HIGH)
-      {
-        pbuf = pdev->pClass->GetDeviceQualifierDescriptor(&len);
-      }
-      else
-      {
-        USBD_CtlError(pdev, req);
-        err++;
-      }
-      break;
+    if (!pbuf)
+    {
+        USBD_CtlError(pdev, req); // Stall Endpoint (unknown descriptor requested)
+        return;
+    }
 
-    // not used for FULL speed USB
-    case USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION:
-      if (pdev->dev_speed == USBD_SPEED_HIGH)
-      {
-        pbuf = pdev->pClass->GetOtherSpeedConfigDescriptor(&len);
-        pbuf[1] = USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION;
-      }
-      else
-      {
-        USBD_CtlError(pdev, req);
-        err++;
-      }
-      break;
-    */
-
-    default:
-      USBD_CtlError(pdev, req);
-      err++;
-      break;
-  }
-
-    if (err != 0U)
-      return;
-
-    if ((len != 0U) && (req->wLength != 0U))
+    if (req->wLength == 0)
+    {
+        USBD_CtlSendStatus(pdev);
+    }
+    else if (len > 0)
     {
         len = MIN(len, req->wLength);
         USBD_CtlSendData(pdev, pbuf, len);
     }
-
-    if (req->wLength == 0U)
-        USBD_CtlSendStatus(pdev);
 }
 
 // @brief  Set device address
 // @param  pdev: device instance
 // @param  req: usb request
-static void USBD_SetAddress(USBD_HandleTypeDef *pdev,
-                            USBD_SetupReqTypedef *req)
+static void USBD_SetAddress(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
   if ((req->wIndex == 0U) && (req->wLength == 0U) && (req->wValue < 128U))
   {
@@ -522,7 +462,9 @@ static void USBD_SetConfig(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
   static uint8_t cfgidx;
   cfgidx = (uint8_t)(req->wValue);
 
-  if (cfgidx > USBD_MAX_NUM_CONFIGURATION)
+  // cfgidx = 0 --> device is not configured (only SETUP commands allowed)
+  // cfgidx = 1 --> select the first Configuration
+  if (cfgidx > USBD_CONFIGURATIONS_COUNT)
   {
     USBD_CtlError(pdev, req);
   }
@@ -626,27 +568,24 @@ static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     case USBD_STATE_CONFIGURED:
       if (req->wLength != 0x2U)
       {
-        USBD_CtlError(pdev, req);
-        break;
+          USBD_CtlError(pdev, req);
+          break;
       }
 
-#if (USBD_SELF_POWERED == 1U)
-      pdev->dev_config_status = USB_CONFIG_SELF_POWERED;
+#if (USBD_SELF_POWERED > 0)
+        pdev->dev_config_status = USB_CONFIG_SELF_POWERED; // status flag
 #else
-      pdev->dev_config_status = 0U;
+        pdev->dev_config_status = 0U;
 #endif
+        if (pdev->dev_remote_wakeup)
+            pdev->dev_config_status |= USB_CONFIG_REMOTE_WAKEUP; // status flag
 
-      if (pdev->dev_remote_wakeup)
-      {
-        pdev->dev_config_status |= USB_CONFIG_REMOTE_WAKEUP;
-      }
-
-      USBD_CtlSendData(pdev, (uint8_t *)(void *)&pdev->dev_config_status, 2U);
-      break;
+        USBD_CtlSendData(pdev, (uint8_t *)(void *)&pdev->dev_config_status, 2U);
+        break;
 
     default:
-      USBD_CtlError(pdev, req);
-      break;
+        USBD_CtlError(pdev, req);
+        break;
   }
 }
 
@@ -654,8 +593,7 @@ static void USBD_GetStatus(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 // @brief  Handle Set device feature request
 // @param  pdev: device instance
 // @param  req: usb request
-static void USBD_SetFeature(USBD_HandleTypeDef *pdev,
-                            USBD_SetupReqTypedef *req)
+static void USBD_SetFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
   if (req->wValue == USB_FEATURE_REMOTE_WAKEUP)
   {
@@ -668,8 +606,7 @@ static void USBD_SetFeature(USBD_HandleTypeDef *pdev,
 // @brief  Handle clear device feature request
 // @param  pdev: device instance
 // @param  req: usb request
-static void USBD_ClrFeature(USBD_HandleTypeDef *pdev,
-                            USBD_SetupReqTypedef *req)
+static void USBD_ClrFeature(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
   switch (pdev->dev_state)
   {
@@ -694,55 +631,42 @@ static void USBD_ClrFeature(USBD_HandleTypeDef *pdev,
 // @param  req: usb request
 void USBD_ParseSetupRequest(USBD_SetupReqTypedef *req, uint8_t *pdata)
 {
-  req->bmRequest = *(uint8_t *)(pdata);
-  req->bRequest = *(uint8_t *)(pdata + 1U);
-  req->wValue = SWAPBYTE(pdata + 2U);
-  req->wIndex = SWAPBYTE(pdata + 4U);
-  req->wLength = SWAPBYTE(pdata + 6U);
+    req->bRequestType = *(uint8_t *)(pdata);
+    req->bRequest     = *(uint8_t *)(pdata + 1U);
+    req->wValue       = SWAPBYTE(pdata + 2U);
+    req->wIndex       = SWAPBYTE(pdata + 4U);
+    req->wLength      = SWAPBYTE(pdata + 6U);
 }
 
 // @brief  Handle USB low level Error
 // @param  pdev: device instance
 void USBD_CtlError(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
-  USBD_LL_StallEP(pdev, 0x80U);
-  USBD_LL_StallEP(pdev, 0U);
+    USBD_LL_StallEP(pdev, 0x80U);
+    USBD_LL_StallEP(pdev, 0U);
 }
 
 
 // @brief  Convert Ascii string into unicode one
-// @param  desc : descriptor buffer
+// @param  desc : descriptor buffer (ASCII)
 // @param  unicode : Formatted string buffer (unicode)
-// @param  len : descriptor length
-void USBD_GetString(uint8_t *desc, uint8_t *unicode, uint16_t *len)
+// @param  len : descriptor length in bytes
+uint8_t* USBD_GetStringDescr(char* descr, uint16_t *len)
 {
-  uint8_t idx = 0U;
-  if (desc != NULL)
-  {
-    *len = (uint16_t)USBD_GetLen(desc) * 2U + 2U;
-    unicode[idx++] = *(uint8_t *)(void *)len;
-    unicode[idx++] = USB_DESC_TYPE_STRING;
-
-    while (*desc != '\0')
+    if (descr != NULL)
     {
-      unicode[idx++] = *desc++;
-      unicode[idx++] =  0U;
-    }
-  }
-}
+        *len = (uint16_t)strlen(descr) * 2 + 2;
+        uint8_t idx = 0;
+        USBD_StrDesc[idx++] = *(uint8_t*)(void*)len;
+        USBD_StrDesc[idx++] = USB_DESC_TYPE_STRING;
 
-// @brief  get the string length
-// @param  pointer to the ascii string buffer
-// @retval string length
-static uint8_t USBD_GetLen(uint8_t *buf)
-{
-  uint8_t  len = 0U;
-  while (*buf != '\0')
-  {
-    len++;
-    buf++;
-  }
-  return len;
+        while (*descr != '\0')
+        {
+            USBD_StrDesc[idx++] = *descr ++;
+            USBD_StrDesc[idx++] = 0;
+        }
+    }
+    return USBD_StrDesc;
 }
 
 

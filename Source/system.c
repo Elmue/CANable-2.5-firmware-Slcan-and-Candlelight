@@ -93,7 +93,10 @@ bool system_init(void)
     RCC_OscInitStruct.HSEState            = RCC_HSE_ON;             // enable HSE (High Speed External) quartz oscillator
     RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSE;      // use external oscillator to feed the PLL
     
-    #if HSE_VALUE == 25000000 // 25 MHz quartz 
+    #if HSE_VALUE == 8000000    // 8 MHz quartz 
+        RCC_OscInitStruct.PLL.PLLM        = RCC_PLLM_DIV1;          // divide 8 MHz input clock / 1 --> 8 MHz
+        RCC_OscInitStruct.PLL.PLLN        = 40;                     // multiply 8 MHz x 40 --> VCO frequency = 320 MHz (maximum 344 MHz)
+    #elif HSE_VALUE == 25000000 // 25 MHz quartz 
         RCC_OscInitStruct.PLL.PLLM        = RCC_PLLM_DIV5;          // divide 25 MHz input clock / 5 --> 5 MHz
         RCC_OscInitStruct.PLL.PLLN        = 64;                     // multiply 5 MHz x 64 --> VCO frequency = 320 MHz (maximum 344 MHz)
     #else
@@ -105,7 +108,7 @@ bool system_init(void)
 
     RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
     RCC_OscInitStruct.PLL.PLLP     = RCC_PLLP_DIV2; // PLL output P = VCO / 2 = 160 MHz (for ADC)
-    RCC_OscInitStruct.PLL.PLLQ     = RCC_PLLQ_DIV2; // PLL output Q = VCO / 2 = 160 MHz (for USB / FDCAN)
+    RCC_OscInitStruct.PLL.PLLQ     = RCC_PLLQ_DIV2; // PLL output Q = VCO / 2 = 160 MHz (for FDCAN)
     RCC_OscInitStruct.PLL.PLLR     = RCC_PLLR_DIV2; // PLL output R = VCO / 2 = 160 MHz (for SYSCLK)
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
         return false;
@@ -211,7 +214,27 @@ void system_init_timestamp()
     TIM3->ARR   = 0xFFFFFFFF;
     TIM3->CR1  |= TIM_CR1_CEN;
     TIM3->EGR   = TIM_EGR_UG;   
+    
+    // This interrupt calls FDCAN1_IT0_IRQHandler()
+    HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ  (FDCAN1_IT0_IRQn);   
 }
+
+// overwrite weak interrupt handler dummy
+void FDCAN1_IT0_IRQHandler(void) 
+{ 
+    // this calls HAL_FDCAN_TimestampWraparoundCallback()
+    HAL_FDCAN_IRQHandler(can_get_handle(0)); 
+}
+
+// overwrite weak callback dummy
+// This callback is called by interrupt every 65.536 ms from HAL_FDCAN_IRQHandler()
+void HAL_FDCAN_TimestampWraparoundCallback(FDCAN_HandleTypeDef *hfdcan)
+{
+    timestamp_wrap ++;
+}
+
+// ---------
 
 // get timestamp with 1 µs precision
 // Timer3 must be used because this is written into FDCAN_TxEventFifoTypeDef.TxTimestamp and FDCAN_RxHeaderTypeDef.RxTimestamp
@@ -226,19 +249,6 @@ uint32_t system_get_timestamp()
 uint32_t system_get_timewrap()
 {
     return timestamp_wrap;
-}
-
-// overwrite weak interrupt handler dummy
-void FDCAN1_IT0_IRQHandler(void) 
-{ 
-    HAL_FDCAN_IRQHandler(can_get_handle()); 
-}
-
-// overwrite weak callback dummy
-// This callback is called by interrupt every 65.536 ms
-void HAL_FDCAN_TimestampWraparoundCallback(FDCAN_HandleTypeDef *hfdcan)
-{
-    timestamp_wrap ++;
 }
 
 // ------------------------------------------------------------------
@@ -282,7 +292,7 @@ eFeedback system_set_option_bytes(eOptionBytes e_Option)
     if (system_get_mcu_serie() != SERIE_G4)
         return FBK_UnsupportedFeature;
 
-    if (can_is_opened())
+    if (can_is_any_open())
         return FBK_AdapterMustBeClosed;
 
     if (system_is_option_enabled(e_Option))

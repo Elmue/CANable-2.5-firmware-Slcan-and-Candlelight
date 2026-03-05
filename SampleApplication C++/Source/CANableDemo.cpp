@@ -57,6 +57,9 @@ Candlelight gi_Candle;
 kDevInfo    gk_Info;
 int         gs32_DeviceIndex; // user selection if multiple devices connected
 
+HANDLE gh_ConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
+HANDLE gh_ConsoleIn  = GetStdHandle(STD_INPUT_HANDLE);
+
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Console colors
@@ -71,24 +74,19 @@ int         gs32_DeviceIndex; // user selection if multiple devices connected
 #define BROWN   (FOREGROUND_RED   | FOREGROUND_GREEN)
 #define GREEN   (FOREGROUND_GREEN)
 
-// Print coloured console output
+// Print coloured console output (max 2000 chars!)
 void PrintConsole(WORD u16_Color, const WCHAR* u16_Format, ...)
 {
-    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), u16_Color); 
+    SetConsoleTextAttribute(gh_ConsoleOut, u16_Color); 
     va_list  args;
     va_start(args, u16_Format);
-    vwprintf(u16_Format, args);
-}
 
-// The user closes the Console window with the mouse --> close the CANable
-BOOL WINAPI ConsoleHandler(DWORD signal) 
-{
-    if (signal == CTRL_CLOSE_EVENT) 
-    {
-        gi_Candle.Close();
-        return TRUE; // Indicate that the signal was handled
-    }
-    return FALSE;
+    WCHAR u16_Buffer[2000];
+    DWORD u32_Len = vswprintf(u16_Buffer, 2000, u16_Format, args);
+
+    // WriteConsole() is significantly faster than wprinf() or vwprintf(), which need 10 ms per line!
+    DWORD u32_Written;
+    WriteConsoleW(gh_ConsoleOut, u16_Buffer, u32_Len, &u32_Written, NULL);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -103,18 +101,17 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 	}
 
     SetConsoleTitle(L"ElmüSoft Candlelight C++ Demo");
-    SetConsoleCtrlHandler(ConsoleHandler, TRUE);
 
     // Increase console buffer for 3000 lines output with 200 chars per line
     COORD k_Size = {120, 3000}; 
-    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), k_Size);
+    SetConsoleScreenBufferSize(gh_ConsoleOut, k_Size);
 
-    COORD k_Max = GetLargestConsoleWindowSize(GetStdHandle(STD_OUTPUT_HANDLE));
+    COORD k_Max = GetLargestConsoleWindowSize(gh_ConsoleOut);
 
     SMALL_RECT k_Wnd = {0}; 
     k_Wnd.Right  = min(k_Max.X, 120) - 4;
     k_Wnd.Bottom = min(k_Max.Y,  60) - 4;
-    SetConsoleWindowInfo(GetStdHandle(STD_OUTPUT_HANDLE), TRUE, &k_Wnd);
+    SetConsoleWindowInfo(gh_ConsoleOut, TRUE, &k_Wnd);
 
     // This is required for wprintf() to show umlauts correctly
     setlocale(LC_ALL, "English_United States.1252");
@@ -130,8 +127,11 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
         DfuDemo();
     }
 
+    gi_Candle.Close(); // Close CAN bus, stop pipe thread
+
     PrintConsole(GREY, L"\nPress a key to exit ...");
     _getch();
+    wprintf(L"\n");
     ExitProcess(0);
 }
 
@@ -150,8 +150,8 @@ void CandlelightDemo()
     // -----------------------------------------
 
     CString s_Display;
-    // Supposed the clock is 160 MHz this will set 500 kBaud and samplepoint 87.5%
-    DWORD u32_Error = gi_Candle.SetBitrate(false, 2, 139, 20, &s_Display);
+    // Supposed the clock is 160 MHz this will set 500 kBaud and samplepoint 75%
+    DWORD u32_Error = gi_Candle.SetBitrate(false, 2, 119, 40, &s_Display);
     if (u32_Error)
     {
         PrintConsole(RED, L"Error setting nominal bitrate. %s\n", gi_Candle.FormatLastError(u32_Error));
@@ -220,7 +220,7 @@ void CandlelightDemo()
     PrintConsole(RED,    L"ATTENTION:\n");
     PrintConsole(YELLOW, L"The Windows console is very slow. It cannot display fast CAN bus traffic.\n");
     PrintConsole(YELLOW, L"If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
-    PrintConsole(YELLOW, L"HUD ECU Hacker has an ultra fast speed-optimized trace pane.\n\n");
+    PrintConsole(YELLOW, L"HUD ECU Hacker has an ultra fast speed-optimized CAN Raw Terminal.\n\n");
     
     PrintConsole(YELLOW, L"A left click into the console stops output, right click continues.\n\n");
 
@@ -228,7 +228,7 @@ void CandlelightDemo()
     PrintConsole(GREEN,  L"Green = Echo of sent packets that have been ACKnowledged\n");
     PrintConsole(CYAN,   L"Cyan  = Received packets\n\n");
 
-    PrintConsole(YELLOW, L"Press ENTER to abort and close the device.\n\n");
+    PrintConsole(MAGENTA, L"Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
 
     kCanPacket k_TxPacket  = {0};
     k_TxPacket.mu32_ID     = 0x7E0 + gs32_DeviceIndex;
@@ -363,18 +363,17 @@ void CandlelightDemo()
         // Check if ENTER key has been pressed
         INPUT_RECORD k_Buffer;
         DWORD        u32_Events;
-        if (PeekConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &k_Buffer, 1, &u32_Events))
+        if (PeekConsoleInput(gh_ConsoleIn, &k_Buffer, 1, &u32_Events))
         {
             if (u32_Events > 0)
             {
                 // The event must be removed from the input buffer, otherwise it is reported eternally.
-                ReadConsoleInput(GetStdHandle(STD_INPUT_HANDLE), &k_Buffer, 1, &u32_Events);  
+                ReadConsoleInput(gh_ConsoleIn, &k_Buffer, 1, &u32_Events);  
 
                 if (k_Buffer.EventType == KEY_EVENT  && 
                     k_Buffer.Event.KeyEvent.bKeyDown &&
                     k_Buffer.Event.KeyEvent.wVirtualKeyCode == VK_RETURN)
                 {
-                    gi_Candle.Close();
                     return;
                 }
             }

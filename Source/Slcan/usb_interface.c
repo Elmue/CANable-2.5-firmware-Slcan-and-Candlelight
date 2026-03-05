@@ -19,7 +19,9 @@
 #include "error.h"
 #include "system.h"
 
-extern USBD_HandleTypeDef USB_Device;
+extern USBD_HandleTypeDef GLB_UsbDevice;
+extern cdc_tx_buf         buf_cdc_tx;
+extern cdc_rx_buf         buf_cdc_rx;
 
 static int8_t CDC_Init_FS(void);
 static int8_t CDC_DeInit_FS(void);
@@ -37,8 +39,8 @@ USBD_CDC_ItfTypeDef USBD_InterfaceCallbacks =
 // Initializes the CDC media low layer over the FS USB IP
 static int8_t CDC_Init_FS(void)
 {
-    USBD_CDC_SetTxBuffer(&USB_Device, (uint8_t *)buf_cdc_tx.data[buf_cdc_tx.tail], 0);
-    USBD_CDC_SetRxBuffer(&USB_Device, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
+    USBD_CDC_SetTxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_tx.data[buf_cdc_tx.tail], 0);
+    USBD_CDC_SetRxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
     return (USBD_OK);
 }
 
@@ -135,11 +137,15 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
     uint32_t new_head = (buf_cdc_rx.head + 1) % BUF_CDC_RX_NUM_BUFS;
     if (new_head == buf_cdc_rx.tail)
     {
-        error_assert(APP_CanTxOverflow, false);
+        // The channel is unknown here --> assert this severe error on all channels.
+        for (int C=0; C<CHANNEL_COUNT; C++)
+        {
+            error_assert(C, APP_CanTxOverflow, false);
+        }
 
         // Listen again on the same buffer. Old data will be overwritten.
-        USBD_CDC_SetRxBuffer(&USB_Device, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
-        USBD_CDC_ReceivePacket(&USB_Device);
+        USBD_CDC_SetRxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
+        USBD_CDC_ReceivePacket(&GLB_UsbDevice);
         return HAL_ERROR;
     }
     else
@@ -149,9 +155,9 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         buf_cdc_rx.head = new_head;
 
         // Start listening on next buffer. Previous buffer will be processed in main loop.
-        USBD_CDC_SetRxBuffer(&USB_Device, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
-        USBD_CDC_ReceivePacket(&USB_Device);
-        return (USBD_OK);
+        USBD_CDC_SetRxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
+        USBD_CDC_ReceivePacket(&GLB_UsbDevice);
+        return USBD_OK;
     }
 }
 
@@ -159,12 +165,12 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 {
     uint8_t result = USBD_OK;
 
-    USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)USB_Device.pClassData;
+    USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)GLB_UsbDevice.pClassData;
     if (hcdc->TxState != 0)
         return USBD_BUSY;
 
-    USBD_CDC_SetTxBuffer(&USB_Device, Buf, Len);
-    result = USBD_CDC_TransmitPacket(&USB_Device);
+    USBD_CDC_SetTxBuffer(&GLB_UsbDevice, Buf, Len);
+    result = USBD_CDC_TransmitPacket(&GLB_UsbDevice);
 
     return result;
 }

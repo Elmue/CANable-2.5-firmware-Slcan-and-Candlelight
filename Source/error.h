@@ -18,11 +18,19 @@ typedef struct
     bool             back_to_active; // the bus has returned from a previous Warning, Passive or Off state to Active
 } kCanErrorState;
 
-void error_init();
-void error_assert(eErrorAppFlags flag, bool report_immediately);
-bool error_is_report_due(uint32_t tick_now);
-void error_clear();
-kCanErrorState* error_get_state();
+typedef struct
+{
+    bool           report_now;
+    uint32_t       last_tick;
+    kCanErrorState cur_state;
+    kCanErrorState last_state;
+} err_class;
+
+void error_init(int channel);
+void error_assert(int channel, eErrorAppFlags flag, bool report_immediately);
+bool error_is_report_due(int channel, uint32_t tick_now);
+void error_clear(int channel);
+kCanErrorState* error_get_state(int channel);
 
 
 

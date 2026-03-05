@@ -83,7 +83,7 @@ void HAL_PCD_ResetCallback(PCD_HandleTypeDef *hpcd)
 void HAL_PCD_SuspendCallback(PCD_HandleTypeDef *hpcd)
 {
   bSuspended = true;  
-  can_close();
+  can_close_all();
   
   USBD_LL_Suspend((USBD_HandleTypeDef*)hpcd->pData);
   if (hpcd->Init.low_power_enable)
@@ -154,8 +154,27 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
   hpcd_USB_FS.Init.battery_charging_enable = DISABLE;
 
   HAL_PCD_Init(&hpcd_USB_FS);
-  USBD_ConfigureEndpoints(pdev);
-  return USBD_OK;
+  return USBD_ConfigureEndpoints(pdev);
+}
+
+// assign a PMA memory buffer with bufsize bytes to the endpoint.
+// *pmaadress is the offset in the Packet Memory Area which has USB_PMA_SIZE bytes.
+// called from USBD_ConfigureEndpoints()
+bool USBD_LL_ConfigurePMA(PCD_HandleTypeDef *hpcd, uint8_t endpoint, bool doublebuf, uint32_t* pmaadress, uint32_t bufsize)
+{
+    if (doublebuf)
+    {
+        uint32_t addr = *pmaadress << 16;
+        *pmaadress = *pmaadress + bufsize;
+        addr |= *pmaadress;
+        HAL_PCDEx_PMAConfig(hpcd, endpoint, PCD_DBL_BUF, addr);
+    }
+    else
+    {
+        HAL_PCDEx_PMAConfig(hpcd, endpoint, PCD_SNG_BUF, *pmaadress);
+    }
+    *pmaadress = *pmaadress + bufsize;
+    return *pmaadress <= USB_PMA_SIZE; // return false --> buffer overflow (too many endpoints)
 }
 
 // @brief  De-Initializes the low level portion of the device driver.

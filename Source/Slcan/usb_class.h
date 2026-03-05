@@ -25,29 +25,35 @@ extern "C" {
 
 #include  "usb_ioreq.h"
 
-#define CDC_IN_EP                                   0x81U  /* EP1 for data IN */
-#define CDC_OUT_EP                                  0x01U  /* EP1 for data OUT */
-#define CDC_CMD_EP                                  0x82U  /* EP2 for CDC commands */
+#define CDC_IN_EP                                   0x81U  /* EP1 IN  for Rx data */
+#define CDC_OUT_EP                                  0x01U  /* EP1 OUT for Tx data */
+#define CDC_NOTI_EP                                 0x82U  /* EP2 IN  for notification events */
 
 #ifndef CDC_HS_BINTERVAL
-    #define CDC_HS_BINTERVAL                        0x10U
+    #define CDC_HS_BINTERVAL                        0x10U // 16 ms interrupt IN packets
 #endif 
 
 #ifndef CDC_FS_BINTERVAL
-    #define CDC_FS_BINTERVAL                        0x10U
+    #define CDC_FS_BINTERVAL                        0x10U // 16 ms interrupt IN packets
 #endif 
+
+// The count of USB interface descriptors declared in the configuration descriptor (also needed for error checking)
+// IMPORTANT: All interface descriptors must have an ascending bInterfaceNumber: 0, 1, 2,...
+// interface 0 = CDC Control --> 1 interrupt endpoint
+// interface 1 = CDC Data    --> 2 bulk endpoints
+#define USBD_INTERFACES_COUNT                       2
 
 // CDC Endpoints parameters: you can fine tune these values depending on the needed baudrates and performance. 
 // EMZ this is unused. Set to same as FS. Endpoint IN & OUT Packet size 
-#define CDC_DATA_HS_MAX_PACKET_SIZE                 CDC_DATA_FS_MAX_PACKET_SIZE  
-#define CDC_DATA_FS_MAX_PACKET_SIZE                 64U  // Endpoint IN & OUT Packet size 
-#define CDC_CMD_PACKET_SIZE                         8U   // Control Endpoint Packet size 
+#define CDC_DATA_FS_MAX_PACKET_SIZE                 64U  // Endpoint IN & OUT Packet size for Full Speed
+#define CDC_DATA_HS_MAX_PACKET_SIZE                 64U  // Endpoint IN & OUT Packet size for High Speed
+#define CDC_NOTI_PACKET_SIZE                         8U  // Notification Endpoint Packet size 
 
-#define USB_CDC_CONFIG_DESC_SIZ                     67U
-#define CDC_DATA_HS_IN_PACKET_SIZE                  CDC_DATA_HS_MAX_PACKET_SIZE
+#define USB_CDC_CONFIG_DESC_SIZE                    67U
+#define CDC_DATA_HS_IN_PACKET_SIZE                  CDC_DATA_HS_MAX_PACKET_SIZE // High Speed
 #define CDC_DATA_HS_OUT_PACKET_SIZE                 CDC_DATA_HS_MAX_PACKET_SIZE
 
-#define CDC_DATA_FS_IN_PACKET_SIZE                  CDC_DATA_FS_MAX_PACKET_SIZE
+#define CDC_DATA_FS_IN_PACKET_SIZE                  CDC_DATA_FS_MAX_PACKET_SIZE // Full Speed
 #define CDC_DATA_FS_OUT_PACKET_SIZE                 CDC_DATA_FS_MAX_PACKET_SIZE
 
 #define CDC_SEND_ENCAPSULATED_COMMAND               0x00U
@@ -97,8 +103,8 @@ uint8_t  USBD_CDC_SetRxBuffer(USBD_HandleTypeDef *pdev, uint8_t *pbuff);
 uint8_t  USBD_CDC_ReceivePacket(USBD_HandleTypeDef *pdev);
 uint8_t  USBD_CDC_TransmitPacket(USBD_HandleTypeDef *pdev);
 
-bool USBD_SetupStageRequest(PCD_HandleTypeDef *hpcd);
-void USBD_ConfigureEndpoints(USBD_HandleTypeDef *pdev);
+bool               USBD_SetupStageRequest(PCD_HandleTypeDef *hpcd);
+USBD_StatusTypeDef USBD_ConfigureEndpoints(USBD_HandleTypeDef *pdev);
 
 #ifdef __cplusplus
 }

@@ -8,23 +8,12 @@
 #include "settings.h"
 
 bool HAL_PCD_Is_Suspended();
+bool USBD_LL_ConfigurePMA(PCD_HandleTypeDef *hpcd, uint8_t endpoint, bool doublebuf, uint32_t* pmaadress, uint32_t bufsize);
 
-/*---------- -----------*/
-#define USBD_MAX_NUM_INTERFACES     1U
-/*---------- -----------*/
-#define USBD_MAX_NUM_CONFIGURATION  1U
-/*---------- -----------*/
-#define USBD_MAX_STR_DESC_SIZE      512U
-/*---------- -----------*/
-#define USBD_DEBUG_LEVEL     0U
-/*---------- -----------*/
-#define USBD_LPM_ENABLED     0U // BOS descriptor not used
-/*---------- -----------*/
-#define USBD_SELF_POWERED    0U // power comes over USB cable
-
+#define USBD_DEBUG_LEVEL    0
 
 /* #define for FS and HS identification */
-#define DEVICE_FS 		0
+#define DEVICE_FS 		    0
 
 
 /** Alias for delay. */

@@ -654,7 +654,7 @@ namespace CANable
                     lock (mi_RxFifo) 
                     {
                         if (ms32_FifoCount >= mi_RxFifo.Length)
-                            mb_FifoOverflow = true;
+                            mb_FifoOverflow = true; // In the demo application the reason is the slow Windows console
                     }
 
                     // if an overflow occurred, stop reading USB packets and inform the caller that it is polling too slowly.
@@ -766,6 +766,7 @@ namespace CANable
                         {
                             mb_FifoOverflow = false;
                         }
+                        // In the demo application the reason is the slow Windows console
                         throw new Exception("Rx FIFO overflow");
                     }
 

@@ -23,13 +23,13 @@ static bool     dfu_require_reset   = false;
 // A positive response is sent only if the command "*DFU\r" and processor family are supported.
 eFeedback dfu_switch_to_bootloader()
 {
-    can_close();
+    can_close_all();
     
     // If the pin BOOT0 is disabled, and then enabled in system_set_option_bytes() below, and then
     // the bootloader entry point is called, it will always boot again into flash until the USB cable is reconnected.
     // In this case a hardware reset is required for the modified Option Bytes to become active.
     if (system_is_option_enabled(OPT_BOOT0_Disable))
-        dfu_require_reset = true;   
+        dfu_require_reset = true;
     
     // ====================================================================================================
     // ATTENTION ## ATTENTION ## ATTENTION ## ATTENTION ## ATTENTION ## ATTENTION ## ATTENTION ## ATTENTION

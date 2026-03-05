@@ -26,46 +26,43 @@ extern "C" {
 #include "usb_lowlevel.h"
 
 #ifndef NULL
-    #define NULL                                            0U
+    #define NULL  0U
 #endif 
 
-#ifndef USBD_MAX_NUM_INTERFACES
-    #define USBD_MAX_NUM_INTERFACES                         1U
-#endif 
+// ============================================================================================
+// TARGET_FIRMWARE is defined in the Makefile
 
-#ifndef USBD_MAX_NUM_CONFIGURATION
-    #define USBD_MAX_NUM_CONFIGURATION                      1U
-#endif 
-
-#ifndef USBD_LPM_ENABLED
-    #define USBD_LPM_ENABLED                                0U
-#endif 
-
-#ifndef USBD_SELF_POWERED
-    #define USBD_SELF_POWERED                               0U
-#endif 
-
+// set USBD_SUPPORT_USER_STRING_DESC = 1 if function USBD_GetUserStringDescr() is implemented
 #if defined(Candlelight)
-    #define USBD_SUPPORT_USER_STRING_DESC                   1U
+    #define USBD_SUPPORT_USER_STRING_DESC                  1U
+#elif defined(Slcan)
+    #define USBD_SUPPORT_USER_STRING_DESC                  0U    
 #else
-    #define USBD_SUPPORT_USER_STRING_DESC                   0U    
+    #error "TARGET_FIRMWARE not defined"
+#endif 
+
+// ============================================================================================
+
+// The count of USB configuration descriptors declared in the device descriptor (needed for error checking)
+#ifndef USBD_CONFIGURATIONS_COUNT
+    #define USBD_CONFIGURATIONS_COUNT    1
 #endif 
 
 #define  USB_LEN_DEV_QUALIFIER_DESC                     0x0AU
-#define  USB_LEN_DEV_DESC                               0x12U
-#define  USB_LEN_CFG_DESC                               0x09U
-#define  USB_LEN_IF_DESC                                0x09U
-#define  USB_LEN_EP_DESC                                0x07U
+#define  USB_LEN_DEV_DESC                               0x12U // Length of Device descriptor
+#define  USB_LEN_CFG_DESC                               0x09U // Length of Configuration descriptor
+#define  USB_LEN_IF_DESC                                0x09U // Length of Interface descriptor
+#define  USB_LEN_EP_DESC                                0x07U // Length of Endpoint descriptor
+#define  USB_LEN_DFU_DESC                               0x09U // Length of DFU Functional descriptor
 #define  USB_LEN_OTG_DESC                               0x03U
 #define  USB_LEN_LANGID_STR_DESC                        0x04U
 #define  USB_LEN_OTHER_SPEED_DESC_SIZ                   0x09U
 
-#define  USBD_IDX_LANGID_STR                            0x00U
-#define  USBD_IDX_MFC_STR                               0x01U
-#define  USBD_IDX_PRODUCT_STR                           0x02U
-#define  USBD_IDX_SERIAL_STR                            0x03U
-#define  USBD_IDX_CONFIG_STR                            0x04U
-#define  USBD_IDX_INTERFACE_STR                         0x05U
+#define  USBD_IDX_LANGID_STR                            0x00U // Supported languages for string descriptors
+#define  USBD_IDX_MFC_STR                               0x01U // Device descriptor: Manufacturer string
+#define  USBD_IDX_PRODUCT_STR                           0x02U // Device descriptor: Product string
+#define  USBD_IDX_SERIAL_STR                            0x03U // Device descriptor: Serial Number string
+#define  USBD_IDX_NEXT_STR                              0x04U // further class specific strings defined in usb_class.c
 
 #define  USB_REQ_TYPE_STANDARD                          0x00U
 #define  USB_REQ_TYPE_CLASS                             0x20U
@@ -98,8 +95,8 @@ extern "C" {
 #define  USB_DESC_TYPE_OTHER_SPEED_CONFIGURATION        0x07U
 #define  USB_DESC_TYPE_BOS                              0x0FU
 
-#define USB_CONFIG_REMOTE_WAKEUP                        0x02U
-#define USB_CONFIG_SELF_POWERED                         0x01U
+#define USB_CONFIG_SELF_POWERED                         0x01U // flags
+#define USB_CONFIG_REMOTE_WAKEUP                        0x02U // flags
 
 #define USB_FEATURE_EP_HALT                             0x00U
 #define USB_FEATURE_REMOTE_WAKEUP                       0x01U
@@ -133,37 +130,29 @@ extern "C" {
 
 typedef struct  
 {
-  uint8_t   bmRequest;
-  uint8_t   bRequest;
-  uint16_t  wValue;
-  uint16_t  wIndex;
-  uint16_t  wLength;
+  uint8_t   bRequestType; // USB_REQ_RECIPIENT_XXX | USB_REQ_TYPE_XXX | 0x80 if direction == IN
+  uint8_t   bRequest;     // USB_REQ_GET_DESCRIPTOR, USB_REQ_SET_FEATURE,.. / DFU_RequDetach, DFU_RequGetStatus,..
+  uint16_t  wValue;       // CAN Channel / ePinID for ELM_ReqGetPinStatus
+  uint16_t  wIndex;       // Interface number (0 = Candlelight, 1 = DFU)
+  uint16_t  wLength;      // Byte count
 } USBD_SetupReqTypedef;
 
 struct _USBD_HandleTypeDef;
 
 typedef struct 
 {
-  uint8_t (*Init)(struct _USBD_HandleTypeDef *pdev, uint8_t cfgidx);
+  uint8_t (*Init)  (struct _USBD_HandleTypeDef *pdev, uint8_t cfgidx);
   uint8_t (*DeInit)(struct _USBD_HandleTypeDef *pdev, uint8_t cfgidx);
   /* Control Endpoints*/
   uint8_t (*Setup)(struct _USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef  *req);
-  uint8_t (*EP0_TxSent)(struct _USBD_HandleTypeDef *pdev);
+  uint8_t (*EP0_TxSent) (struct _USBD_HandleTypeDef *pdev);
   uint8_t (*EP0_RxReady)(struct _USBD_HandleTypeDef *pdev);
   /* Class Specific Endpoints*/
-  uint8_t (*DataIn)(struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
+  uint8_t (*DataIn) (struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
   uint8_t (*DataOut)(struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
   uint8_t (*SOF)(struct _USBD_HandleTypeDef *pdev);
-  uint8_t (*IsoINIncomplete)(struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
+  uint8_t (*IsoINIncomplete) (struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
   uint8_t (*IsoOUTIncomplete)(struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
-
-  uint8_t* (*GetHSConfigDescriptor)(uint16_t *length);
-  uint8_t* (*GetFSConfigDescriptor)(uint16_t *length);
-  uint8_t* (*GetOtherSpeedConfigDescriptor)(uint16_t *length);
-  uint8_t* (*GetDeviceQualifierDescriptor)(uint16_t *length);
-#if (USBD_SUPPORT_USER_STRING_DESC == 1U)
-  uint8_t  *(*GetUsrStrDescriptor)(struct _USBD_HandleTypeDef *pdev, uint8_t index,  uint16_t *length);
-#endif
 
 } USBD_ClassTypeDef;
 
@@ -183,21 +172,6 @@ typedef enum
   USBD_FAIL,
 } USBD_StatusTypeDef;
 
-/* USB Device descriptors structure */
-typedef struct
-{
-  uint8_t* (*GetDeviceDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-  uint8_t* (*GetLangIDStrDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-  uint8_t* (*GetManufacturerStrDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-  uint8_t* (*GetProductStrDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-  uint8_t* (*GetSerialStrDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-  uint8_t* (*GetConfigurationStrDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-  uint8_t* (*GetInterfaceStrDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-#if (USBD_LPM_ENABLED == 1U)
-  uint8_t* (*GetBOSDescriptor)(USBD_SpeedTypeDef speed, uint16_t *length);
-#endif
-} USBD_DescriptorsTypeDef;
-
 /* USB Device handle structure */
 typedef struct
 {
@@ -211,7 +185,7 @@ typedef struct
 /* USB Device handle structure */
 typedef struct _USBD_HandleTypeDef
 {
-  uint8_t                 id;
+  uint8_t                 id;                    // DEVICE_FS
   uint32_t                dev_config;
   uint32_t                dev_default_config;
   uint32_t                dev_config_status;
@@ -222,16 +196,13 @@ typedef struct _USBD_HandleTypeDef
   uint32_t                ep0_data_len;
   uint8_t                 dev_state;
   uint8_t                 dev_old_state;
-  uint8_t                 dev_address;
-  uint8_t                 dev_connection_status;
+  uint8_t                 dev_address;           // address on USB bus (assigned by host computer)
   uint8_t                 dev_test_mode;
   uint32_t                dev_remote_wakeup;
-
+  
   USBD_SetupReqTypedef    request;
-  USBD_DescriptorsTypeDef *pDesc;
   USBD_ClassTypeDef       *pClass;
   void                    *pClassData;
-  void                    *pUserData;
   void                    *pData;
 } USBD_HandleTypeDef;
 

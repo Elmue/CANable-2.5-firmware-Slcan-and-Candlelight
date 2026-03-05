@@ -12,7 +12,7 @@
 #define ERROR_INVALID_DEVICE    57010  // Not a Candlelight device
 #define ERROR_INVALID_FIRMWARE  57011  // Not CANable 2.5 firmware
 #define ERROR_CODE_IN_FEEDBACK  57012  // Check me_LastError for an explanation
-#define ERROR_RX_FIFO_OVERFLOW  57013  // The application is polling ReceiveData() slower than USB IN packets arrive
+#define ERROR_RX_FIFO_OVERFLOW  57013  // The application is polling ReceiveData() slower than USB IN packets arrive. In the demo app the reason may be the slow Windows console.
 #define ERROR_CORRUPT_IN_DATA   57014  // Corrupt USB IN packet received from the firmware
 #define ERROR_UPDATE_FIRMWARE   57015  // The user must update the firmware
 #define ERROR_TOO_MANY_ERRORS   57016  // too many errors during WritePipe / ReadPipe
@@ -104,6 +104,7 @@ private:
     kDevInfo                 mk_Info;
     CString                  ms_Details;
     BYTE                     mu8_Interface;
+    BYTE                     mu8_Channel;
     bool                     mb_McuTimestamp;
     bool                     mb_BaudFDSet;
     bool                     mb_InitDone;

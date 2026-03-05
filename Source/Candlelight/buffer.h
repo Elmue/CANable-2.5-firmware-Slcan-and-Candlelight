@@ -14,6 +14,12 @@
 #include "candlelight_def.h"
 #include "usb_def.h"
 
+// If 3 Tx messages are in the Tx FIFO of the processor while 64 more Tx messages are in list_to_host, we have 67 messages waiting for an ACK.
+// If now another adapter is opened and acknowledges them all we are flooded with 67 Tx events to be sent to the host.
+// So the host buffer should be larger than the CAN buffer to avoid error APP_UsbInOverflow.
+#define CAN_QUEUE_SIZE      64
+#define HOST_QUEUE_SIZE     70
+
 // ----------------------------------------------------------------------------------------
 
 #define container_of(ptr, type, member) \
@@ -116,48 +122,53 @@ typedef struct
     kHostFrameLegacy frame;
 } kHostFrameObject;
 
-// several buffer
 typedef struct 
 {
-    // 64 byte buffer for Endpoint 0 data (SETUP requests)
-    // This buffer contains OUT data from the host in the second stage of SETUP requests.
-    uint8_t __aligned(4)    ep0_buf[USB_MAX_EP0_SIZE];
-
     // Currently a USB packet is sent to the host --> wait until the bus is free for the next packet.
-    __IO bool               TxBusy;
+    __IO bool  TxBusy;
     // Send a Zero Length Packet after the IN transfer
-    __IO bool               SendZLP;
+    __IO bool  SendZLP;
+    
+    // This was totally wrong in the legacy firmware.
+    // They used only one pool buffer for everything.
+    // If you sent more than 64 messages to the CAN bus, but no ACK was received, the buffer got full.
+    // The sloppy firmware did not even set an error flag.
+    // But even if it would, it would have been useless, because if the one and only buffer is full,
+    // not even an error message could be sent to the host.
+    // So the adapter simply stopped responding and was dead.
+    // Addionally due to another bug it could even crash when the buffer got full.
+    kHostFrameObject   can_pool_buffer [CAN_QUEUE_SIZE];
+    kHostFrameObject   host_pool_buffer[HOST_QUEUE_SIZE];   
 
     // The frame pool contains 64 kHostFrameObject's
     // These can be taken and appended to list_to_can or list_to_host.
     // When they are not used anymore they must be given back to the pool.
     // When the frame pool is empty no more data can be sent, a buffer overflow error is generated.
-    list_item               list_can_pool;          // initialized to point to can_pool_buffer
-    list_item               list_host_pool;         // initialized to point to host_pool_buffer
-    list_item               list_to_can;            // FIFO for packtes USB --> CAN bus
-    list_item               list_to_host;           // FIFO for packtes CAN bus --> USB
-    
+    list_item  list_can_pool;   // initialized to point to can_pool_buffer
+    list_item  list_host_pool;  // initialized to point to host_pool_buffer
+    list_item  list_to_can;     // FIFO for packtes USB --> CAN bus
+    list_item  list_to_host;    // FIFO for packtes CAN bus --> USB
+       
     // ATTENTION:
     // The legacy Candlelight firmware from Github was competely buggy.
     // Instead of these fix buffers they used pointers to the ringbuffer which is totally wrong.
     // The result was an adapter not sending anymore and even crashes when the buffer got full!
     // Nobody ever noticed that because of a complete lack of proper error handling.
     // The legacy firmware did not even set an error flag when a buffer overflow occurred.
-    uint8_t                 to_host_buf  [sizeof(kHostFrameLegacy)]; // stores USB IN  data during transmission (fixed by ElmüSoft)
-    uint8_t                 from_host_buf[sizeof(kHostFrameLegacy)]; // stores USB OUT data after reception     (fixed by ElmüSoft)
+    uint8_t    to_host_buf  [sizeof(kHostFrameLegacy)]; // stores USB IN  data during transmission (fixed by ElmüSoft)
+    uint8_t    from_host_buf[sizeof(kHostFrameLegacy)]; // stores USB OUT data after reception     (fixed by ElmüSoft)   
     
-    // SETUP requests with OUT data are executed in two stages, 
-    // the first stage uses this variable to pass the request to the second stage.
-    USBD_SetupReqTypedef    last_setup_request;
-}  __attribute__ ((aligned (4))) USB_BufHandleTypeDef;
+}  __attribute__ ((aligned (4))) buf_class;
 
 // ----------------------------------------------------------------------------------------
 
 void buf_init();
-void buf_process(uint32_t tick_now);
-void buf_clear_can_buffer();
-void buf_store_error();
-void buf_store_rx_packet(FDCAN_RxHeaderTypeDef *rx_header, uint8_t *frame_data);
-void buf_store_tx_echo(FDCAN_TxEventFifoTypeDef* tx_event);
+void buf_process(int channel, uint32_t tick_now);
+void buf_clear_can_buffer(int channel);
+void buf_store_error(int channel);
+void buf_store_rx_packet(int channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *frame_data);
+void buf_store_tx_echo(int channel, FDCAN_TxEventFifoTypeDef* tx_event);
+buf_class* buf_get_instance(int channel);
+buf_class* buf_get_inst_for_usb(int channel);
 kHostFrameObject* buf_get_frame_locked(list_item* list_head);
      

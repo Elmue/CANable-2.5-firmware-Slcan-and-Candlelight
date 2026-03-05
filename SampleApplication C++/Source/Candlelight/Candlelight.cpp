@@ -47,7 +47,10 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251118 = 18.nov.2025)
-const DWORD MIN_FIRMWARE = 0x260113;
+const DWORD MIN_FIRMWARE = 0x260304;
+
+// The firmware update interface is always interface 1
+const BYTE DFU_INTERFACE = 1;
 
 const WORD LANGUAGE_ENGLISH_USA = 0x409;
 
@@ -160,8 +163,29 @@ DWORD Candlelight::EnumDevices(BYTE u8_Interface, CStringArray* pi_DispNames, CS
             break;
         }
 
-        pi_DispNames  ->Add((const WCHAR*)u8_NameBuf);
-        pi_DevicePaths->Add(pk_DetailData->DevicePath);
+        CString s_DispName = (const WCHAR*)u8_NameBuf;
+        CString s_DevPath  = pk_DetailData->DevicePath;
+        s_DevPath.MakeUpper();
+
+        // Append interface number for multi-interface adapters
+        int s32_Pos = s_DevPath.Find(L"&MI_0");
+        if (s32_Pos > 0)
+        {
+            // MI_00 --> Candlelight 1
+            // MI_01 --> DFU
+            // MI_02 --> Candlelight 2
+            // MI_03 --> Candlelight 3
+            int s32_Interface = _wtoi(s_DevPath.Mid(s32_Pos + 5, 1));
+            if (s32_Interface == 0)
+                s32_Interface = 1;  // display one-based interface number
+            
+            CString s_Number;
+            s_Number.Format(L" [%u]", s32_Interface);
+            s_DispName += s_Number;
+        }
+
+        pi_DispNames  ->Add(s_DispName);
+        pi_DevicePaths->Add(s_DevPath);
     }
 
     SetupDiDestroyDeviceInfoList(h_DevInfo); // free memory
@@ -255,12 +279,14 @@ DWORD Candlelight::Open(CString s_DevicePath)
     // Get the string name of the interface
     ReadStringDescriptor(k_InterfDescr.iInterface, LANGUAGE_ENGLISH_USA, mk_Info.ms_Interface);
 
-    s_Line.Format(L"USB Interface:        \"%s\"\n", mk_Info.ms_Interface);                                ms_Details += s_Line;
+    s_Line.Format(L"USB Interface Name:   \"%s\"\n", mk_Info.ms_Interface);                                ms_Details += s_Line;
     s_Line.Format(L"USB Vendor  ID:       %04X\n",   mk_Info.mk_DeviceDescr.idVendor);                     ms_Details += s_Line;
     s_Line.Format(L"USB Product ID:       %04X\n",   mk_Info.mk_DeviceDescr.idProduct);                    ms_Details += s_Line;
     s_Line.Format(L"USB Device Version:   %s\n",     FormatBcdVersion(mk_Info.mk_DeviceDescr.bcdDevice));  ms_Details += s_Line;
 
-    if (mu8_Interface == 1)
+    // -------------------------- DFU --------------------------------
+
+    if (mu8_Interface == DFU_INTERFACE)
     {
         // The DFU interface has no interface IN / OUT endpoints. It supports only SETUP requests.
         if (k_InterfDescr.bNumEndpoints != 0)
@@ -270,7 +296,15 @@ DWORD Candlelight::Open(CString s_DevicePath)
         return ERROR_SUCCESS;
     }
 
-    // --------------------------------------------------------------------
+    // ------------------------ Candlelight --------------------------
+
+    // Interface 0 -> Channel 0
+    // Interface 1 -> DFU
+    // Interface 2 -> Channel 1
+    // Interface 3 -> Channel 2
+    mu8_Channel = mu8_Interface; 
+    if (mu8_Channel > 0)
+        mu8_Channel --;
 
     // There must be exactly 2 endpoints: IN (81) and OUT (02)
     if (k_InterfDescr.bNumEndpoints != 2)
@@ -321,7 +355,7 @@ DWORD Candlelight::Open(CString s_DevicePath)
         return u32_Error;
 
     // GS_ReqGetCapabilities is a legacy commmand supported by all Candlelight's
-    if (u32_Error = CtrlTransfer(DIR_In, GS_ReqGetCapabilities, 0, &mk_Info.mk_Capability, sizeof(kCapabilityClassic)))
+    if (u32_Error = CtrlTransfer(DIR_In, GS_ReqGetCapabilities, mu8_Channel, &mk_Info.mk_Capability, sizeof(kCapabilityClassic)))
         return u32_Error;
 
     mk_Info.mb_IsElmueSoft =  (mk_Info.mk_Capability.feature & ELM_DevFlagProtocolElmue) > 0;
@@ -331,13 +365,13 @@ DWORD Candlelight::Open(CString s_DevicePath)
     if (mk_Info.mb_SupportsFD)
     {
         // GS_ReqGetCapabilitiesFD is a legacy commmand supported by all Candlelight's
-        u32_Error = CtrlTransfer(DIR_In, GS_ReqGetCapabilitiesFD, 0, &mk_Info.mk_CapabilityFD, sizeof(kCapabilityFD));
+        u32_Error = CtrlTransfer(DIR_In, GS_ReqGetCapabilitiesFD, mu8_Channel, &mk_Info.mk_CapabilityFD, sizeof(kCapabilityFD));
         if (u32_Error)
             return u32_Error;
     }
 
     // GS_ReqGetDeviceVersion is a legacy commmand supported by all Candlelight's
-    if (u32_Error = CtrlTransfer(DIR_In, GS_ReqGetDeviceVersion, 0, &mk_Info.mk_DeviceVersion, sizeof(kDeviceVersion)))
+    if (u32_Error = CtrlTransfer(DIR_In, GS_ReqGetDeviceVersion, mu8_Channel, &mk_Info.mk_DeviceVersion, sizeof(kDeviceVersion)))
         return u32_Error;
 
     s_Line.Format(L"Hardware Version:     %s\n", FormatBcdVersion(mk_Info.mk_DeviceVersion.hw_version_bcd));  ms_Details += s_Line;
@@ -352,7 +386,7 @@ DWORD Candlelight::Open(CString s_DevicePath)
     }
 
     // ELM_ReqGetBoardInfo requires ElmüSoft firmware
-    if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetBoardInfo, 0, &mk_Info.mk_BoardInfo, sizeof(kBoardInfo)))
+    if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetBoardInfo, mu8_Channel, &mk_Info.mk_BoardInfo, sizeof(kBoardInfo)))
         return u32_Error;
 
     // IsBootPinEnabled cannot be calle dhere because mb_InitDone must be set at the end of this function.
@@ -360,11 +394,16 @@ DWORD Candlelight::Open(CString s_DevicePath)
     if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetPinStatus, PINID_BOOT0, &u16_PinStatus, sizeof(u16_PinStatus)))
         return u32_Error;
 
+    bool b_UseQuartz = (mk_Info.mk_BoardInfo.BoardFlags & BRD_Quartz_In_Use) > 0;
+
     s_Line.Format(L"Target Board:         %hs\n", mk_Info.mk_BoardInfo.BoardName);           ms_Details += s_Line;
     s_Line.Format(L"Processor:            %hs, CAN Clock: %u MHz, DeviceID: 0x%X\n",
                                                   mk_Info.mk_BoardInfo.McuName,
                                                   mk_Info.mk_Capability.fclk_can / 1000000,
                                                   mk_Info.mk_BoardInfo.McuDeviceID);         ms_Details += s_Line;
+    s_Line.Format(L"Quartz in use:        %s\n",  b_UseQuartz ? L"Yes": L"No");              ms_Details += s_Line;
+    s_Line.Format(L"CAN Channel:          %d of %d\n", mu8_Channel + 1, 
+                                                       mk_Info.mk_DeviceVersion.icount + 1); ms_Details += s_Line;
     s_Line.Format(L"Pin BOOT0:            %s\n",  (u16_PinStatus & PINST_Enabled) ? 
                                                   L"Enabled" : L"Disabled");                 ms_Details += s_Line;
 
@@ -416,7 +455,7 @@ DWORD Candlelight::ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHA
 // returns the formatted baudrate and samplepoint in s_Display
 DWORD Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, CString* ps_Display)
 {
-    if (!mb_InitDone || mu8_Interface != 0)
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
     if (b_FD && !mk_Info.mb_SupportsFD)
@@ -436,7 +475,7 @@ DWORD Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2
     k_Timing.sjw  = min(s32_Seg1, s32_Seg2); // Synchronization Jump Width (see "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation")
 
     eUsbRequest e_Requ = b_FD ? GS_ReqSetBitTimingFD : GS_ReqSetBitTiming;
-    DWORD u32_Error = CtrlTransfer(DIR_Out, e_Requ, 0, &k_Timing, sizeof(k_Timing));
+    DWORD u32_Error = CtrlTransfer(DIR_Out, e_Requ, mu8_Channel, &k_Timing, sizeof(k_Timing));
     if (u32_Error)
         return u32_Error;
 
@@ -461,7 +500,7 @@ DWORD Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2
 // ATTENTION: If you set only an 11 bit filter, no 29 bit ID's will pass and vice versa.
 DWORD Candlelight::AddMaskFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
 {
-    if (!mb_InitDone || mu8_Interface != 0)
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
     kFilter k_Filter;
@@ -469,7 +508,7 @@ DWORD Candlelight::AddMaskFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
     k_Filter.Mask      = u32_Mask;
     k_Filter.Operation = b_29bit ? FIL_AcceptMask29bit : FIL_AcceptMask11bit;
 
-    return CtrlTransfer(DIR_Out, ELM_ReqSetFilter, 0, &k_Filter, sizeof(k_Filter));
+    return CtrlTransfer(DIR_Out, ELM_ReqSetFilter, mu8_Channel, &k_Filter, sizeof(k_Filter));
 }
 
 // --------------------------------------------------------------------
@@ -478,13 +517,13 @@ DWORD Candlelight::AddMaskFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
 // Connect to CAN bus, turn off the green LED
 DWORD Candlelight::Start(eDeviceFlags e_Flags)
 {
-    if (!mb_InitDone || mu8_Interface != 0)
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
     kDeviceMode k_Mode;
     k_Mode.flags = e_Flags | ELM_DevFlagProtocolElmue; // required for this demo!
     k_Mode.mode  = GS_ModeStart;
-    DWORD u32_Error = CtrlTransfer(DIR_Out, GS_ReqSetDeviceMode, 0, &k_Mode, sizeof(k_Mode)); // turn off green LED
+    DWORD u32_Error = CtrlTransfer(DIR_Out, GS_ReqSetDeviceMode, mu8_Channel, &k_Mode, sizeof(k_Mode)); // turn off green LED
     if (u32_Error)
         return u32_Error;
 
@@ -503,7 +542,7 @@ DWORD Candlelight::Reset()
     kDeviceMode k_Mode;
     k_Mode.flags = ELM_DevFlagProtocolElmue;
     k_Mode.mode  = GS_ModeReset;
-    return CtrlTransfer(DIR_Out, GS_ReqSetDeviceMode, 0, &k_Mode, sizeof(k_Mode));
+    return CtrlTransfer(DIR_Out, GS_ReqSetDeviceMode, mu8_Channel, &k_Mode, sizeof(k_Mode));
 }
 
 // ======================================= Send ========================================
@@ -670,7 +709,7 @@ void Candlelight::ReadPipeThreadMember()
             {
                 u32_Error = ERROR_SUCCESS;
 
-                // mh_ThreadEvent is set when a USB IN packet was received and in Close() to abort the thread
+                // mh_ThreadEvent = k_Overlapped.hEvent is set when a USB IN packet was received and in Close() to abort the thread
                 DWORD u32_Result = WaitForSingleObject(mh_ThreadEvent, INFINITE);
                 if (mb_AbortThread)
                     break;
@@ -693,7 +732,9 @@ void Candlelight::ReadPipeThreadMember()
                         break;
                 }
             }
+            else assert(FALSE); // this should never happen
         }
+        else assert(FALSE); // this should never happen
 
         pk_FifoWrite->mu32_BytesRead    = u32_Read;
         pk_FifoWrite->mu32_Error        = u32_Error;
@@ -813,21 +854,21 @@ kCanPacket Candlelight::GetTxEchoPacket(kTxEchoElmue* pk_TxEcho)
 // Flashes the green / blue LEDs on the board
 DWORD Candlelight::Identify(bool b_Blink)
 {
-    if (!mb_InitDone || mu8_Interface != 0)
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
     DWORD u32_Mode = b_Blink; 
-    return CtrlTransfer(DIR_Out, GS_ReqIdentify, 0, &u32_Mode, sizeof(u32_Mode));
+    return CtrlTransfer(DIR_Out, GS_ReqIdentify, mu8_Channel, &u32_Mode, sizeof(u32_Mode));
 }
 
 // Interval = 7 --> report busload in percent every 700 ms.
 // NOTE: The firmware does not report the busload if bus load is permanently 0%.
 DWORD Candlelight::EnableBusLoadReport(BYTE u8_Interval)
 {
-    if (!mb_InitDone || mu8_Interface != 0)
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
-    return CtrlTransfer(DIR_Out, ELM_ReqSetBusLoadReport, 0, &u8_Interval, sizeof(u8_Interval));
+    return CtrlTransfer(DIR_Out, ELM_ReqSetBusLoadReport, mu8_Channel, &u8_Interval, sizeof(u8_Interval));
 }
 
 // Read the detailed documentation about pin BOOT0 on https://netcult.ch/elmue/CANable%20Firmware%20Update
@@ -835,19 +876,19 @@ DWORD Candlelight::EnableBusLoadReport(BYTE u8_Interval)
 // The pin is automatically enabled when entering DFU mode with EnterDfuMode()
 DWORD Candlelight::DisableBootPin()
 {
-    if (!mb_InitDone || mu8_Interface != 0)
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
     kPinStatus k_PinStatus = {0};
     k_PinStatus.Operation  = PINOP_Disable;
     k_PinStatus.PinID      = PINID_BOOT0;
-    return CtrlTransfer(DIR_Out, ELM_ReqSetPinStatus, 0, &k_PinStatus, sizeof(k_PinStatus));
+    return CtrlTransfer(DIR_Out, ELM_ReqSetPinStatus, mu8_Channel, &k_PinStatus, sizeof(k_PinStatus));
 }
 
 // Read the detailed documentation about pin BOOT0 on https://netcult.ch/elmue/CANable%20Firmware%20Update
 DWORD Candlelight::IsBootPinEnabled(bool* pb_Enabled)
 {
-    if (!mb_InitDone || mu8_Interface != 0)
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
     // The requested pin ID must be transmitted in SETUP.wValue because a USB IN request cannot otherwise transmit parameters to the firmware.
@@ -869,12 +910,12 @@ DWORD Candlelight::IsBootPinEnabled(bool* pb_Enabled)
 DWORD Candlelight::CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, void* p_Data, DWORD u32_DataSize)
 {
     // The Candlelight interface implements Vendor requests while the DFU interface implements Class requests.
-    eSetupType e_Type = (mu8_Interface == 0) ? TYP_Vendor : TYP_Class;
+    eSetupType e_Type = (mu8_Interface == DFU_INTERFACE) ? TYP_Class : TYP_Vendor;
 
     WINUSB_SETUP_PACKET k_Setup;
     k_Setup.RequestType = RECIP_Interface | e_Type | e_Dir;
     k_Setup.Request     = u8_Request;
-    k_Setup.Value       = u16_Value;     // only used for ELM_ReqGetPinStatus
+    k_Setup.Value       = u16_Value;     // Channel / PinID for ELM_ReqGetPinStatus
     k_Setup.Index       = mu8_Interface; // destination interface (0 = Candlelight, 1 = DFU Firmware Update)
     k_Setup.Length      = 0;             // set by WinUSB to u32_DataSize
 
@@ -886,7 +927,7 @@ DWORD Candlelight::CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Valu
         u32_CmdErr = GetLastError();
 
     // The DFU interface has no feedback
-    if (mu8_Interface == 0)
+    if (mu8_Interface != DFU_INTERFACE)
     {
         // ---------- Get Feedback -------------
 
@@ -1027,13 +1068,45 @@ CString Candlelight::FormatHexBytes(BYTE u8_Data[], int s32_DataLen)
     return s_Hex;
 }
 
-// returns "5" or "2.00" or "25.09.14"
+// 0x0        --> "0"
+// 0x11       --> "11"
+// 0x1122     --> "11.22"
+// 0x11223344 --> "11.22.33.44"
+// 0x00YYMMDD --> "Day.Month.Year"
 CString Candlelight::FormatBcdVersion(DWORD u32_Version)
 {
     if (u32_Version == 0)
         return L"0";
 
     CString s_Version;
+
+    // BCD encoded 0x00YYMMDD
+    if (u32_Version > 0x250101 && u32_Version < 0x991231)
+    {
+        CString s_Month;
+        switch ((BYTE)(u32_Version >> 8))
+        {
+            case 0x01: s_Month = L"Jan"; break;
+            case 0x02: s_Month = L"Feb"; break;
+            case 0x03: s_Month = L"Mar"; break;
+            case 0x04: s_Month = L"Apr"; break;
+            case 0x05: s_Month = L"May"; break;
+            case 0x06: s_Month = L"Jun"; break;
+            case 0x07: s_Month = L"Jul"; break;
+            case 0x08: s_Month = L"Aug"; break;
+            case 0x09: s_Month = L"Sep"; break;
+            case 0x10: s_Month = L"Oct"; break;
+            case 0x11: s_Month = L"Nov"; break;
+            case 0x12: s_Month = L"Dec"; break;
+        }
+
+        if (!s_Month.IsEmpty())
+        {
+            s_Version.Format(L"%X.%s.%02X", (BYTE)u32_Version, s_Month, (BYTE)(u32_Version >> 16));
+            return s_Version;
+        }
+    }
+
     for (int i=0; i<4; i++)
     {
         WCHAR c_Buf[5];
@@ -1152,13 +1225,13 @@ CString Candlelight::FormatLastError(DWORD u32_Error)
     switch (u32_Error)
     {
         case ERROR_ACCESS_DENIED: // from CreateFile()
-            return L"Access denied. Probably the device is already used in another application.";
+            return L"Access denied. Probably the device is already open elsewhere.";
         case ERROR_INVALID_DEVICE:   
             return L"The device is not a Candlelight adapter.";
         case ERROR_INVALID_FIRMWARE: 
             return L"This demo supports only devices that have the CANable 2.5 firmware from ElmüSoft.";
         case ERROR_RX_FIFO_OVERFLOW:
-            return L"USB Rx FIFO overflow. Polling is too slow.";
+            return L"USB Rx FIFO overflow. Polling is too slow."; // in the demo app the reason is the slow Windows console.
         case ERROR_CORRUPT_IN_DATA:
             return L"Corrupt USB IN data received.";
         case ERROR_UPDATE_FIRMWARE:
@@ -1210,7 +1283,7 @@ CString Candlelight::FormatLastError(DWORD u32_Error)
 // If you want to update the firmware use HUD ECU Hacker which comes with a very comfortable STM32 Firmware Updater.
 DWORD Candlelight::EnterDfuMode()
 {
-    if (!mb_InitDone || mu8_Interface != 1)
+    if (!mb_InitDone || mu8_Interface != DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
     // The legacy firmware would have entered immediately in DFU mode and CtrlTransfer() would have returned error 31 here.

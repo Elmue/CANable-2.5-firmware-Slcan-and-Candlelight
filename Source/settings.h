@@ -18,7 +18,7 @@
 // ============================================================================================
 // The following enums are used for Slcan and Candlelight
 
-typedef enum 
+typedef enum
 {
     false = 0,
     true  = 1,
@@ -32,19 +32,19 @@ typedef enum // sent as 8 bit
 {
     FBK_RetString = 1,            // The reponse has already been sent over USB --> no additional feedback. This is used only internally.
     FBK_Success   = 2,            // Command successfully executed
-    // --------------------------    
-    FBK_InvalidCommand    = '1',  // The command is invalid
-    FBK_InvalidParameter,         // One of the parameters is invalid
-    FBK_AdapterMustBeOpen,        // The command cannot be executed before opening the adapter
-    FBK_AdapterMustBeClosed,      // The command cannot be executed after  opening the adapter
-    FBK_ErrorFromHAL,             // The HAL from ST Microelectronics has reported an error
-    FBK_UnsupportedFeature,       // The feature is not implemented or not supported by the board
-    FBK_TxBufferFull,             // Sending is not possible because the buffer is full (only Slcan)
-    FBK_BusIsOff,                 // Sending is not possible because the processor is blocked in the BusOff state
-    FBK_NoTxInSilentMode,         // Sending is not possible because the adapter is in Bus Monitoring mode
-    FBK_BaudrateNotSet,           // Opening the adapter is not possible if no baudrate has been set
-    FBK_OptBytesProgrFailed,      // Programming the Option Bytes failed
-    FBK_ResetRequired,            // The user must disconnect and reconnect the USB cable to enter boot mode
+    // --------------------------
+    FBK_InvalidCommand    = '1',  // "#1" = The command is invalid
+    FBK_InvalidParameter,         // "#2" = One of the parameters is invalid
+    FBK_AdapterMustBeOpen,        // "#3" = The command cannot be executed before opening the adapter
+    FBK_AdapterMustBeClosed,      // "#4" = The command cannot be executed after  opening the adapter
+    FBK_ErrorFromHAL,             // "#5" = The HAL from ST Microelectronics has reported an error
+    FBK_UnsupportedFeature,       // "#6" = The feature is not implemented or not supported by the board
+    FBK_TxBufferFull,             // "#7" = Sending is not possible because the buffer is full (only Slcan)
+    FBK_BusIsOff,                 // "#8" = Sending is not possible because the processor is blocked in the BusOff state
+    FBK_NoTxInSilentMode,         // "#9" = Sending is not possible because the adapter is in Bus Monitoring mode
+    FBK_BaudrateNotSet,           // "#:" = Opening the adapter is not possible if no baudrate has been set
+    FBK_OptBytesProgrFailed,      // "#;" =Programming the Option Bytes failed
+    FBK_ResetRequired,            // "#<" =The user must disconnect and reconnect the USB cable to enter boot mode
 } eFeedback;
 
 // If bus status is BUS_OFF both LED's (green + blue) are permanently ON
@@ -63,13 +63,13 @@ typedef enum // sent as 4 bit
 // They are set again if the error is still present
 // Slcan sends this in the error report "EXXXXXXXX\r"
 // Candlelight sends this in a special error packet with a flag (legacy: CAN_ID_Error, ElmüSoft: MSG_Error)
-typedef enum // sent as 8 bit 
+typedef enum // sent as 8 bit
 {
     APP_CanRxFail       = 0x01, // the HAL reports an error receiving a CAN packet.
     APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or invalid Tx packet or HAL error
     APP_CanTxOverflow   = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
     APP_UsbInOverflow   = 0x08, // a USB IN packet could not be sent because CAN traffic is faster than USB transfer.
-    APP_CanTxTimeout    = 0x10, // A packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
+    APP_CanTxTimeout    = 0x10, // a packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
 } eErrorAppFlags;
 
 // ============================================================================================
@@ -89,82 +89,102 @@ typedef enum // sent as 8 bit
 // TARGET_BOARD is defined in Makefile
 
 #if defined(Multiboard)
-    // MKS Makerbase + Walfront + DSD Tech use default settings
-#elif defined(Jhoinrch)    
-    // The Jhoinrch board has a 25 MHz quartz crystal. The make file sets: QUARTZ_FREQU = 25000000
+    // MKS Makerbase + Walfront + DSD Tech + Jhoinrch before 2026 use default settings
+#elif defined(Jhoinrch)
+    // Jhoinrch puts a 25 MHz quartz on all their boards since 2026 (make file defines: QUARTZ_FREQU = 25000000).
 #elif defined(OpenlightLabs)
     // OpenlightLabs has the green LED at pin B11
-    #define LED_TX_Pin          GPIO_PIN_11  
-    #define LED_TX_Port         GPIOB
+    #define LED_TX_PINS         GPIO_PIN_11
+    #define LED_TX_PORTS        GPIOB
+#elif defined(OleksiiSolo)
+    // Oleksii puts a 8 MHz quartz on the single channel board (make file defines: QUARTZ_FREQU = 8000000).
+    #define LED_TX_PINS         GPIO_PIN_5
+    #define LED_TX_PORTS        GPIOA
+    #define LED_RX_PINS         GPIO_PIN_6
+    #define LED_RX_PORTS        GPIOA
+    // -------------------
+    #define LED_MODE            GPIO_MODE_OUTPUT_PP
+    #define LED_ON              GPIO_PIN_SET             // The LED's cathode is connected to ground
+    #define LED_OFF             GPIO_PIN_RESET
+#elif defined(OleksiiDual)
+    // Oleksii puts a 8 MHz quartz on the dual channel board (make file defines: QUARTZ_FREQU = 8000000).
+    // The board has 2 CAN connectors and creates 2 Candlelight USB interfaces.
+    #define CHANNEL_COUNT       2
+    // -------------------      Channel 1:               Channel 2:
+    #define CAN_INTERFACES      FDCAN1,                  FDCAN2
+    #define CAN_PINS            GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_5 | GPIO_PIN_6 // CANFD Tx, Rx pins
+    #define CAN_PORTS           GPIOB,                   GPIOB                   // CANFD Port
+    #define CAN_ALTERNATES      GPIO_AF9_FDCAN1,         GPIO_AF9_FDCAN2  // switch pin multiplexer to CAN module
+    // -------------------
+    #define LED_TX_PINS         GPIO_PIN_5,              GPIO_PIN_3
+    #define LED_TX_PORTS        GPIOA,                   GPIOA
+    #define LED_RX_PINS         GPIO_PIN_6,              GPIO_PIN_4
+    #define LED_RX_PORTS        GPIOA,                   GPIOA
+    // -------------------
+    #define TERMINATOR_PINS     -1,                      -1  // termination resistor is switched by a manual jumper
+    #define TERMINATOR_PORTS    GPIOB,                   GPIOB    
+    // ---------------------------------------------------------
+    #define LED_MODE            GPIO_MODE_OUTPUT_PP
+    #define LED_ON              GPIO_PIN_SET             // The LED's cathode is connected to ground
+    #define LED_OFF             GPIO_PIN_RESET
 #else
     #error "TARGET_BOARD not defined in makefile"
 #endif
 
+
 // ============================================================================================
 // Load default settings if no board-specific settings are defined
 
-// green Tx LED is at pin A0
-#ifndef LED_TX_Pin
-    #define LED_TX_Pin          GPIO_PIN_0   
-    #define LED_TX_Port         GPIOA
+// define single channel default: green Tx LED is at pin A0
+#ifndef LED_TX_PINS
+    #define LED_TX_PINS         GPIO_PIN_0
+    #define LED_TX_PORTS        GPIOA
 #endif
 
-// blue Rx Led is at pin A15
-#ifndef LED_RX_Pin
-    #define LED_RX_Pin          GPIO_PIN_15
-    #define LED_RX_Port         GPIOA      
+// define single channel default: blue Rx Led is at pin A15
+#ifndef LED_RX_PINS
+    #define LED_RX_PINS         GPIO_PIN_15
+    #define LED_RX_PORTS        GPIOA
 #endif
 
 // PP = Push/Pull, OD = Open Drain
-#ifndef LED_Mode
-    #define LED_Mode            GPIO_MODE_OUTPUT_PP
-#endif
-
-// Some boards use inverted voltage (Low = ON)
-#ifndef LED_ON
+// Most boards use inverted voltage (Low = ON): The LED's anode is connected to +3.3V
+#ifndef LED_MODE
+    #define LED_MODE            GPIO_MODE_OUTPUT_PP
     #define LED_ON              GPIO_PIN_RESET
     #define LED_OFF             GPIO_PIN_SET
 #endif
 
-// The CAN interface (some processors have 3 CAN interfaces)
-#ifndef CAN_INTERFACE
-    #define CAN_INTERFACE       FDCAN1
-#endif
-
+// define single channel default: no terminator pin available
 // Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
 // If the board does not support this --> set TERMINATOR_Pin = -1
-#ifndef TERMINATOR_Port
-    #define TERMINATOR_Port     GPIOB
-    #define TERMINATOR_Pin      -1 // GPIO_PIN_3
-    #define TERMINATOR_Mode     GPIO_MODE_OUTPUT_PP
-    #define TERMINATOR_ON       GPIO_PIN_SET    // turn on termination resistor
+#ifndef TERMINATOR_PINS
+    #define TERMINATOR_PINS     -1
+    #define TERMINATOR_PORTS    GPIOB
+#endif    
+#ifndef TERMINATOR_MODE
+    #define TERMINATOR_MODE     GPIO_MODE_OUTPUT_PP
+    #define TERMINATOR_ON       GPIO_PIN_SET        // turn on termination resistor
     #define TERMINATOR_OFF      GPIO_PIN_RESET
 #endif
 
-// On some boards the power supply of the isolator chip can be disabled when not using CAN bus.
-// If the board has no isolation power switch transistor set ISOLATOR_PWR_Pin = -1
-#ifndef ISOLATOR_PWR_Port
-	#define ISOLATOR_PWR_Port   GPIOC
-	#define ISOLATOR_PWR_Pin    -1 // GPIO_PIN_13  
-    #define ISOLATOR_ON         GPIO_PIN_SET    // turn on power supply of isolator chip
-    #define ISOLATOR_OFF        GPIO_PIN_RESET
+// define single channel default: Use CAN interface 1 at PB8 and PB9
+// (STUPID design where FDCAN1 and BOOT0 use the same pin)
+#ifndef CHANNEL_COUNT
+    #define CHANNEL_COUNT       1
+    #define CAN_INTERFACES      FDCAN1
+    #define CAN_PINS            GPIO_PIN_8 | GPIO_PIN_9 // Rx = PB8, Tx = PB9
+    #define CAN_PORTS           GPIOB                   // Port B
+    #define CAN_ALTERNATES      GPIO_AF9_FDCAN1         // switch pin 8,9 multiplexer to CAN module
 #endif
 
-// ============================================================================================
+// 0x00 = adapter power comes over USB cable
+// 0x40 = adapter has own power supply (flag 'Self Powered' in bmAttributes in Configuration descriptor)
+// 0xXX = any other value is invalid!
+#ifndef USBD_SELF_POWERED
+    #define USBD_SELF_POWERED   0x00
+#endif
 
-// Define the firmware version in BCD format.
-// Version 0x250914 is displayed as "25.09.14" and means 14th september 2025
-// The year and month are stored in the device descriptor.
-// The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
-// Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
-#define FIRMWARE_VERSION_BCD   0x260113
-
-// ATTENTION: 
-// This version defines which Slcan commands are available.
-// Whenever you add new Slcan commands, don't forget to increment the version number and write a documentation for them.
-// So the controlling application knows with which firmware it is dealing.
-// (Candlelight does not need a version number because it returns the supported features as bit flags)
-#define SLCAN_VERSION          100
 
 
 

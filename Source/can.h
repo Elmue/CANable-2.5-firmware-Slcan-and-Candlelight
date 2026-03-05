@@ -4,11 +4,14 @@
     https://netcult.ch/elmue/CANable Firmware Update
 */
 
-
 #pragma once
 
 #include "settings.h"
 #include "system.h"
+
+// The user can define 8 mask filters for 11 bit or 29 bit packets
+// The processor allows up to 28 standard filters and up to 8 extended filters.
+#define MAX_FILTERS  8
 
 // Classic CAN / CANFD nominal bitrates
 // always samplepoint 87.5%
@@ -57,6 +60,32 @@ typedef struct
     uint8_t  data[64];
 } tx_packet;
 
+typedef struct
+{
+    FDCAN_HandleTypeDef         handle;
+    FDCAN_FilterTypeDef         filters[MAX_FILTERS];
+    FDCAN_ProtocolStatusTypeDef cur_status; // current bus status
+    can_bitrate_cfg             bitrate_nominal;
+    can_bitrate_cfg             bitrate_data;
+
+    bool is_open;
+    bool recover_bus_off;
+    bool termination_on; 
+    bool bitrate_printed_once;
+    bool delay_printed_once;
+
+    uint32_t std_filter_count;    // standard filters
+    uint32_t ext_filter_count;    // extended filters
+    uint32_t bit_count_total;     // for calculation of bus load, total count of all bits of all Rx messages converted to nominal baudrate
+    uint32_t nom_bit_len_ns;      // for calculation of bus load, length of one nominal bit in ns (constant)
+    uint8_t  old_busload_pct;     // for calculation of bus load, last reported percent value
+    uint32_t busload_interval;    // for calculation of bus load, report interval in 100 ms steps
+    uint32_t busload_counter;     // for calculation of bus load, incremented every 100 ms until busload_interval is reached
+    uint32_t tdc_offset;          // for Transceiver Delay Compensation
+    uint32_t last_tx_tick;        // for Transmit Timeout
+    int      tx_pending;          // for Transmit Timeout
+} can_class;
+
 static inline uint32_t can_calc_baud(can_bitrate_cfg* bitrate)
 {
     return (bitrate->Brp == 0) ? 0 : system_get_can_clock() / bitrate->Brp / (1 + bitrate->Seg1 + bitrate->Seg2);
@@ -68,30 +97,30 @@ static inline uint32_t can_calc_sample(can_bitrate_cfg* bitrate)
 }
 
 void can_init();
-eFeedback can_open(uint32_t mode);
-void      can_close();
-void      can_process(uint32_t tick_now);
+eFeedback can_open(int channel, uint32_t mode);
+void      can_close_all();
+void      can_close(int channel);
+void      can_process(int channel, uint32_t tick_now);
 void      can_timer_100ms();
-void      can_send_packet(FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
-eFeedback can_set_baudrate     (can_nom_bitrate bitrate);
-eFeedback can_set_data_baudrate(can_data_bitrate bitrate);
-eFeedback can_set_nom_bit_timing (uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw);
-eFeedback can_set_data_bit_timing(uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw);
-eFeedback can_enable_busload(uint32_t interval);
-bool      can_set_termination(bool enable);
-bool      can_get_termination(bool* enabled);
-void      can_print_info();
-bool      can_is_opened();
-bool      can_is_passive();
-bool      can_using_FD();
-bool      can_using_BRS();
-eFeedback can_is_tx_allowed();
-eFeedback can_set_mask_filter(bool extended, uint32_t filter, uint32_t mask);
-eFeedback can_clear_filters();
-uint32_t  can_get_cycle_ave_time_ns();
-uint32_t  can_get_cycle_max_time_ns();
-void      can_recover_bus_off();
+void      can_send_packet(int channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
+eFeedback can_set_baudrate(int channel, can_nom_bitrate bitrate);
+eFeedback can_set_data_baudrate(int channel, can_data_bitrate bitrate);
+eFeedback can_set_nom_bit_timing (int channel, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw);
+eFeedback can_set_data_bit_timing(int channel, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw);
+eFeedback can_enable_busload(int channel, uint32_t interval);
+bool      can_set_termination(int channel, bool enable);
+bool      can_get_termination(int channel, bool* enabled);
+bool      can_is_any_open();
+bool      can_is_open(int channel);
+bool      can_is_passive(int channel);
+bool      can_using_FD(int channel);
+bool      can_using_BRS(int channel);
+bool      can_is_tx_fifo_free(int channel);
+eFeedback can_is_tx_allowed(int channel);
+eFeedback can_set_mask_filter(int channel, bool extended, uint32_t filter, uint32_t mask);
+eFeedback can_clear_filters(int channel);
+void      can_recover_bus_off(int channel);
 
-FDCAN_HandleTypeDef *can_get_handle();
+FDCAN_HandleTypeDef *can_get_handle(int channel);
 
 

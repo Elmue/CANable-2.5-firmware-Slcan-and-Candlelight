@@ -3,6 +3,9 @@
     Implemenatation of Legacy USB GS Class (Geschwister Schneider) and the new ElmüSoft CANable 2.5 protocol
     Copyright (c) 2025 ElmueSoft / Hubert Denkmair
     https://netcult.ch/elmue/CANable Firmware Update
+    
+    The enums and structs of the Linux Kernel GS driver can be found here:
+    https://elixir.bootlin.com/linux/v6.18.6/source/drivers/net/can/usb/gs_usb.c
 */
 
 #pragma once
@@ -28,9 +31,10 @@ typedef enum // transferred as 8 bit
     GS_ReqGetState,            // kDeviceState: not implemented, undocumented
 
     // ----------- ELM commands added by ElmüSoft -----------
+    ELM_ReqFIRST        = 20,  // First request that requires ElmüSoft protocol to be enabled
     ELM_ReqGetBoardInfo = 20,  // kBoardInfo: get name about target board and processor
     ELM_ReqSetFilter,          // kFilter: set up to 8 acceptance mask filters
-    ELM_ReqGetLastError,       // uint8_t: get the eFeedback error that has stalled the SETUP request of the last command
+    ELM_ReqGetLastError,       // uint8_t: get the eFeedback error of the last SETUP request. This works also in legacy mode!
     ELM_ReqSetBusLoadReport,   // uint8_t: enable busload report in percent to be sent in a user defined interval
     ELM_ReqSetPinStatus,       // kPinStatus: set, reset, enable, disable,... processor pins
     ELM_ReqGetPinStatus,       // Receive: SETUP.wValue = ePinID, Send: ePinStatus in 2 data bytes
@@ -79,7 +83,9 @@ typedef enum // transferred as 32 bit
 
     // ----------- ELM flags added by ElmüSoft -----------
     // Switch to the new extended ElmüSoft CANable 2.5 protocol (use kHostFrameElmue instead of kHostFrameLegacy)  
-    // In the Capabilities this flag means that all ELM_ReqXXX commands are supported
+    // ATTENTION: This flag enables the ElmüSoft protocol for ALL channels and it stays enabled until all channels have been closed!
+    // This flag also enables debug reports (USR_DebugReport).
+    // In the Capabilities this flag means that all ELM_ReqXXX commands are supported.
     ELM_DevFlagProtocolElmue          = 0x04000, 
     // Do not send an echo for the successfully sent CAN packets (by default this is enabled in the Candlelight firmware)
     // The Tx event packet is sent in the moment when the ACK was recived. You can turn this off to reduce USB traffic.
@@ -94,7 +100,7 @@ typedef struct
     uint8_t  reserved1;
     uint8_t  reserved2;
     uint8_t  reserved3;
-    uint8_t  icount;         // Always zero. Undocumented. What is this ?
+    uint8_t  icount;         // Candlelight interface count - 1
     uint32_t sw_version_bcd; // software (firmware) version in BCD format
     uint32_t hw_version_bcd; // hardware version in BCD format
 } __packed __aligned(4) kDeviceVersion;
@@ -367,7 +373,7 @@ typedef struct  // Legacy (size = 80 byte)
     uint32_t echo_id;    // eEchoID
     uint32_t can_id;     // CAN ID + eCanIdFlags or error flags
     uint8_t  can_dlc;    // 0 ... 15
-    uint8_t  channel;    // unused, always zero
+    uint8_t  channel;    // channel number (zero based)
     uint8_t  flags;      // eFrameFlags
     uint8_t  reserved;   // unused
     union // size = 68 byte
@@ -406,6 +412,13 @@ typedef struct  // Legacy (size = 80 byte)
 // For more details see https://netcult.ch/elmue/CANable Firmware Update
 // ---------------------------------------------------------------------------------
 
+// Detail information about the board / firmware
+// added in february 2026 update
+typedef enum // 32 bit
+{
+    BRD_Quartz_In_Use  = 0x00000001, // the board has a quartz and the firmware is using it
+} eBoardFlags;
+
 // ELM_ReqGetBoardInfo
 // McuDeviceId comes from HAL_GetDEVID() which returns a unique identifier (DBG_IDCODE) for each processor family.
 // The STM32G0xx serie uses 0x460, 0x465, 0x476, 0x477 and STM32G4xx uses 0x468, 0x469, 0x479.
@@ -414,6 +427,8 @@ typedef struct
     uint16_t McuDeviceID;   // 0x468
     char     McuName  [25]; // "STM32G431xx" from makefile
     char     BoardName[25]; // "Multiboard", "OpenlightLabs", "Jhoinrch" from makefile
+    // added in february 2026 update
+    uint32_t BoardFlags;    // eBoardFlags
 } __packed __aligned(1) kBoardInfo;
 
 // -----------------------------------------
@@ -513,7 +528,7 @@ typedef struct
     uint8_t  msg_type;  // eMessageType
 } __packed __aligned(1) kHeader;
 
-// this struct is received on endpoint 02 (OUT) from the host
+// this struct is received on the OUT endpoint from the host
 // A DLC byte is not required. The count of transferred data bytes is calculated as: header.size - sizeof(kTxFrameElmue)
 // For remote frames the host can write the DLC value into the first data byte, otherwise DLC = 0 is sent.
 // see buf_process_can_bus()
@@ -526,7 +541,7 @@ typedef struct
     uint8_t  data_start[0]; // data start
 } __packed __aligned(1) kTxFrameElmue;
 
-// this struct is transmitted on endpoint 81 (IN) to the host
+// this struct is transmitted on the IN endpoint to the host
 // A DLC byte is not required. The count of transferred data bytes is calculated as: header.size - sizeof(kRxFrameElmue)
 // For remote frames the DLC from the Rx packet is transmitted in the first data byte to the host.
 // if timestamps are not used subtract 4 additional bytes

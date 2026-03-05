@@ -16,28 +16,26 @@
 
 #include "usb_core.h"
 
-extern USBD_DescriptorsTypeDef USBD_DescriptorCallbacks;
 extern USBD_ClassTypeDef       USBD_ClassCallbacks;
 
-USBD_HandleTypeDef USB_Device;
+USBD_HandleTypeDef GLB_UsbDevice;
 
 // Configure and Start the USB module.
 bool USBD_Init()
 {
-    USB_Device.id        = DEVICE_FS;  
-    USB_Device.dev_state = USBD_STATE_DEFAULT;
-    USB_Device.pDesc     = &USBD_DescriptorCallbacks; // get device, config, string descriptors
-    USB_Device.pClass    = &USBD_ClassCallbacks;      // device specific (Slcan / Candlelight)
+    GLB_UsbDevice.id        = DEVICE_FS;  
+    GLB_UsbDevice.dev_state = USBD_STATE_DEFAULT;
+    GLB_UsbDevice.pClass    = &USBD_ClassCallbacks;      // device specific (Slcan / Candlelight)
 
-    return (USBD_LL_Init (&USB_Device) == USBD_OK &&
-            USBD_LL_Start(&USB_Device) == USBD_OK);
+    return (USBD_LL_Init (&GLB_UsbDevice) == USBD_OK &&
+            USBD_LL_Start(&GLB_UsbDevice) == USBD_OK);
 }
 
 // This simulates an USB disconnect / reconnect which is noticed by the host.
 // But this does not help to replace a hardware reset after enabling pin BOOT0.
 bool USBD_DetachAttach()
 {
-    USBD_DeInit(&USB_Device); // Stop USB
+    USBD_DeInit(&GLB_UsbDevice); // Stop USB
     HAL_Delay(50);
     return USBD_Init(); // Start USB
 }
@@ -113,7 +111,7 @@ USBD_StatusTypeDef USBD_LL_SetupStage(USBD_HandleTypeDef *pdev, uint8_t *psetup)
   pdev->ep0_state = USBD_EP0_SETUP;
   pdev->ep0_data_len = pdev->request.wLength;
 
-  switch (pdev->request.bmRequest & 0x1FU)
+  switch (pdev->request.bRequestType & USB_REQ_RECIPIENT_MASK)
   {
     case USB_REQ_RECIPIENT_DEVICE:
       USBD_StdDevReq(pdev, &pdev->request);
@@ -125,7 +123,7 @@ USBD_StatusTypeDef USBD_LL_SetupStage(USBD_HandleTypeDef *pdev, uint8_t *psetup)
       USBD_StdEPReq(pdev, &pdev->request);
       break;
     default:
-      USBD_LL_StallEP(pdev, (pdev->request.bmRequest & 0x80U));
+      USBD_LL_StallEP(pdev, (pdev->request.bRequestType & 0x80));
       break;
   }
   return USBD_OK;
@@ -273,7 +271,7 @@ USBD_StatusTypeDef USBD_LL_Reset(USBD_HandleTypeDef *pdev)
   pdev->dev_config = 0U;
   pdev->dev_remote_wakeup = 0U;
 
-  if (pdev->pClassData)
+  if (pdev->pClassData) // assigned in USBD_GS_Init(), USBD_CDC_Init()
       pdev->pClass->DeInit(pdev, (uint8_t)pdev->dev_config);
 
   return USBD_OK;

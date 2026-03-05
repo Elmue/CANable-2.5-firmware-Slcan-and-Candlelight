@@ -1,0 +1,26 @@
+
+# CANable Candlelight Makefile
+
+######################################
+#
+# This makefile compiles for the dual channel CANable board from 
+# Oleksii which has a 8 MHz quartz
+#
+# Compile this by typing:
+# make -s -f Make_G431_Candle_OleksiiSolo
+#
+#######################################
+
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
+
+TARGET_FIRMWARE = Candlelight
+TARGET_BOARD    = OleksiiSolo
+TARGET_MCU      = STM32G431xx
+
+# This board has a 8 MHz quartz.
+QUARTZ_FREQU    = 8000000
+
+# name of the compiled files (*.bin, *.hex, *.elf)
+TARGET_FILE = STM32G431_Candlelight2.5_OleksiiSolo
+
+include GCC_Rules.mk

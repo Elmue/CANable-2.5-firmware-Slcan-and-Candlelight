@@ -26,51 +26,43 @@
 // Receive buffering: circular buffer FIFO
 // buf_cdc_rx is written in the interrupt handler CDC_Receive_FS() where ASCII characters are received
 // when a Crarriage Return is found they are passed to control_parse_command()
-struct buf_cdc_rx
+typedef struct 
 {
-	uint8_t  data  [BUF_CDC_RX_NUM_BUFS][BUF_CDC_RX_BUF_SIZE];
+	char     data  [BUF_CDC_RX_NUM_BUFS][BUF_CDC_RX_BUF_SIZE];
 	uint32_t msglen[BUF_CDC_RX_NUM_BUFS];
 	uint32_t head;
 	uint32_t tail;
-};
+} cdc_rx_buf;
 
 // Transmit buffering: triple buffers
 // buf_cdc_tx is written in buf_enqueue_cdc() when the firmware sends ASCII characters to the host
-struct buf_cdc_tx
+typedef struct 
 {
-	uint8_t  data  [BUF_CDC_TX_NUM_BUFS][BUF_CDC_TX_BUF_SIZE];
+	char     data  [BUF_CDC_TX_NUM_BUFS][BUF_CDC_TX_BUF_SIZE];
 	uint32_t msglen[BUF_CDC_TX_NUM_BUFS];
 	uint32_t head;
 	uint32_t tail;
-};
+} cdc_tx_buf;
 
 // Cirbuf structure for CAN TX frames
-// buf_can_tx is written in control_parse_command() -> buf_comit_can_dest() when a frame has been received from the host
-struct buf_can_tx
+// buf_can_tx is written in control_parse_command() -> buf_commit_can_dest() when a frame has been received from the host
+typedef struct 
 {
     FDCAN_TxHeaderTypeDef header[BUF_CAN_TXQUEUE_LEN];   // Header buffer
     uint8_t  data[BUF_CAN_TXQUEUE_LEN][CAN_MAX_DATALEN]; // Data buffer
     uint16_t head;                                       // Head pointer
     uint16_t send;                                       // Send pointer
     uint16_t tail;                                       // Tail pointer
-    uint8_t  full;                                       // Set this when we are full, clear when the tail moves one.
-};
+    bool     full;                                       // Set this when we are full, clear when the tail moves one.
+} can_tx_buf;
 
-extern volatile struct buf_cdc_tx buf_cdc_tx;
-extern volatile struct buf_cdc_rx buf_cdc_rx;
+void  buf_init();
+void  buf_process(int channel, uint32_t tick_now);
+void  buf_enqueue_cdc(int channel, char* buf, uint16_t len);
+bool  buf_get_can_dest(int channel, FDCAN_TxHeaderTypeDef** tx_header, uint8_t** tx_data);
+void  buf_clear_can_buffer(int channel);
+void  buf_store_tx_echo(int channel, FDCAN_TxEventFifoTypeDef* tx_event);
+void  buf_store_rx_packet(int channel, FDCAN_RxHeaderTypeDef *frame_header, uint8_t *frame_data);
 
-void buf_init();
-void buf_process(uint32_t tick_now);
-
-void buf_enqueue_cdc(char* buf, uint16_t len);
-uint8_t *buf_get_cdc_dest();
-void buf_comit_cdc_dest(uint32_t len);
-
-FDCAN_TxHeaderTypeDef *buf_get_can_dest_header();
-uint8_t *buf_get_can_dest_data();
-eFeedback buf_comit_can_dest();
-void buf_clear_can_buffer();
-void buf_store_tx_echo(FDCAN_TxEventFifoTypeDef* tx_event);
-void buf_store_rx_packet(FDCAN_RxHeaderTypeDef *frame_header, uint8_t *frame_data);
-
+eFeedback buf_commit_can_dest(int channel);
 

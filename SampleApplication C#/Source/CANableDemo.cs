@@ -85,8 +85,7 @@ class Program
         Console.SetWindowSize(s32_Width, s32_Height);
 
         Console.Title = "ElmüSoft Candlelight C# Demo";
-        Utils.SetConsoleCtrlHandler(CtrlHandler, true);
-
+        
         if (CANDLELIGHT_DEMO) 
         {
             // Test interface 0 = Candlelight
@@ -98,26 +97,12 @@ class Program
             DfuDemo();
         }
 
+        mi_Candle.Dispose(); // Always disconnect from CAN bus, stop pipe thread
+
         Print(ConsoleColor.Gray, "\nPress a key to exit ...");
         Console.ReadKey();
 
-        mi_Candle.Dispose(); // Always disconnect from CAN bus!
         Process.GetCurrentProcess().Kill();
-    }
-
-    /// <summary>
-    /// The user closes the Console window with the mouse --> close the CANable
-    /// </summary>
-    static bool CtrlHandler(int signal)
-    {
-        const int CTRL_CLOSE_EVENT = 2;
-
-        if (signal == CTRL_CLOSE_EVENT) 
-        {
-            mi_Candle.Dispose(); // Always disconnect from CAN bus!
-            return true; // Indicate that the signal was handled
-        }
-        return false;
     }
 
     static void CandlelightDemo()
@@ -138,8 +123,8 @@ class Program
             s_Action = "Error setting nominal bitrate.";
 
             String s_Display;
-            // Supposed the clock is 160 MHz this will set 500 kBaud and samplepoint 87.5%
-            mi_Candle.SetBitrate(false, 2, 139, 20, out s_Display);
+            // Supposed the clock is 160 MHz this will set 500 kBaud and samplepoint 75%
+            mi_Candle.SetBitrate(false, 2, 119, 40, out s_Display);
 
             Print(ConsoleColor.DarkYellow, "\nSet {0}\n", s_Display);
 
@@ -198,7 +183,7 @@ class Program
             Print(ConsoleColor.Red,    "ATTENTION:\n");
             Print(ConsoleColor.Yellow, "The Windows console is very slow. It cannot display fast CAN bus traffic.\n");
             Print(ConsoleColor.Yellow, "If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
-            Print(ConsoleColor.Yellow, "HUD ECU Hacker has an ultra fast speed-optimized trace pane.\n\n");
+            Print(ConsoleColor.Yellow, "HUD ECU Hacker has an ultra fast speed-optimized CAN Raw Terminal.\n\n");
 
             Print(ConsoleColor.Yellow, "A left click into the console stops output, right click continues.\n\n");
 
@@ -206,7 +191,7 @@ class Program
             Print(ConsoleColor.DarkGreen, "Green = Echo of sent packets that have been ACKnowledged\n");
             Print(ConsoleColor.Cyan,      "Cyan  = Received packets\n\n");
 
-            Print(ConsoleColor.Yellow, "Press ENTER to abort and close the device.\n\n");
+            Print(ConsoleColor.Magenta, "Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
         }
         catch (Exception Ex)
         {
@@ -360,13 +345,11 @@ class Program
                         k_Buffer.bKeyDown &&
                         k_Buffer.wVirtualKeyCode == VK_RETURN)
                     {
-                        mi_Candle.Dispose();
                         return;
                     }
                 }
             }
-
-        } // while (true)
+        } // while()
     }
 
     static void DfuDemo()

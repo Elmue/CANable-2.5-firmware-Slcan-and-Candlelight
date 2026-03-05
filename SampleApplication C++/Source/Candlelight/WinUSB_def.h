@@ -7,7 +7,7 @@ extern "C" {
 
 // ====================================== USB SETUP Request =====================================
 
-enum eSetupRecip // Bits 0,1,2,3,4 of bmRequestType
+enum eSetupRecip // Bits 0,1,2,3,4 of WINUSB_SETUP_PACKET.RequestType
 {
     RECIP_Device    = 0x00,
     RECIP_Interface = 0x01,
@@ -16,14 +16,14 @@ enum eSetupRecip // Bits 0,1,2,3,4 of bmRequestType
     //   ....   0x1F,
 };
     
-enum eSetupType // Bits 5,6 of bmRequestType
+enum eSetupType // Bits 5,6 of WINUSB_SETUP_PACKET.RequestType
 {
     TYP_Standard = 0x00, // 0 << 5
     TYP_Class    = 0x20, // 1 << 5
     TYP_Vendor   = 0x40, // 2 << 5
 };
 
-enum eDirection // Bit 7 of bmRequestType, also used for endpoints
+enum eDirection // Bit 7 of WINUSB_SETUP_PACKET.RequestType, also used for endpoints
 {
     DIR_Out = 0x00,
     DIR_In  = 0x80,
@@ -34,10 +34,10 @@ enum eDirection // Bit 7 of bmRequestType, also used for endpoints
 typedef struct _WINUSB_SETUP_PACKET 
 {
     UCHAR   RequestType; // eSetupRecip | eSetupType | eDirection
-    UCHAR   Request;
-    USHORT  Value;
-    USHORT  Index;
-    USHORT  Length;
+    UCHAR   Request;     // GS_ReqGetCapabilities,... / DFU_RequDetach, DFU_RequGetStatus,...
+    USHORT  Value;       // CAN Channel / ePinID for ELM_ReqGetPinStatus
+    USHORT  Index;       // Interface number (0 = Candlelight, 1 = DFU)
+    USHORT  Length;      // Byte count
 } WINUSB_SETUP_PACKET, *PWINUSB_SETUP_PACKET;
 
 #pragma pack()
@@ -61,27 +61,41 @@ typedef enum
     DFU_RequAbort       = 6, // RequType = 0x21, Abort current operation
 } eDfuRequest;
 
-// This is sent in byte 0 of a DFU_RequGetStatus request
+// This is sent in byte 0 (bStatus) of kDfuStatus from a DFU_RequGetStatus request
 typedef enum 
 {
-    DfuStatus_OK = 0,      // No error condition is present.
-    DfuStatus_ErrTarget,   // File is not targeted for use by this device. 
-    DfuStatus_ErrFile,     // File is for this device but fails some vendor-specific verification test. 
-    DfuStatus_ErrWrite,    // Device is unable to write memory. 
-    DfuStatus_ErrErase,    // Memory erase function failed.
-    // and more... (not used here)
+    DfuStatus_OK = 0,         // No error condition is present.
+    DfuStatus_ErrTarget,      // File is not targeted for use by this device. 
+    DfuStatus_ErrFile,        // File is for this device but fails some vendor-specific verification test. 
+    DfuStatus_ErrWrite,       // Device is unable to write memory. 
+    DfuStatus_ErrErase,       // Memory erase function failed.
+    DfuStatus_ErrCheckErased, // Memory erase check failed.
+    DfuStatus_ErrProg,        // Program memory function failed.
+    DfuStatus_ErrVerify,      // Programmed memory failed verification. 
+    DfuStatus_ErrAddress,     // Cannot program memory due to received address that is out of range. 
+    DfuStatus_ErrNotDone,     // Received DFU_DNLOAD with wLength = 0, but device does not think it has all of the data yet. 
+    DfuStatus_ErrFirmware,    // Device’s firmware is corrupt.  It cannot return to run-time (non-DFU) operations. 
+    DfuStatus_ErrVendor,      // StringIdx indicates a vendor-specific error. 
+    DfuStatus_ErrUSBR,        // Device detected unexpected USB reset signaling. 
+    DfuStatus_ErrPOR,         // Device detected unexpected power on reset.  
+    DfuStatus_ErrUnknown,     // Something went wrong, but the device does not know what it was. 
+    DfuStatus_ErrStallEP,     // Device stalled an unexpected request. 
 } eDfuStatus;
 
-// This is sent in byte 4 of a DFU_RequGetStatus request
+// This is sent in byte 4 (bState) of kDfuStatus from a DFU_RequGetStatus request
 typedef enum 
 {
-    DfuState_AppIdle = 0,   // Device is running its normal application mode.
-    DfuState_AppDetach,     // Device is running its normal application, has received the DFU_DETACH request, and is waiting for a USB reset. 
-    DfuState_DfuIdle,       // Device is operating in the DFU mode and is waiting for requests.
-    DfuState_DownloadSync,  // Device has received a block and is waiting for the host to solicit the status via DFU_GETSTATUS. 
-    DfuState_DownloadBusy,  // Device is programming a control-write block into its nonvolatile memories. 
-    DfuState_DownloadIdle,  // Device is processing a download operation, expecting DFU_DNLOAD requests. 
-    // and more... (not used here)
+    DfuState_AppIdle = 0,       // Device is running its normal application mode.
+    DfuState_AppDetach,         // Device is running its normal application, has received the DFU_DETACH request, and is waiting for a USB reset. 
+    DfuState_DfuIdle,           // Device is operating in the DFU mode and is waiting for requests.
+    DfuState_DownloadSync,      // Device has received a block and is waiting for the host to solicit the status via DFU_GETSTATUS. 
+    DfuState_DownloadBusy,      // Device is programming a control-write block into its nonvolatile memories. 
+    DfuState_DownloadIdle,      // Device is processing a download operation, expecting DFU_DNLOAD requests. 
+    DfuState_ManifestSync,      // Device has received the final block of firmware and waits for DFU_GETSTATUS to begin Manifestation phase
+    DfuState_Manifest,          // Device is in the Manifestation phase.  
+    DfuState_ManifestWaitReset, // Device has programmed its memories and is waiting for a USB reset or a power-on reset
+    DfuState_UploadIdle,        // Device is processing an upload operation. 
+    DfuState_Error              // An error has occurred. Awaiting the DFU_CLRSTATUS request. 
 } eDfuState;
 
 #pragma pack(push,1)
@@ -92,7 +106,7 @@ typedef struct
     BYTE Status;          // eDfuStatus
     BYTE PollTimeout[3];
     BYTE State;           // eDfuState
-    BYTE StringIdx;
+    BYTE StringIdx;       // string index for proprietary vendor error messages (see DfuStatus_ErrVendor)
 } kDfuStatus;
 
 #pragma pack(pop)

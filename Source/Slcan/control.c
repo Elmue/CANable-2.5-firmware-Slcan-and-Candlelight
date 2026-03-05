@@ -13,25 +13,54 @@
 #include "dfu.h"
 #include "control.h"
 
-extern eUserFlags USER_Flags;
+// ATTENTION:
+// This version defines which Slcan commands are available.
+// The first version was 100.
+// In version 101 support for multi-channel adapters has been added.
+// (Candlelight does not need a version number because it returns the supported features as bit flags)
+#define SLCAN_VERSION          101
 
-uint32_t can_mode = FDCAN_MODE_NORMAL; // normal, silent, loopback modes
 
-eFeedback control_parse_str (char buf[], int len);
-eFeedback control_set_filter(char buf[], uint8_t len);
+// ----- Globals
+extern eUserFlags GLB_UserFlags[CHANNEL_COUNT];
+
+// ----- Member
+uint32_t  CanMode[CHANNEL_COUNT];
+
+// ----- Private Methods
+eFeedback control_parse_str (int channel, char buf[], int len);
+eFeedback control_parse_filter(int channel, char buf[], uint8_t len);
 
 // ==================================================================================================================
 
 void control_init()
 {
-    // all the other flags must be enabled by the user
-    USER_Flags = USR_SlcanDefault;
+    for (int C=0; C<CHANNEL_COUNT; C++)
+    {
+        // all the other flags must be enabled by the user
+        GLB_UserFlags[C] = USR_SlcanDefault;  // retransmit
+        CanMode      [C] = FDCAN_MODE_NORMAL; // normal mode (not silent / loopback mode)
+    }
 }
 
-void control_parse_command(char buf[], int len)
+void control_parse_command(char* buf, int len)
 {
-    eFeedback e_Ret = control_parse_str(buf, len);
-    if ((USER_Flags & USR_Feedback) == 0)
+    // IMPORTANT: Terminate the command string with zero
+    buf[len] = 0;
+    
+    int channel = 0;
+    switch (buf[0])
+    {
+#if CHANNEL_COUNT > 1        
+        case '&': channel = 1; buf ++; len --; break;
+#endif    
+#if CHANNEL_COUNT > 2
+        case '$': channel = 2; buf ++; len --; break;
+#endif    
+    }
+     
+    eFeedback e_Ret = control_parse_str(channel, buf, len);
+    if ((GLB_UserFlags[channel] & USR_Feedback) == 0)
         return;
 
     switch (e_Ret)
@@ -39,12 +68,12 @@ void control_parse_command(char buf[], int len)
         case FBK_RetString:
             break; // response has already been written with buf_enqueue_cdc()
         case FBK_Success:
-            buf_enqueue_cdc("#\r", 2); // return "#\r" for success
+            buf_enqueue_cdc(channel, "#\r", 2); // return "#\r" for success
             break;
         default:
         {
             char s8_Error[3] = { '#', e_Ret, '\r' }; // return "#4\r" for error 4
-            buf_enqueue_cdc(s8_Error, 3);
+            buf_enqueue_cdc(channel, s8_Error, 3);
             break;
         }
     }
@@ -52,22 +81,19 @@ void control_parse_command(char buf[], int len)
 
 // Parse an incoming slcan command from the USB CDC port.
 // The termination '\r' has already been removed.
-eFeedback control_parse_str(char buf[], int len)
-{
+eFeedback control_parse_str(int channel, char buf[], int len)
+{   
     // Flash the blue LED very shortly if bus is closed
     // ATTENTION: If the bus is closed the green LED is on, so this is not the same as blue flashing with bus open.
-    if (!can_is_opened())
-        led_flash_RX(); // flash 15 ms
+    if (!can_is_open(channel))
+        led_flash_RX(channel); // flash 15 ms
 
-    // Reply OK to a blank command "\r"
+    // Reply Success to an empty command "\r" if the user has hit the Enter key in the terminal.
     if (len == 0)
         return FBK_Success;
 
-    // IMPORTANT: Terminate the string with zero
-    buf[len] = 0;
-
     char tempbuf[200];
-
+    
     eFeedback e_Ret = FBK_InvalidParameter;
     switch (buf[0])
     {
@@ -76,13 +102,13 @@ eFeedback control_parse_str(char buf[], int len)
             if (len != 2)
                 return FBK_InvalidParameter;
 
-            if (can_is_opened())
+            if (can_is_open(channel))
                 return FBK_AdapterMustBeClosed;
 
             switch (buf[1])
             {
-                case '0': USER_Flags &= ~USR_Retransmit; break; // "A0" (legacy command) enable one shot mode
-                case '1': USER_Flags |=  USR_Retransmit; break; // "A1" (legacy command) try 128 times to send a packet
+                case '0': GLB_UserFlags[channel] &= ~USR_Retransmit; break; // "A0" (legacy command) enable one shot mode
+                case '1': GLB_UserFlags[channel] |=  USR_Retransmit; break; // "A1" (legacy command) try 128 times to send a packet
                 default:  return FBK_InvalidParameter;
             }
             return FBK_Success;
@@ -100,35 +126,35 @@ eFeedback control_parse_str(char buf[], int len)
                 switch (buf[i])
                 {
                     case 'A':                                        // "MA"  Enable Auto re-transmit (same as legacy "A1")
-                        if (can_is_opened()) return FBK_AdapterMustBeClosed;
-                        USER_Flags |=  USR_Retransmit; 
+                        if (can_is_open(channel)) return FBK_AdapterMustBeClosed;
+                        GLB_UserFlags[channel] |=  USR_Retransmit; 
                         break;
                     case 'a':                                        // "Ma"
-                        if (can_is_opened()) return FBK_AdapterMustBeClosed;
-                        USER_Flags &= ~USR_Retransmit;  
+                        if (can_is_open(channel)) return FBK_AdapterMustBeClosed;
+                        GLB_UserFlags[channel] &= ~USR_Retransmit;  
                         break;
-                    case 'D': USER_Flags |=  USR_DebugReport; break; // "MD"  Enable string debug messages
-                    case 'd': USER_Flags &= ~USR_DebugReport; break; // "Md"
-                    case 'E': USER_Flags |=  USR_ErrorReport; break; // "ME"  Enable CAN bus error reports
-                    case 'e': USER_Flags &= ~USR_ErrorReport; break; // "Me"
-                    case 'F': USER_Flags |=  USR_Feedback;    break; // "MF"  Enable command execution Feedback mode
-                    case 'f': USER_Flags &= ~USR_Feedback;    break; // "Mf"
-                    case 'M': USER_Flags |=  USR_ReportTX;    break; // "MT"  Enable Tx echo report with Marker
-                    case 'm': USER_Flags &= ~USR_ReportTX;    break; // "Mt"
-                    case 'S': USER_Flags |=  USR_ReportESI;   break; // "MS"  Enable ESI report
-                    case 's': USER_Flags &= ~USR_ReportESI;   break; // "Ms"
+                    case 'D': GLB_UserFlags[channel] |=  USR_DebugReport; break; // "MD"  Enable string debug messages
+                    case 'd': GLB_UserFlags[channel] &= ~USR_DebugReport; break; // "Md"
+                    case 'E': GLB_UserFlags[channel] |=  USR_ErrorReport; break; // "ME"  Enable CAN bus error reports
+                    case 'e': GLB_UserFlags[channel] &= ~USR_ErrorReport; break; // "Me"
+                    case 'F': GLB_UserFlags[channel] |=  USR_Feedback;    break; // "MF"  Enable command execution Feedback mode
+                    case 'f': GLB_UserFlags[channel] &= ~USR_Feedback;    break; // "Mf"
+                    case 'M': GLB_UserFlags[channel] |=  USR_ReportTX;    break; // "MT"  Enable Tx echo report with Marker
+                    case 'm': GLB_UserFlags[channel] &= ~USR_ReportTX;    break; // "Mt"
+                    case 'S': GLB_UserFlags[channel] |=  USR_ReportESI;   break; // "MS"  Enable ESI report
+                    case 's': GLB_UserFlags[channel] &= ~USR_ReportESI;   break; // "Ms"
                     // -----------------------------------------------------
-                    case 'I': led_blink_identify(true);       break; // "MI"  Identify device by blinking the LEDs
-                    case 'i': led_blink_identify(false);      break; // "Mi"  stop blinking
-                    case '0':                                        // "M0"  Use normal mode for Open (legacy command)
-                    case '1':                                        // "M1"  Use silent (bus monitoring) mode for Open (legacy command)
-                        if (can_is_opened()) 
+                    case 'I': led_blink_identify(channel, true);          break; // "MI"  Identify device by blinking the LEDs
+                    case 'i': led_blink_identify(channel, false);         break; // "Mi"  stop blinking
+                    case '0':                                                    // "M0"  Use normal mode for Open (legacy command)
+                    case '1':                                                    // "M1"  Use silent (bus monitoring) mode for Open (legacy command)
+                        if (can_is_open(channel)) 
                             return FBK_AdapterMustBeClosed;
-                        can_mode = (buf[i] == '1') ? FDCAN_MODE_BUS_MONITORING : FDCAN_MODE_NORMAL;
+                        CanMode[channel] = (buf[i] == '1') ? FDCAN_MODE_BUS_MONITORING : FDCAN_MODE_NORMAL;
                         break;
                     case 'R':                                        // "MR" (enable  120 Ohm Termination Resistor)
                     case 'r':                                        // "Mr" (disable 120 Ohm Termination Resistor)
-                        if (!can_set_termination(buf[i] == 'R'))
+                        if (!can_set_termination(channel, buf[i] == 'R'))
                             return FBK_UnsupportedFeature;
                         break;
                     default:
@@ -147,18 +173,18 @@ eFeedback control_parse_str(char buf[], int len)
 
             if (len == 2)
             {
-                // ATTENTION: can_mode is also set by command "M"
+                // ATTENTION: CanMode is also set by command "M"
                 // It must be only modified here if 2 characters have been sent!
                 switch (buf[1])
                 {
-                    case 'N': can_mode = FDCAN_MODE_NORMAL;            break; // "ON"
-                    case 'S': can_mode = FDCAN_MODE_BUS_MONITORING;    break; // "OS"
-                    case 'I': can_mode = FDCAN_MODE_INTERNAL_LOOPBACK; break; // "OI"
-                    case 'E': can_mode = FDCAN_MODE_EXTERNAL_LOOPBACK; break; // "OE"
+                    case 'N': CanMode[channel] = FDCAN_MODE_NORMAL;            break; // "ON"
+                    case 'S': CanMode[channel] = FDCAN_MODE_BUS_MONITORING;    break; // "OS"
+                    case 'I': CanMode[channel] = FDCAN_MODE_INTERNAL_LOOPBACK; break; // "OI"
+                    case 'E': CanMode[channel] = FDCAN_MODE_EXTERNAL_LOOPBACK; break; // "OE"
                     default:  return FBK_InvalidParameter;
                 }
             }
-            return can_open(can_mode); // returns error if already open
+            return can_open(channel, CanMode[channel]); // returns error if already open
         }
         // Close adapter and reset variables (no error if already closed)
         // ATTENTION: This command does not send feedback although it is enabled!
@@ -167,11 +193,11 @@ eFeedback control_parse_str(char buf[], int len)
         case 'C':
             if (len == 1)
             {
-                can_close(); // no error if already closed
+                can_close(channel); // no error if already closed
 
                 // reset the variables to their default
-                can_mode   = FDCAN_MODE_NORMAL;
-                USER_Flags = USR_SlcanDefault;
+                CanMode      [channel] = FDCAN_MODE_NORMAL;
+                GLB_UserFlags[channel] = USR_SlcanDefault;
 
                 // Do not call buf_enqueue_cdc() here --> never send a response. 
                 // This is the only command that behaves the same way as the legacy command.
@@ -191,21 +217,27 @@ eFeedback control_parse_str(char buf[], int len)
                 // HAL_GetDEVID() returns a unique identifier (DBG_IDCODE) for each processor family.
                 // The STM32G0xx serie uses 0x460, 0x465, 0x476, 0x477 and STM32G4xx uses 0x468, 0x469, 0x479.
                 // String responses start with '+', all other command responses start with '#'
-                sprintf(tempbuf, "+Board: "      TARGET_BOARD            // Multiboard             (from MakeFile)
-                                 "\tMCU: %s"                             // STM32G431              (from MakeFile)
-                                 "\tDevID: %lu"                          // 0x468                  (from processor)
-                                 "\tFirmware: %u"                        // 0x250814               (from settings.h)
-                                 "\tSlcan: "     STR(SLCAN_VERSION)      // 100                    (from settings.h)
-                                 "\tClock: %lu"                          // 160                    (from system variable)
+                sprintf(tempbuf, "+Board: "      TARGET_BOARD              // Multiboard  (from MakeFile)
+                                 "\tMCU: %s"                               // STM32G431   (from MakeFile)
+                                 "\tDevID: %lu"                            // 0x468       (from processor)
+                                 "\tFirmware: %u"                          // 2427156     (from settings.h)
+                                 "\tSlcan: "     STR(SLCAN_VERSION)        // 101         (from settings.h)
+                                 "\tClock: %lu"                            // 160         (from system variable)
+                                 "\tChannels: "  STR(CHANNEL_COUNT)        // 1           (from settings.h)
+#if HSE_VALUE > 0                                 
+                                 "\tQuartz: Yes"                           // Yes / No    (from make file)
+#else
+                                 "\tQuartz: No"                            // Yes / No    (from make file)    
+#endif
                                  "\tLimits: %lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\r",
                                  utils_get_MCU_name(),
                                  HAL_GetDEVID(),
-                                 FIRMWARE_VERSION_BCD,
-                                 system_get_can_clock() / 1000000,
+                                 FIRMWARE_VERSION_BCD, // defined as hex, but sent as decimal for easier parsing in the host software
+                                 system_get_can_clock() / 1000000,                                 
                                  lim->nom_brp_max, lim->nom_seg1_max, lim->nom_seg2_max, lim->nom_sjw_max,
                                  lim->fd_brp_max,  lim->fd_seg1_max,  lim->fd_seg2_max,  lim->fd_sjw_max);
 
-                buf_enqueue_cdc(tempbuf, strlen(tempbuf));
+                buf_enqueue_cdc(channel, tempbuf, strlen(tempbuf));
                 return FBK_RetString;
             }
             return e_Ret;
@@ -215,10 +247,10 @@ eFeedback control_parse_str(char buf[], int len)
         // Set baudrate (always samplepoint nominal: 87.5%, data: 75%)
         // ATTENTION: Deprecated! Read the manual.        
         case 'S':
-            if (len == 2) e_Ret = can_set_baudrate((can_nom_bitrate)(buf[1] - '0')); // "S1"
+            if (len == 2) e_Ret = can_set_baudrate(channel, (can_nom_bitrate)(buf[1] - '0')); // "S1"
             return e_Ret;
         case 'Y':
-            if (len == 2) e_Ret = can_set_data_baudrate((can_data_bitrate)(buf[1] - '0')); // "Y2"
+            if (len == 2) e_Ret = can_set_data_baudrate(channel, (can_data_bitrate)(buf[1] - '0')); // "Y2"
             return e_Ret;
 
         // Set bitrate (any samplepoint is possible)
@@ -233,18 +265,18 @@ eFeedback control_parse_str(char buf[], int len)
                 !utils_parse_next_decimal(buf, &pos,  0,  &Sjw))
                     return FBK_InvalidParameter;
 
-            if (buf[0] == 's') return can_set_nom_bit_timing (BRP, Seg1, Seg2, Sjw); // "s40,16,2,2"
-            else               return can_set_data_bit_timing(BRP, Seg1, Seg2, Sjw);
+            if (buf[0] == 's') return can_set_nom_bit_timing (channel, BRP, Seg1, Seg2, Sjw); // "s40,16,2,2"
+            else               return can_set_data_bit_timing(channel, BRP, Seg1, Seg2, Sjw);
         }
 
         // ----------------------------
 
         // Set CAN filter:
         case 'F':
-            return control_set_filter(buf, len); // "F7E0,7FF"
+            return control_parse_filter(channel, buf, len); // "F7E0,7FF"
         // Clear all CAN filters:
         case 'f':
-            if (len == 1) return can_clear_filters(); // "f"
+            if (len == 1) return can_clear_filters(channel); // "f"
             return e_Ret;
 
         // ----------------------------
@@ -259,7 +291,7 @@ eFeedback control_parse_str(char buf[], int len)
             if (!utils_parse_next_decimal(buf, &pos, 0, &interval)) // "L0", "L7", "L30"
                 return FBK_InvalidParameter;
 
-            return can_enable_busload(interval); // interval in 100ms steps
+            return can_enable_busload(channel, interval); // interval in 100 ms steps
         }
 
         // ----------------------------
@@ -285,74 +317,27 @@ eFeedback control_parse_str(char buf[], int len)
             {
                 // String responses start with '+', all other command responses start with '#'
                 char* resp = system_is_option_enabled(OPT_BOOT0_Enable) ? "+1\r" : "+0\r";
-                buf_enqueue_cdc(resp, 3);
+                buf_enqueue_cdc(channel, resp, 3);
                 return FBK_RetString;
             }
             return FBK_InvalidParameter;
-        }
-        // Debug command
-        case '?':
-        {
-            return FBK_InvalidCommand;
-            /*
-            // This code was written by Nakanishi Kiyomaro.
-
-            char* dbgstr = (char*)buf_get_cdc_dest();
-            snprintf(dbgstr, SLCAN_MTU - 1, ">%02X-%02X-%01X-%04X%04X-%04X\r",
-                                        (uint8_t)(can_get_cycle_ave_time_ns() >= 255000 ? 255 : can_get_cycle_ave_time_ns() / 1000),
-                                        (uint8_t)(can_get_cycle_max_time_ns() >= 255000 ? 255 : can_get_cycle_max_time_ns() / 1000),
-                                        (uint8_t)(HAL_FDCAN_GetState(can_get_handle())),
-                                        (uint16_t)(HAL_FDCAN_GetError(can_get_handle()) >> 16),
-                                        (uint16_t)(HAL_FDCAN_GetError(can_get_handle()) & 0xFFFF),
-                                        (uint16_t)(error_get_register()));
-            buf_comit_cdc_dest(23);
-            */
-
-            /*
-            uint8_t cycle_ave = (uint8_t)(can_get_cycle_ave_time_ns() >= 255000 ? 255 : can_get_cycle_ave_time_ns() / 1000);
-            uint8_t cycle_max = (uint8_t)(can_get_cycle_max_time_ns() >= 255000 ? 255 : can_get_cycle_max_time_ns() / 1000);
-
-            char dbgstr[7];
-            dbgstr[0] = '>'; // debug message
-            dbgstr[1] = cycle_ave >> 4;
-            dbgstr[2] = cycle_ave & 0xF;
-            for (uint8_t j = 1; j <= 2; j++)
-            {
-                if (dbgstr[j] < 0xA) dbgstr[j] += 0x30;
-                else                 dbgstr[j] += 0x37;
-            }
-            dbgstr[3] = '-';
-            dbgstr[4] = cycle_max >> 4;
-            dbgstr[5] = cycle_max & 0xF;
-            for (uint8_t j = 4; j <= 5; j++)
-            {
-                if (dbgstr[j] < 0xA) dbgstr[j] += 0x30;
-                else                 dbgstr[j] += 0x37;
-            }
-            dbgstr[6] = '\r';
-            can_clear_cycle_time();
-
-            buf_enqueue_cdc(dbgstr, 7);
-            return FBK_RetString;
-            */
         }
     }
 
     // ================ Transmit Packet =================
     // "t600801020304050607083A\r"
-
-    // Set default header. All values overridden below as needed.
-    FDCAN_TxHeaderTypeDef* tx_header = buf_get_can_dest_header();
-    uint8_t*               tx_data   = buf_get_can_dest_data();
-
-    if (tx_header == NULL || tx_data == NULL)
+    
+    FDCAN_TxHeaderTypeDef* tx_header;
+    uint8_t*               tx_data;
+    if (!buf_get_can_dest(channel, &tx_header, &tx_data))
         return FBK_TxBufferFull;
 
+    // Set default header. All values overridden below as needed.
     tx_header->TxFrameType         = FDCAN_DATA_FRAME;
     tx_header->FDFormat            = FDCAN_CLASSIC_CAN;
     tx_header->IdType              = FDCAN_STANDARD_ID;
     tx_header->BitRateSwitch       = FDCAN_BRS_OFF;
-    tx_header->ErrorStateIndicator = can_is_passive() ? FDCAN_ESI_PASSIVE : FDCAN_ESI_ACTIVE;
+    tx_header->ErrorStateIndicator = can_is_passive(channel) ? FDCAN_ESI_PASSIVE : FDCAN_ESI_ACTIVE;
     tx_header->TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the green LED
 
     switch (buf[0])
@@ -400,7 +385,7 @@ eFeedback control_parse_str(char buf[], int len)
     
     // Sending a message with FDF flag requires a data baudrate to be set.
     // It is allowed that the data baudrate is the same as the nominal baudrate to send messages up to 64 bytes without BRS.
-    if (tx_header->FDFormat == FDCAN_FD_CAN && !can_using_FD())
+    if (tx_header->FDFormat == FDCAN_FD_CAN && !can_using_FD(channel))
         return FBK_BaudrateNotSet;
     
     // Start parsing at second byte (skip command byte)
@@ -449,7 +434,7 @@ eFeedback control_parse_str(char buf[], int len)
     // The host must generate a unique one-byte marker for each sent packet using a counter that increments with each Tx message.
     // The Tx FIFO can store 3 packets and the buffer can store 64 waiting messages.
     // So 3 + 64 different values are sufficient that each message that is waiting for an ACK has it's own unique marker.
-    if (USER_Flags & USR_ReportTX)
+    if (GLB_UserFlags[channel] & USR_ReportTX)
     {
         if (!utils_parse_hex_value(buf, &parse_loc, 2, &tx_header->MessageMarker))
             return FBK_InvalidParameter;
@@ -460,14 +445,14 @@ eFeedback control_parse_str(char buf[], int len)
         return FBK_InvalidParameter;
 
     // Store the message in the buffer
-    return buf_comit_can_dest();
+    return buf_commit_can_dest(channel);
 }
 
 // ================================================================================================================
 
 // Command: "F7E0,7FF;1F005000,1FFFFFFF\r" --> set 11 bit filter: 0x7E0, mask: 0x7FF and 29 bit filter 0x1F005000.
-// see comment for can_set_filter()
-eFeedback control_set_filter(char buf[], uint8_t len)
+// see comment for can_set_mask_filter()
+eFeedback control_parse_filter(int channel, char buf[], uint8_t len)
 {
     int  pos = 1;
     bool abort = false;
@@ -495,7 +480,7 @@ eFeedback control_set_filter(char buf[], uint8_t len)
         else if (digitsF == 8) extended = true;
         else return FBK_InvalidParameter;
 
-        eFeedback error = can_set_mask_filter(extended, filter, mask);
+        eFeedback error = can_set_mask_filter(channel, extended, filter, mask);
         if (error != FBK_Success)
             return error;
     }
@@ -505,13 +490,13 @@ eFeedback control_set_filter(char buf[], uint8_t len)
 // This function is called approx 100 times in one millisecond from the main loop
 // if the error state has changed, report it every 100 ms
 // if the error state did not change, report the same state only every 3000 ms.
-void control_process(uint32_t tick_now)
+void control_process(int channel, uint32_t tick_now)
 {
-    if (!error_is_report_due(tick_now))
+    if (!error_is_report_due(channel, tick_now))
         return;
 
     // get errors that are still present after the last error_clear()
-    kCanErrorState* state = error_get_state();
+    kCanErrorState* state = error_get_state(channel);
 
     // Bus status and last protocol error (FDCAN_PROTOCOL_ERROR_ACK) have few values --> pack both into one byte
     char tempbuf[20];
@@ -519,27 +504,27 @@ void control_process(uint32_t tick_now)
                                             (uint8_t)state->app_flags,
                                             (uint8_t)state->tx_err_count,
                                             (uint8_t)state->rx_err_count);
-    buf_enqueue_cdc(tempbuf, 10);
-    error_clear();
+    buf_enqueue_cdc(channel, tempbuf, 10);
+    error_clear(channel);
     
     // Revover BusOff AFTER printing error BusOff to the Trace output!
-    can_recover_bus_off();
+    can_recover_bus_off(channel);
 }
 
 // send the busload in percet to the host in the user defined interval
-void control_report_busload(uint8_t busload_percent)
+void control_report_busload(int channel, uint8_t busload_percent)
 {
     char buf[10];
     sprintf(buf, "L%u\r", busload_percent);
-    buf_enqueue_cdc(buf, strlen(buf));
+    buf_enqueue_cdc(channel, buf, strlen(buf));
 }
 
 // Send a debug message. Maximum length is 80 characters.
 // The message may contain "\n" for multi-line output
 // You will see this message in the Trace pane of HUD ECU Hacker if USR_DebugReport is enabled.
-bool control_send_debug_mesg(const char* message)
+bool control_send_debug_mesg(int channel, const char* message)
 {
-    if ((USER_Flags & USR_DebugReport) == 0)
+    if ((GLB_UserFlags[channel] & USR_DebugReport) == 0)
         return false;
 
     int len = strlen(message);
@@ -552,7 +537,7 @@ bool control_send_debug_mesg(const char* message)
     char buf[85];
     sprintf(buf, ">%s\r", message);
 
-    buf_enqueue_cdc(buf, len + 2);
+    buf_enqueue_cdc(channel, buf, len + 2);
     return true;
 }
 

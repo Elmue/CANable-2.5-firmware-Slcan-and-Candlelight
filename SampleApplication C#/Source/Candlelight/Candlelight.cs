@@ -252,12 +252,20 @@ namespace CANable
 
         #region enums ElmüSoft protocol
 
+        // Detail information about the board / firmware
+        // added in firmware from february 2026
+        [FlagsAttribute]
+        public enum eBoardFlags : uint
+        {
+            Quartz_In_Use  = 0x00000001, // the board has a quartz and the firmware is using it
+        }
+
         public enum eFeedback
         {
             None           =  0,
             Success        =  2,
             // ---------------------
-            Invalid_comand = '1',   // Slcan = "#1\r"
+            Invalid_command = '1',  // Slcan = "#1\r"
             Invalid_parameter,      // Slcan = "#2\r"
             Adapter_must_be_open,   // this command must be executed after  opening the adapter
             Adapter_must_be_closed, // this command must be executed before opening the adapter
@@ -403,7 +411,7 @@ namespace CANable
             public Byte   mu8_Reserved1;
             public Byte   mu8_Reserved2;
             public Byte   mu8_Reserved3;
-            public Byte   mu8_Icount;     // number of CAN channels - 1  (WTF is this nonsense for?)
+            public Byte   mu8_Icount;     // Candlelight interfaces - 1
             public UInt32 mu32_SoftVersionBcd;
             public UInt32 mu32_HardVersionBcd;
 
@@ -439,11 +447,12 @@ namespace CANable
         [StructLayout(LayoutKind.Sequential, Pack = 1)]
         public struct kBoardInfo
         {
-            public UInt16  mu16_McuDeviceID;    // 0x468
+            public UInt16      mu16_McuDeviceID;    // 0x468
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 25)]
-            public Byte[]  mu8_McuName;         // "STM32G431xx"
+            public Byte[]      mu8_McuName;         // "STM32G431xx"
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 25)]
-            public Byte[]  mu8_BoardName;       // "Multiboard", "OpenlightLabs", "Jhoinrh"
+            public Byte[]      mu8_BoardName;       // "Multiboard", "OpenlightLabs", "Jhoinrh"
+            public eBoardFlags me_BoardFlags;
 
             public String McuName
             {
@@ -714,12 +723,25 @@ namespace CANable
         public class CanPacket
         {
             public int        ms32_ID = -1;
-            public List<Byte> mi_Data = new List<Byte>();
             public bool       mb_29bit;  // Extended ID.
             public bool       mb_RTR;    // Remote Frame                     Only used if mb_FDF = false
             public bool       mb_FDF;    // CAN FD Frame
             public bool       mb_BRS;    // CAN FD Bit Rate Switching        Only used if mb_FDF = true
             public bool       mb_ESI;    // CAN FD Error State Passive flag  Only used if mb_FDF = true
+            public List<Byte> mi_Data = new List<Byte>();
+
+            public CanPacket Clone()
+            {
+                CanPacket i_Clone = new CanPacket();
+                i_Clone.ms32_ID  = ms32_ID;
+                i_Clone.mb_29bit = mb_29bit;
+                i_Clone.mb_RTR   = mb_RTR;
+                i_Clone.mb_FDF   = mb_FDF;
+                i_Clone.mb_BRS   = mb_BRS;
+                i_Clone.mb_ESI   = mb_ESI;
+                i_Clone.mi_Data.AddRange(mi_Data);
+                return i_Clone;
+            }
 
             public override string ToString()
             {
@@ -754,13 +776,17 @@ namespace CANable
         // Adapt this to the latest available CANable 2.5 firmware version.
         // It shows an error to upload the latest firmware to the adapter.
         // The version number is BCD encoded (0x251118 = 18.nov.2025)
-        public const int MIN_FIRMWARE = 0x260113;
+        const int MIN_FIRMWARE = 0x260304;
+
+        // The firmware update interface is always interface 1
+        const Byte DFU_INTERFACE = 1;
 
         WinUSB         mi_WinUSB;
         kDevInfo       mk_Info;
         StringBuilder  ms_Details;
         cPipeIn        mi_PipeIn;
         cPipeOut       mi_PipeOut;
+        Byte           mu8_Channel;
         bool           mb_InitDone;
         bool           mb_Started;
         bool           mb_BaudFDSet;
@@ -850,12 +876,14 @@ namespace CANable
             ms_Details.AppendFormat("USB Vendor:           \"{0}\"\n", mk_Info.ms_Vendor);
             ms_Details.AppendFormat("USB Product:          \"{0}\"\n", mk_Info.ms_Product);
             ms_Details.AppendFormat("USB Serial  Nº:       \"{0}\"\n", mk_Info.ms_SerialNo);
-            ms_Details.AppendFormat("USB Interface:        \"{0}\"\n", mk_Info.ms_Interface);
+            ms_Details.AppendFormat("USB Interface Name:   \"{0}\"\n", mk_Info.ms_Interface);
             ms_Details.AppendFormat("USB Vendor  ID:       {0:X4}\n",  mk_Info.mk_DeviceDescr.idVendor);
             ms_Details.AppendFormat("USB Product ID:       {0:X4}\n",  mk_Info.mk_DeviceDescr.idProduct);
             ms_Details.AppendFormat("USB Device Version:   {0}\n",     Utils.FormatBcdVersion(mk_Info.mk_DeviceDescr.bcdDevice));
 
-            if (mi_WinUSB.Interface.Number == 1)
+            // ----------------- DFU --------------------
+
+            if (mi_WinUSB.Interface.Number == DFU_INTERFACE)
             {
                 // Interface 1 (DFU) has no IN / OUT endpoints. It supports only SETUP requests.
                 if (mi_WinUSB.Interface.EndpointCount != 0)
@@ -865,7 +893,17 @@ namespace CANable
                 return;
             }
 
-            // ------------- Pipes ------------------
+            // --------------- Channel ------------------
+
+            // Interface 0 -> Channel 0
+            // Interface 1 -> DFU
+            // Interface 2 -> Channel 1
+            // Interface 3 -> Channel 2
+            mu8_Channel = mi_WinUSB.Interface.Number; 
+            if (mu8_Channel > 0)
+                mu8_Channel --;
+
+            // --------------- Pipes ------------------
 
             // Interface 0 (Candlelight) must have exactly 2 endpoints: IN (81) and OUT (02)
             if (mi_WinUSB.Interface.EndpointCount != 2)
@@ -901,16 +939,16 @@ namespace CANable
 
             // ------------------ Legacy ------------------
 
-            mk_Info.mk_Capability = CtrlTransfer<kCapabilityClassic>((Byte)eUsbRequest.GetCapability, eDirection.In, 0); 
+            mk_Info.mk_Capability = CtrlTransfer<kCapabilityClassic>((Byte)eUsbRequest.GetCapability, eDirection.In, mu8_Channel); 
 
             mk_Info.mb_IsElmueSoft =  (mk_Info.mk_Capability.me_Feature & eDeviceFlags.ProtocolElmue) > 0;
             mk_Info.mb_SupportsFD  = ((mk_Info.mk_Capability.me_Feature & eDeviceFlags.CanFD)         > 0 && 
                                       (mk_Info.mk_Capability.me_Feature & eDeviceFlags.BitTimingFD)   > 0);
 
             if (mk_Info.mb_SupportsFD)
-                mk_Info.mk_CapabilityFD = CtrlTransfer<kCapabilityFD> ((Byte)eUsbRequest.GetCapabilityFD,  eDirection.In, 0); 
+                mk_Info.mk_CapabilityFD = CtrlTransfer<kCapabilityFD> ((Byte)eUsbRequest.GetCapabilityFD,  eDirection.In, mu8_Channel); 
 
-            mk_Info.mk_DeviceVersion    = CtrlTransfer<kDeviceVersion>((Byte)eUsbRequest.GetDeviceVersion, eDirection.In, 0); 
+            mk_Info.mk_DeviceVersion    = CtrlTransfer<kDeviceVersion>((Byte)eUsbRequest.GetDeviceVersion, eDirection.In, mu8_Channel); 
 
             ms_Details.AppendFormat("Hardware Version:     {0}\n", mk_Info.mk_DeviceVersion.HardVersion);
             ms_Details.AppendFormat("Firmware Version:     {0}\n", mk_Info.mk_DeviceVersion.SoftVersion);
@@ -925,16 +963,19 @@ namespace CANable
 
             // ------------------ ElmüSoft ------------------
 
-            mk_Info.mk_BoardInfo = CtrlTransfer<kBoardInfo>((Byte)eUsbRequest.GetBoardInfo, eDirection.In, 0); 
+            mk_Info.mk_BoardInfo = CtrlTransfer<kBoardInfo>((Byte)eUsbRequest.GetBoardInfo, eDirection.In, mu8_Channel); 
             UInt16 u16_PinStatus = CtrlTransfer<UInt16>((Byte)eUsbRequest.GetPinStatus, eDirection.In, (UInt16)ePinID.BOOT0);
             bool   b_Enabled     = (u16_PinStatus & (UInt16)ePinStatus.Enabled) > 0;
 
+            bool b_UseQuartz = (mk_Info.mk_BoardInfo.me_BoardFlags & eBoardFlags.Quartz_In_Use) > 0;
 
             ms_Details.AppendFormat("Target Board:         {0}\n", mk_Info.mk_BoardInfo.BoardName);
             ms_Details.AppendFormat("Processor:            {0}, CAN Clock: {1} MHz, DeviceID: 0x{2:X}\n",
                                                                    mk_Info.mk_BoardInfo.McuName,
                                                                    mk_Info.mk_Capability.ms32_CanClock / 1000000,
                                                                    mk_Info.mk_BoardInfo.mu16_McuDeviceID);
+            ms_Details.AppendFormat("Quartz in use:        {0}\n", b_UseQuartz ? "Yes" : "No");
+            ms_Details.AppendFormat("CAN Channel:          {0} of {1}\n", mu8_Channel + 1, mk_Info.mk_DeviceVersion.mu8_Icount + 1);
             ms_Details.AppendFormat("Pin BOOT0:            {0}\n", b_Enabled ? "Enabled" : "Disabled");
 
             if (mk_Info.mk_DeviceVersion.mu32_SoftVersionBcd < MIN_FIRMWARE)
@@ -958,8 +999,8 @@ namespace CANable
         /// </summary>
         public void SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, out String s_Display)
         {
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 0)
-                throw new Exception("The device must be opened for interface 0 (Candlelight)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+                throw new Exception("The device must be opened for the Candlelight interface.");
 
             if (b_FD && !mk_Info.mb_SupportsFD)
                 throw new Exception("The board does not support CAN FD.");
@@ -978,7 +1019,7 @@ namespace CANable
             k_Timing.ms32_Sjw  = Math.Min(s32_Seg1, s32_Seg2); // Synchronization Jump Width (see "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation")
 
             eUsbRequest e_Requ = b_FD ? eUsbRequest.SetBitTimingFD : eUsbRequest.SetBitTiming;
-            CtrlTransfer((Byte)e_Requ, eDirection.Out, 0, k_Timing);
+            CtrlTransfer((Byte)e_Requ, eDirection.Out, mu8_Channel, k_Timing);
 
             int s32_TotTQ  = 1 + s32_Seg1 + s32_Seg2;
             int s32_Baud   = mk_Info.mk_Capability.ms32_CanClock / s32_BRP / s32_TotTQ;
@@ -1004,8 +1045,8 @@ namespace CANable
         /// </summary>
         public void AddMaskFilter(bool b_29bit, int s32_Filter, int s32_Mask)
         {
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 0)
-                throw new Exception("The device must be opened for interface 0 (Candlelight)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+                throw new Exception("The device must be opened for the Candlelight interface.");
 
             kFilter k_Filter;
             k_Filter.ms32_Filter    = s32_Filter;
@@ -1014,7 +1055,7 @@ namespace CANable
             k_Filter.ms32_Reserved1 = 0;
             k_Filter.ms32_Reserved2 = 0;
 
-            CtrlTransfer((Byte)eUsbRequest.SetFilter, eDirection.Out, 0, k_Filter);
+            CtrlTransfer((Byte)eUsbRequest.SetFilter, eDirection.Out, mu8_Channel, k_Filter);
         }
 
         // -------------------------------------------------------------------------------------
@@ -1025,11 +1066,11 @@ namespace CANable
         /// </summary>
         public void Start(eDeviceFlags e_Flags)
         {
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 0)
-                throw new Exception("The device must be opened for interface 0 (Candlelight)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+                throw new Exception("The device must be opened for the Candlelight interface.");
 
             e_Flags |= eDeviceFlags.ProtocolElmue;
-            CtrlTransfer((Byte)eUsbRequest.SetDeviceMode, eDirection.Out, 0, new kDeviceMode(eDevMode.Start, e_Flags));
+            CtrlTransfer((Byte)eUsbRequest.SetDeviceMode, eDirection.Out, mu8_Channel, new kDeviceMode(eDevMode.Start, e_Flags));
 
             mb_McuTimestamp = (e_Flags & eDeviceFlags.HwTimestamp) > 0;
             mb_Started = true;
@@ -1044,7 +1085,8 @@ namespace CANable
 
             // IMPORTANT: Set flag ProtocolElmue always to make sure that the device can send debug messages.
             // Should there be a legacy device connected, it will ignore all flags sent with GS_ModeReset
-            CtrlTransfer((Byte)eUsbRequest.SetDeviceMode, eDirection.Out, 0, new kDeviceMode(eDevMode.Reset, eDeviceFlags.ProtocolElmue));
+            CtrlTransfer((Byte)eUsbRequest.SetDeviceMode, eDirection.Out, mu8_Channel, 
+                         new kDeviceMode(eDevMode.Reset, eDeviceFlags.ProtocolElmue));
         }
 
         /// <summary>
@@ -1052,11 +1094,11 @@ namespace CANable
         /// </summary>
         public void Identify(bool b_Blink)
         {
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 0)
-                throw new Exception("The device must be opened for interface 0 (Candlelight)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+                throw new Exception("The device must be opened for the Candlelight interface.");
 
             int s32_Mode = b_Blink ? 1 : 0; 
-            CtrlTransfer((Byte)eUsbRequest.Identify, eDirection.Out, 0, s32_Mode);
+            CtrlTransfer((Byte)eUsbRequest.Identify, eDirection.Out, mu8_Channel, s32_Mode);
         }
 
         /// <summary>
@@ -1065,10 +1107,10 @@ namespace CANable
         /// </summary>
         public void EnableBusLoadReport(Byte u8_Interval)
         {
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 0)
-                throw new Exception("The device must be opened for interface 0 (Candlelight)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+                throw new Exception("The device must be opened for the Candlelight interface.");
 
-            CtrlTransfer((Byte)eUsbRequest.SetBusLoadReport, eDirection.Out, 0, u8_Interval);
+            CtrlTransfer((Byte)eUsbRequest.SetBusLoadReport, eDirection.Out, mu8_Channel, u8_Interval);
         }
 
         /// <summary>
@@ -1078,15 +1120,15 @@ namespace CANable
         /// </summary>
         public void DisableBootPin()
         {
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 0)
-                throw new Exception("The device must be opened for interface 0 (Candlelight)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+                throw new Exception("The device must be opened for the Candlelight interface.");
 
             kPinStatus k_PinStatus;
             k_PinStatus.me_Operation    = ePinOperation.Disable;
             k_PinStatus.me_PinID        = ePinID.BOOT0;
             k_PinStatus.ms32_Reserved1  = 0;
             k_PinStatus.ms32_Reserved2  = 0;
-            CtrlTransfer((Byte)eUsbRequest.SetPinStatus, eDirection.Out, 0, k_PinStatus);
+            CtrlTransfer((Byte)eUsbRequest.SetPinStatus, eDirection.Out, mu8_Channel, k_PinStatus);
         }
 
         /// <summary>
@@ -1094,8 +1136,8 @@ namespace CANable
         /// </summary>
         public bool IsBootPinEnabled()
         {
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 0)
-                throw new Exception("The device must be opened for interface 0 (Candlelight)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+                throw new Exception("The device must be opened for the Candlelight interface.");
 
             // The requested pin ID must be transmitted in SETUP.wValue because a USB IN request cannot otherwise transmit parameters to the firmware.
             UInt16  u16_PinStatus = CtrlTransfer<UInt16>((Byte)eUsbRequest.GetPinStatus, eDirection.In, (UInt16)ePinID.BOOT0);
@@ -1113,20 +1155,20 @@ namespace CANable
         {
             eSetupType e_Type;
             String s_Request;
-            if (mi_WinUSB.Interface.Number == 0) // Candlelight
-            {
-                e_Type = eSetupType.Vendor;
-                s_Request = ((eUsbRequest)u8_Request).ToString();
-            }
-            else // DFU
+            if (mi_WinUSB.Interface.Number == DFU_INTERFACE)
             {
                 e_Type = eSetupType.Class;
                 s_Request = ((eDfuRequest)u8_Request).ToString();
             }
+            else // Candlelight
+            {
+                e_Type = eSetupType.Vendor;
+                s_Request = ((eUsbRequest)u8_Request).ToString();
+            }
 
             // The old firmware checks that wValue is a valid channel (must be == 0)
-            // wValue is only used for ReqGetPinStatus
-            UInt16 wValue = u16_Value;
+            // wValue = Channel / PinID for ELM_ReqGetPinStatus
+            UInt16 wValue = u16_Value; 
             // wIndex is the interface number (0 = Candlelight, 1 = DFU)
             UInt16 wIndex = mi_WinUSB.Interface.Number;
 
@@ -1139,7 +1181,7 @@ namespace CANable
             int s32_CmdError = mi_WinUSB.CtrlTansfer(eSetupRecip.Interface, e_Type, e_Dir, 
                                                      u8_Request, wValue, wIndex, ref u8_Buffer);     
             // The DFU interface has no feedback
-            if (mi_WinUSB.Interface.Number == 0)
+            if (mi_WinUSB.Interface.Number != DFU_INTERFACE)
             {
                 // ---------- Get Feedback -------------
 
@@ -1193,6 +1235,9 @@ namespace CANable
         public void SendPacket(CanPacket i_Packet, out Int64 s64_WinTimestamp, out Byte u8_EchoMarker)
         {
             const Byte PADDING = 0;
+
+            // original packet is modified here and stored in mi_TxEcho --> cloning required
+            i_Packet = i_Packet.Clone();
 
             if (!mb_InitDone || !mb_Started)
                 throw new Exception("The device must be open and started.");
@@ -1503,8 +1548,8 @@ namespace CANable
         {
             b_ReconnectRequired = false;
 
-            if (!mb_InitDone || mi_WinUSB.Interface.Number != 1)
-                throw new Exception("The device must be opened for interface 1 (DFU)");
+            if (!mb_InitDone || mi_WinUSB.Interface.Number != DFU_INTERFACE)
+                throw new Exception("The device must be opened for the DFU interface.");
 
             // The legacy firmware would have entered immediately in DFU mode and CtrlTransfer() would have returned error 31 here.
             // But the CANable 2.5 firmware responds correctly to all SETUP requests because it makes a delay of 300 ms before entering DFU mode.

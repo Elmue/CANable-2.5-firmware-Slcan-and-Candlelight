@@ -173,8 +173,6 @@ namespace CANable
                     break;
                 }
 
-                String s_DevicePath = new String(k_DetailData.chrDevicePath);
-
                 // Get display name
                 uint u32_RegDataType;
                 if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, ref k_DevInfoData, SPDRP_DEVICEDESC, out u32_RegDataType, 
@@ -184,7 +182,28 @@ namespace CANable
                     break;
                 }
 
-                i_DeviceList.Add(new kUsbDevice(s_NameBuf.ToString(), s_DevicePath.TrimEnd('\0')));
+                String s_DevicePath = new String(k_DetailData.chrDevicePath).TrimEnd('\0').ToUpper();;
+                String s_DispName   = s_NameBuf.ToString();
+
+                // Append interface number for multi-interface adapters
+                int Pos = s_DevicePath.IndexOf("&MI_0");
+                if (Pos > 0)
+                {
+                    int s32_Interface;
+                    if (int.TryParse(s_DevicePath.Substring(Pos + 5, 1), out s32_Interface))
+                    {
+                        // MI_00 --> Candlelight 1
+                        // MI_01 --> DFU
+                        // MI_02 --> Candlelight 2
+                        // MI_03 --> Candlelight 3
+                        if (s32_Interface == 0)
+                            s32_Interface = 1;  // display one-based interface number
+
+                        s_DispName += String.Format(" [{0}]", s32_Interface);
+                    }
+                }
+
+                i_DeviceList.Add(new kUsbDevice(s_DispName, s_DevicePath));
             }
 
             SetupDiDestroyDeviceInfoList(h_DevInfo);

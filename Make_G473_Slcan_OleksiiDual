@@ -1,0 +1,26 @@
+
+# CANable Slcan Makefile
+
+######################################
+#
+# This makefile compiles for the dual channel CANable board from 
+# Oleksii which has a 8 MHz quartz
+#
+# Compile this by typing:
+# make -s -f Make_G473_Slcan_OleksiiDual
+#
+#######################################
+
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
+
+TARGET_FIRMWARE = Slcan
+TARGET_BOARD    = OleksiiDual
+TARGET_MCU      = STM32G473xx
+
+# This board has a 8 MHz quartz.
+QUARTZ_FREQU    = 8000000
+
+# name of the compiled files (*.bin, *.hex, *.elf)
+TARGET_FILE = STM32G473_Slcan2.5_OleksiiDual
+
+include GCC_Rules.mk

@@ -6,10 +6,21 @@
 # user configuration:
 #######################################
 
+# Define the firmware version in BCD format.
+# Version 0x250914 is displayed as "25.09.14" and means 14th september 2025
+# The year and month are stored in the device descriptor.
+# The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
+# Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
+FIRMWARE_VERSION = 0x260304
+
 # TARGET_BOARD, TARGET_FIRMWARE, TARGET_FILE and TARGET_MCU must be set in the main makefile before including this file
 
 # directory to place output files in
 BUILD_DIR = Build_$(TARGET_MCU)_$(TARGET_FIRMWARE)_$(TARGET_BOARD)
+
+# File trunk (without extension) of build files: *.bin, *.hex, *.elf
+# Example: Trunk = "STM32G431_Slcan2.5_Multiboard_0x250914"
+BUILD_TRUNK = $(BUILD_DIR)/$(TARGET_FILE)_$(FIRMWARE_VERSION)
 
 # directory to place modified template files
 CONFIG_DIR = STM32/$(TARGET_MCU)_Config
@@ -18,7 +29,8 @@ CONFIG_DIR = STM32/$(TARGET_MCU)_Config
 LD_SCRIPT = $(CONFIG_DIR)/$(TARGET_MCU).ld
 
 # user C flags (enable warnings, enable debug info)
-USER_CFLAGS = -Wall -g -ffunction-sections -fdata-sections -Os
+# Flag -O3 optimizes for higher speed, Flag -Os optimizes for smaller size
+USER_CFLAGS = -Wall -g -ffunction-sections -fdata-sections -O3
 
 # user LD flags
 USER_LDFLAGS = -fno-exceptions -ffunction-sections -fdata-sections -Wl,--gc-sections
@@ -79,12 +91,13 @@ CFLAGS += -DTARGET_BOARD=\"$(TARGET_BOARD)\"
 CFLAGS += -DTARGET_FIRMWARE=\"$(TARGET_FIRMWARE)\"
 CFLAGS += -DTARGET_MCU=\"$(TARGET_MCU)\"
 CFLAGS += -DHSE_VALUE=$(QUARTZ_FREQU)
+CFLAGS += -DFIRMWARE_VERSION_BCD=$(FIRMWARE_VERSION)
 
 # default action: build the user application
-all: $(BUILD_DIR)/$(TARGET_FILE).bin $(BUILD_DIR)/$(TARGET_FILE).hex
+all: $(BUILD_TRUNK).bin $(BUILD_TRUNK).hex
 
 flash: all
-	sudo dfu-util -w -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000:leave -D $(BUILD_DIR)/$(TARGET_FILE).bin
+	sudo dfu-util -w -d 0483:df11 -c 1 -i 0 -a 0 -s 0x08000000:leave -D $(BUILD_TRUNK).bin
 
 
 #######################################
@@ -125,7 +138,7 @@ FIRM_OBJECTS += $(addprefix $(FIRM_BUILD_DIR)/,$(notdir $(FIRM_SOURCES:.c=.o)))
 firm: $(FIRM_OBJECTS)
 
 $(FIRM_BUILD_DIR)/%.o: Source/$(TARGET_FIRMWARE)/%.c | $(FIRM_BUILD_DIR)
-	$(CC) -Os $(CFLAGS) -c -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(FIRM_BUILD_DIR):
 	@echo $(FIRM_BUILD_DIR)
@@ -136,7 +149,7 @@ $(FIRM_BUILD_DIR):
 #######################################
 
 # list of common source files
-SOURCES = main.c system_stm32g4xx.c system.c interrupts.c can.c error.c led.c dfu.c utils.c usb_ctrlreq.c usb_ioreq.c usb_core.c usb_lowlevel.c usb_desc.c 
+SOURCES = main.c system_stm32g4xx.c system.c interrupts.c can.c error.c led.c dfu.c utils.c usb_ctrlreq.c usb_ioreq.c usb_core.c usb_lowlevel.c 
 
 # list of user program objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(SOURCES:.c=.o)))
@@ -147,23 +160,23 @@ OBJECTS += $(BUILD_DIR)/startup_$(TARGET_MCU).o
 LIBS = -lstm32cube -lc -lm -lnosys
 LDFLAGS = -T $(LD_SCRIPT) -L $(CUBELIB_BUILD_DIR) -static $(LIBS) $(USER_LDFLAGS)
 
-$(BUILD_DIR)/$(TARGET_FILE).hex: $(BUILD_DIR)/$(TARGET_FILE).elf
-	$(OBJCOPY) -O ihex $(BUILD_DIR)/$(TARGET_FILE).elf $@
+$(BUILD_TRUNK).hex: $(BUILD_TRUNK).elf
+	$(OBJCOPY) -O ihex $(BUILD_TRUNK).elf $@
 
-$(BUILD_DIR)/$(TARGET_FILE).bin: $(BUILD_DIR)/$(TARGET_FILE).elf
-	$(OBJCOPY) -O binary $(BUILD_DIR)/$(TARGET_FILE).elf $@
+$(BUILD_TRUNK).bin: $(BUILD_TRUNK).elf
+	$(OBJCOPY) -O binary $(BUILD_TRUNK).elf $@
 
-$(BUILD_DIR)/$(TARGET_FILE).elf: $(OBJECTS) $(FIRM_OBJECTS) $(CUBELIB)
+$(BUILD_TRUNK).elf: $(OBJECTS) $(FIRM_OBJECTS) $(CUBELIB)
 	$(CC) -o $@ $(CFLAGS) $(OBJECTS) $(FIRM_OBJECTS) \
 		$(LDFLAGS) -Xlinker \
-		-Map=$(BUILD_DIR)/$(TARGET_FILE).map
+		-Map=$(BUILD_TRUNK).map
 	$(SIZE) $@
 
 $(BUILD_DIR)/%.o: Source/%.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -Os -c -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(BUILD_DIR)/%.o: $(CONFIG_DIR)/%.c | $(BUILD_DIR)
-	$(CC) $(CFLAGS) -Os -c -o $@ $^
+	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(BUILD_DIR)/%.o: $(CONFIG_DIR)/%.s | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $^

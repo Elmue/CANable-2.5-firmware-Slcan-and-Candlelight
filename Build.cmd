@@ -20,15 +20,18 @@ echo A: Build all boards
 echo B: Build Slcan Multiboard
 echo C: Build Slcan Jhoinrch
 echo D: Build Slcan Openlightlabs
-echo E: Build Candlelight Multiboard
-echo F: Build Candlelight Jhoinrch
-echo G: Build Candlelight Openlightlabs
+echo E: Build Slcan OleksiiSolo
+echo F: Build Slcan OleksiiDual
+echo G: Build Candlelight Multiboard
+echo H: Build Candlelight Jhoinrch
+echo I: Build Candlelight Openlightlabs
+echo K: Build Candlelight OleksiiSolo
+echo L: Build Candlelight OleksiiDual
 echo X: Exit
 echo ----------------------------------
-choice /C XABCDEFG /N /M "Press a key: "
+choice /C XABCDEFGHIKL /N /M "Press a key: "
 
-rem 'X'
-if %errorlevel%==1 exit
+cls
 
 rem The compiler fails to correctly detect changes in sourcecode --> always built from scratch.
 rem Delete all subfolders "Build_STM*"
@@ -36,8 +39,11 @@ for /D %%i in ("Build_STM*") do (
     rmdir /S /Q "%%~nxi"
 )
 
+rem 'X'
+if %errorlevel%==1 exit
+
 rem 'A'
-if %errorlevel%==2 (
+if %errorlevel% == 2 (
     rem compile all files "Make_*" in the current folder
     for %%f in ("Make_*") do (
         call :Compile %%f
@@ -45,12 +51,16 @@ if %errorlevel%==2 (
 )
 
 rem 'B', 'C',...
-if %errorlevel%==3 call :Compile  Make_G431_Slcan_Multiboard
-if %errorlevel%==4 call :Compile  Make_G431_Slcan_Jhoinrch
-if %errorlevel%==5 call :Compile  Make_G431_Slcan_Openlightlabs
-if %errorlevel%==6 call :Compile  Make_G431_Candle_Multiboard
-if %errorlevel%==7 call :Compile  Make_G431_Candle_Jhoinrch
-if %errorlevel%==8 call :Compile  Make_G431_Candle_Openlightlabs
+if %errorlevel% ==  3 call :Compile  Make_G431_Slcan_Multiboard
+if %errorlevel% ==  4 call :Compile  Make_G431_Slcan_Jhoinrch
+if %errorlevel% ==  5 call :Compile  Make_G431_Slcan_Openlightlabs
+if %errorlevel% ==  6 call :Compile  Make_G473_Slcan_OleksiiSolo
+if %errorlevel% ==  7 call :Compile  Make_G473_Slcan_OleksiiDual
+if %errorlevel% ==  8 call :Compile  Make_G431_Candle_Multiboard
+if %errorlevel% ==  9 call :Compile  Make_G431_Candle_Jhoinrch
+if %errorlevel% == 10 call :Compile  Make_G431_Candle_Openlightlabs
+if %errorlevel% == 11 call :Compile  Make_G473_Candle_OleksiiSolo
+if %errorlevel% == 12 call :Compile  Make_G473_Candle_OleksiiDual
 
 rem Copy all BIN files to HUD ECU Hacker
 for /D %%i in ("Build_STM*") do (
@@ -60,7 +70,6 @@ for /D %%i in ("Build_STM*") do (
 
 echo:
 goto Loop
-
 
 
 rem function Compile(Makefile)

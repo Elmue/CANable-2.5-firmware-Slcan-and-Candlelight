@@ -321,10 +321,34 @@ namespace CANable
         // 0x11       --> "11"
         // 0x1122     --> "11.22"
         // 0x11223344 --> "11.22.33.44"
+        // 0x00YYMMDD --> "Day.Month.Year"
         public static String FormatBcdVersion(UInt32 u32_Version)
         {
             if (u32_Version == 0)
                 return "0";
+
+            // BCD encoded 0x00YYMMDD
+            if (u32_Version > 0x250101 && u32_Version < 0x991231)
+            {
+                String s_Month = null;
+                switch ((Byte)(u32_Version >> 8))
+                {
+                    case 0x01: s_Month = "Jan"; break;
+                    case 0x02: s_Month = "Feb"; break;
+                    case 0x03: s_Month = "Mar"; break;
+                    case 0x04: s_Month = "Apr"; break;
+                    case 0x05: s_Month = "May"; break;
+                    case 0x06: s_Month = "Jun"; break;
+                    case 0x07: s_Month = "Jul"; break;
+                    case 0x08: s_Month = "Aug"; break;
+                    case 0x09: s_Month = "Sep"; break;
+                    case 0x10: s_Month = "Oct"; break;
+                    case 0x11: s_Month = "Nov"; break;
+                    case 0x12: s_Month = "Dec"; break;
+                }
+                if (s_Month != null)
+                    return String.Format("{0:X}.{1}.{2:X2}", (Byte)u32_Version, s_Month, (Byte)(u32_Version >> 16));
+            }
 
             String s_Version = "";
             for (int i=0; i<4; i++)

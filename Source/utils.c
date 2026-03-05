@@ -9,6 +9,7 @@
 bitlimits limits;
 char      MCU_name[30]; // name is never longer than 24 characters
 
+// called from the main loop
 void utils_init()
 {
     // Stupidly the files from ST do not declare any constants for the CAN bitrate ranges.

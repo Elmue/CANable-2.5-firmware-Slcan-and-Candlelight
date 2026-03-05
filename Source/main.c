@@ -34,8 +34,9 @@ int main(void)
     can_init();
     utils_init();
     control_init(); // AFTER utils_init()
-    
-    // This loop runs approx 100 times in one millisecond
+       
+    // This loop runs eternally approx 100 times in one millisecond
+    int channel = 0;    
     while (true)
     {
         if (HAL_PCD_Is_Suspended()) // computer is in sleep mode (USB off)
@@ -58,10 +59,10 @@ int main(void)
         }
         
         uint32_t tick_now = HAL_GetTick();        
-        led_process(tick_now);
-        buf_process(tick_now);
-        control_process(tick_now); // calls error_is_report_due() --> First report the error "Bus Off"
-        can_process(tick_now);     // AFTER control!              --> After recover from Bus Off
+        led_process    (channel, tick_now);
+        buf_process    (channel, tick_now);
+        control_process(channel, tick_now); // calls error_is_report_due() --> First report the error "Bus Off"
+        can_process    (channel, tick_now); // AFTER control!              --> After recover from Bus Off
         
         if (tick_now - tick_last >= 100)
         {
@@ -69,6 +70,9 @@ int main(void)
             can_timer_100ms();
             dfu_timer_100ms(tick_now);
         }
+        
+        // iterate through all channels if multi-channel board
+        channel = (channel + 1) % CHANNEL_COUNT;
     }
 }
 
