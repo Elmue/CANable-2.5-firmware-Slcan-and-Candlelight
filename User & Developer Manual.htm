@@ -985,7 +985,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <p>
 <a name="Multi_Channel"></a>
 <h3>Multi-Channel Adapters</h3>
-<div>The new <b>Candlelight</b> firmware supports multiple CAN channels provided for example by the STM32G<b>473</b> processor.</div>
+<div>The new <b>CANable 2.5</b> firmware supports multiple CAN channels provided for example by the STM32G<b>473</b> processor.</div>
 <div>A firmware version is available for the <a href="https://can-module.com/#dual" target="_blank">Dual Channel Adapter</a> from Oleksii.</div>
 <p>
 <div>The new <b>ElmüSoft</b> Candlelight protocol transfers each CAN channel over a separate USB interface.</div>
@@ -996,7 +996,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <p>
 <div>The operating system treats each CAN channel in the multi-channel adapter as if it was a separate adapter.</div>
 <div>On <b>Windows</b> you can open each interface individually, even from different applications.</div>
-<div>On <b>Linux</b> you can also access individual SocketCAN devices: <code>can0</code>, <code>can1</code>,...</div>
+<div>On <b>Linux</b> you access each SocketCAN device <code>can0</code>, <code>can1</code>,... individually.</div>
 <p>
 <div>The <b>legacy</b> Geschwister Schneider protocol uses only the first USB interface and ignores the others.</div>
 <div>Instead it addresses the CAN channel via <code>kHostFrameLegacy.channel</code>.</div>
