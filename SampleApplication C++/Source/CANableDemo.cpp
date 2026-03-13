@@ -37,20 +37,22 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 #include "CANableDemo.h"
 #include "Candlelight/Candlelight.h"
 
-// true  --> run Candlelight demo
-// false --> run DFU demo
+// true  --> run Candlelight demo (send and receive CAN packets)
+// false --> run DFU demo (switch a device in Candlelight mode into DFU mode, fails if already in DFU mode)
 bool CANDLELIGHT_DEMO = true; 
 
-// true  --> Only packets with 11 bit CAN ID 0x7E8 will be received.
+// true  --> only packets with 11 bit CAN ID 0x7E8 will be received.
+// false --> all packets are received
 bool SET_FILTERS = false;
 
-// Enable transfer of timestamps from the firmware (deprecated!)
+// true  --> enable transfer of timestamps from the firmware (deprecated!)
+// false --> create performance counter timestamps 
 bool HW_TIMESTAMP = false;
 
 // forward declarations
 void CandlelightDemo();
 void DfuDemo();
-BOOL OpenDevice(BYTE u8_Interface);
+bool OpenDevice();
 
 // global instances
 Candlelight gi_Candle;
@@ -143,8 +145,8 @@ void CandlelightDemo()
     PrintConsole(YELLOW, L"               CANable 2.5 Candlelight C++ Demo by ElmüSoft                  \n");
     PrintConsole(YELLOW, L"=============================================================================\n");
 
-    // open interface 0
-    if (!OpenDevice(0))
+    // open Candlelight interface
+    if (!OpenDevice())
         return;
 
     // -----------------------------------------
@@ -393,8 +395,8 @@ void DfuDemo()
     PrintConsole(YELLOW, L"                 CANable 2.5 Enter DFU C++ Demo by ElmüSoft                  \n");
     PrintConsole(YELLOW, L"=============================================================================\n");
 
-    // open interface 1
-    if (!OpenDevice(1))
+    // Open DFU interface
+    if (!OpenDevice())
         return;
 
     DWORD u32_Error = gi_Candle.EnterDfuMode();
@@ -409,51 +411,59 @@ void DfuDemo()
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-BOOL OpenDevice(BYTE u8_Interface)
+// CANDLELIGHT_DEMO = true  --> Candlelight
+// CANDLELIGHT_DEMO = false --> DFU
+bool OpenDevice()
 {
-    CStringArray i_DispNames, i_DevicePaths;
-    DWORD u32_Error = gi_Candle.EnumDevices(u8_Interface, &i_DispNames, &i_DevicePaths);
+    CArray<cUsbDevice, cUsbDevice> i_Devices;
+    DWORD u32_Error = gi_Candle.EnumDevices(CANDLELIGHT_DEMO, &i_Devices);
     if (u32_Error)
     {
         PrintConsole(RED, L"Error enumerating USB devices. %s\n", gi_Candle.FormatLastError(u32_Error));
-        return FALSE;
+        return false;
     }
 
-    if (i_DispNames.GetCount() == 0)
+    if (i_Devices.GetCount() == 0)
     {
         PrintConsole(RED, L"\nNo Candlelight device connected or in wrong operatiom mode or WinUSB driver not installed correctly.\n"
                           L"Legacy Candlelight firmware has bugs that prevent the correct driver installation.\n"
                           L"Make sure you have the new CANable 2.5 firmware from ElmüSoft.\n");
-        return FALSE;
+        return false;
     }
 
     // -----------------------------------------
 
     gs32_DeviceIndex = 0;
-    if (i_DispNames.GetCount() > 1) // 2 ore more devices connected
+    if (i_Devices.GetCount() > 1) // 2 or more devices connected
     {
         while (true)
         {
-            PrintConsole(LIME, L"\nPlease select one of the devices:\n");
+            PrintConsole(LIME, L"\nPlease select one of the devices:\n\n");
 
-            for (int i=0; i<i_DispNames.GetCount(); i++)
+            for (int i=0; i<i_Devices.GetCount(); i++)
             {
-                PrintConsole(GREY, L"%u.) %s\n", i+1, i_DispNames[i]);
+                cUsbDevice i_Dev = i_Devices[i];
+                PrintConsole(WHITE, L"%u.) Name: %s - Serial Nº: %s", i+1, i_Dev.ms_DispName, i_Dev.ms_SerialNo);
+
+                if (CANDLELIGHT_DEMO) // DFU devices have no channels
+                    PrintConsole(WHITE, L" - CAN Channel: %d", i_Dev.ms32_Channel);
+
+                PrintConsole(WHITE, L"\n");
             }
             gs32_DeviceIndex = _getch() - '1';
 
-            if (gs32_DeviceIndex >= 0 && gs32_DeviceIndex < i_DispNames.GetCount()) 
+            if (gs32_DeviceIndex >= 0 && gs32_DeviceIndex < i_Devices.GetCount()) 
                 break;
             
-            PrintConsole(RED, L"Invalid key!\n");
+            PrintConsole(RED, L"\nInvalid key!\n");
         }
     }
    
-    PrintConsole(GREY, L"\nDevice Path: \"%s\"\n", i_DevicePaths[gs32_DeviceIndex]);
+    PrintConsole(GREY, L"\nDevice Path: \"%s\"\n", i_Devices[gs32_DeviceIndex].ms_DevPath);
 
     // -----------------------------------------
 
-    u32_Error = gi_Candle.Open(i_DevicePaths[gs32_DeviceIndex]);
+    u32_Error = gi_Candle.Open(i_Devices[gs32_DeviceIndex].ms_DevPath);
     gk_Info   = gi_Candle.GetDeviceInfo();
 
     PrintConsole(GREY, gi_Candle.GetDetails());
@@ -461,7 +471,7 @@ BOOL OpenDevice(BYTE u8_Interface)
     if (u32_Error)
     {
         PrintConsole(RED, L"\n%s\n", gi_Candle.FormatLastError(u32_Error));
-        return FALSE;
+        return false;
     }
-    return TRUE;
+    return true;
 }

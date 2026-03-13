@@ -40,7 +40,7 @@ using System.Collections.Generic;
 using System.Text;
 
 using WinUSB              = CANable.WinUSB;
-using kUsbDevice          = CANable.SetupApi.kUsbDevice;
+using cUsbDevice          = CANable.SetupApi.cUsbDevice;
 using SetupApi            = CANable.SetupApi;
 using Candlelight         = CANable.Candlelight;
 using CanPacket           = CANable.Candlelight.CanPacket;
@@ -62,14 +62,16 @@ namespace CandlelightDemo
 {
 class Program
 {
-    // true  --> run Candlelight demo
-    // false --> run DFU demo
+    // true  --> run Candlelight demo (send and receive CAN packets)
+    // false --> run DFU demo (switch a device in Candlelight mode into DFU mode, fails if already in DFU mode)
     static bool CANDLELIGHT_DEMO = true; 
 
-    // true  --> Only packets with 11 bit CAN ID 0x7E8 will be received.
+    // true  --> only packets with the 11 bit CAN ID 0x7E8 will be received.
+    // false --> all packets are received
     static bool SET_FILTERS = false;
 
-    // Enable transfer of timestamps from the firmware (deprecated!)
+    // true  --> enable transfer of timestamps from the firmware (deprecated!)
+    // false --> create performance counter timestamps 
     static bool HW_TIMESTAMP = false;
 
     static Candlelight mi_Candle = new Candlelight();
@@ -111,8 +113,8 @@ class Program
         Print(ConsoleColor.Yellow, "                CANable 2.5 Candlelight C# Demo by ElmüSoft                  \n");
         Print(ConsoleColor.Yellow, "=============================================================================\n");
 
-        // open interface 0
-        if (!OpenDevice(0))
+        // open Candlelight interface
+        if (!OpenDevice())
             return;
 
         // -----------------------------------------
@@ -352,14 +354,19 @@ class Program
         } // while()
     }
 
+    /// <summary>
+    /// ATTENTION:
+    /// This works only if the device is in Candlelight mode.
+    /// If the device is already in DFU mode it will fail.
+    /// </summary>
     static void DfuDemo()
     {
         Print(ConsoleColor.Yellow, "=============================================================================\n");
         Print(ConsoleColor.Yellow, "                 CANable 2.5 Enter DFU C# Demo by ElmüSoft                   \n");
         Print(ConsoleColor.Yellow, "=============================================================================\n");
 
-        // open interface 1
-        if (!OpenDevice(1))
+        // Open DFU interface
+        if (!OpenDevice())
             return;
 
         try
@@ -385,13 +392,15 @@ class Program
 
     /// <summary>
     /// Does not throw
+    /// CANDLELIGHT_DEMO = true  --> Candlelight
+    /// CANDLELIGHT_DEMO = false --> DFU
     /// </summary>
-    static bool OpenDevice(Byte u8_Interface)
+    static bool OpenDevice()
     {
-        List<kUsbDevice> i_Devices;
+        List<cUsbDevice> i_Devices;
         try
         {
-            i_Devices = SetupApi.EnumerateUsbDevices(u8_Interface);
+            i_Devices = SetupApi.EnumerateUsbDevices(CANDLELIGHT_DEMO);
         }
         catch (Exception Ex)
         {
@@ -410,35 +419,41 @@ class Program
         // -----------------------------------------
 
         ms32_DeviceIndex = 0;
-        if (i_Devices.Count > 1) // 2 ore more devices connected
+        if (i_Devices.Count > 1) // 2 or more devices connected
         {
             while (true)
             {
-                Print(ConsoleColor.Green, "\nPlease select one of the devices:\n");
+                Print(ConsoleColor.Green, "\nPlease select one of the devices:\n\n");
 
                 for (int i=0; i<i_Devices.Count; i++)
                 {
-                    Print(ConsoleColor.Gray, "{0}.) {1}\n", i+1, i_Devices[i]);
+                    cUsbDevice i_Dev = i_Devices[i];
+                    Print(ConsoleColor.White, "{0}.) Name: {1} - Serial Nº: {2}", i+1, i_Dev.ms_DispName, i_Dev.ms_SerialNo);
+
+                    if (CANDLELIGHT_DEMO) // DFU devices have no channels
+                        Print(ConsoleColor.White, " - CAN Channel: {0}", i_Dev.ms32_Channel);
+
+                    Print(ConsoleColor.White, "\n");
                 }
 
-                ConsoleKeyInfo k_Key = Console.ReadKey();
+                ConsoleKeyInfo k_Key = Console.ReadKey(true);
                 ms32_DeviceIndex = k_Key.KeyChar - '1';
 
                 if (ms32_DeviceIndex >= 0 && ms32_DeviceIndex < i_Devices.Count) 
                     break;
             
-                Print(ConsoleColor.Red, "Invalid key!\n");
+                Print(ConsoleColor.Red, "\nInvalid key!\n");
             }
         }
    
-        Print(ConsoleColor.Gray, "\nDevice Path: \"{0}\"\n", i_Devices[ms32_DeviceIndex].NtPath);
+        Print(ConsoleColor.Gray, "\nDevice Path: \"{0}\"\n", i_Devices[ms32_DeviceIndex].ms_DevPath);
 
         // -----------------------------------------
 
         Exception i_Exception = null;
         try
         {
-            mi_Candle.Open(i_Devices[ms32_DeviceIndex].NtPath);
+            mi_Candle.Open(i_Devices[ms32_DeviceIndex].ms_DevPath);
         }
         catch (Exception Ex)
         {
@@ -465,5 +480,5 @@ class Program
         Console.ForegroundColor = e_Color;
         Console.Write(String.Format(s_Format, o_Param));
     }
-} // class Program
-} // namespace CANable_Demo
+} // class
+} // namespace

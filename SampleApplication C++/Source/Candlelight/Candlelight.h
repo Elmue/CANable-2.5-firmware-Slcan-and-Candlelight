@@ -27,6 +27,36 @@ typedef enum
     LEVEL_High,   // print error in red
 } eErrorLevel;
 
+class cUsbDevice
+{
+public:
+    CString ms_DispName;
+    CString ms_SerialNo;
+    CString ms_DevPath;
+    int     ms32_Channel; // one-based
+
+    cUsbDevice()
+    {
+        ms32_Channel = 0; // invalid
+    }
+
+    // Compare by Serial Number and then by Channel number for sorting
+    int Compare(const cUsbDevice* pi_Dev2)
+    {
+        int s32_Diff = ms_SerialNo.Compare(pi_Dev2->ms_SerialNo);
+        if (s32_Diff != 0)
+            return s32_Diff;
+            
+        if (ms32_Channel > pi_Dev2->ms32_Channel)
+            return 1;
+
+        if (ms32_Channel < pi_Dev2->ms32_Channel)
+            return -1;
+
+        return 0; // This will never happen
+    }
+};
+
 struct kDevInfo
 {
     WCHAR                    ms_Vendor   [128];
@@ -65,7 +95,7 @@ public:
      Candlelight();
     ~Candlelight();
     // ------------------------------------
-    DWORD    EnumDevices(BYTE u8_Interface, CStringArray* ps_DispNames, CStringArray* ps_DevicePaths);
+    DWORD    EnumDevices(bool b_Candlelight, CArray<cUsbDevice, cUsbDevice>* pi_Devices);
     DWORD    Open(CString s_DevicePath);
     void     Close();
     DWORD    SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, CString* ps_Display);
@@ -95,6 +125,8 @@ public:
     inline CString  GetDetails()    { return ms_Details; }
 
 private:
+    DWORD    EnumSerialNumbers(CMapStringToString* pi_Serials);
+    DWORD    RegReadString(HKEY h_Class, const WCHAR* u16_Path, const WCHAR* u16_Entry, CString* ps_Value);
     DWORD    ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHAR s_String[128]);
     DWORD    CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, void* p_Data, DWORD u32_DataSize);
     DWORD    Reset();

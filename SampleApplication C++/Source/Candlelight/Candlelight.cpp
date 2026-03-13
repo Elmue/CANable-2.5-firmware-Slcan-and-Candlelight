@@ -107,18 +107,15 @@ void Candlelight::Close()
 // --------------------------------------------------------------------
 
 // STEP 1)
-// Returns device name and device path like "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
+// Returns device name, serial and path like "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
 // This function can also enumerate the devices in DFU mode using GUID_CANDLE_DFU, but only if the device has the ElmüSoft firmware.
 // All legacy fimrware versions were buggy and unable to send the two Microsoft OS descriptors correctly, so the driver is not installed.
-DWORD Candlelight::EnumDevices(BYTE u8_Interface, CStringArray* pi_DispNames, CStringArray* pi_DevicePaths)
+DWORD Candlelight::EnumDevices(bool b_Candlelight, CArray<cUsbDevice, cUsbDevice>* pi_Devices)
 {
-    GUID* pk_Guid;
-    switch (u8_Interface)
-    {
-        case 0: pk_Guid = &GUID_CANDLELIGHT; break; // Interface 0 = Candlelight
-        case 1: pk_Guid = &GUID_CANDLE_DFU;  break; // Interface 1 = Firmware Update
-        default: return ERROR_INVALID_PARAMETER;
-    }
+    CMapStringToString i_Serials;
+    EnumSerialNumbers(&i_Serials); // ignore error
+
+    GUID* pk_Guid = b_Candlelight ? &GUID_CANDLELIGHT : &GUID_CANDLE_DFU;
 
     // Enumerate all USB devices with the given GUID that are currently connected
     HDEVINFO h_DevInfo = SetupDiGetClassDevs(pk_Guid, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
@@ -136,7 +133,8 @@ DWORD Candlelight::EnumDevices(BYTE u8_Interface, CStringArray* pi_DispNames, CS
     SP_DEVICE_INTERFACE_DETAIL_DATA_W* pk_DetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA_W*)u8_DetailBuf;
     pk_DetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_W);
 
-    BYTE u8_NameBuf[256];
+    BYTE u8_NameBuf  [256];
+    BYTE u8_Container[100];
 
     for (int Idx=0; true; Idx++)
     {
@@ -156,41 +154,128 @@ DWORD Candlelight::EnumDevices(BYTE u8_Interface, CStringArray* pi_DispNames, CS
             break;
         }
 
-        // Get the display name
-        if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_DEVICEDESC, NULL, u8_NameBuf, sizeof(u8_NameBuf), NULL))
+        // Get name from USB interface descriptor "CAN FD Interface 1" (not available on Windows 7)
+        if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_FRIENDLYNAME, NULL, u8_NameBuf, sizeof(u8_NameBuf), NULL))
+        {
+            // Get generic name (Windows 7) "WinUSB Device"
+            if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_DEVICEDESC, NULL, u8_NameBuf, sizeof(u8_NameBuf), NULL))
+            {
+                u32_Error = GetLastError();
+                break;
+            }
+        }
+
+        // Get the 'ContainerID' GUID string (since Windows 7) which is identical for all interfaces of the same device
+        if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_BASE_CONTAINERID, NULL, u8_Container, sizeof(u8_Container), NULL))
         {
             u32_Error = GetLastError();
             break;
         }
 
-        CString s_DispName = (const WCHAR*)u8_NameBuf;
-        CString s_DevPath  = pk_DetailData->DevicePath;
-        s_DevPath.MakeUpper();
+        cUsbDevice i_UsbDev;
+        i_UsbDev.ms_DispName = (const WCHAR*)u8_NameBuf;  // "CAN FD Interface 1"
+        i_UsbDev.ms_DevPath  = pk_DetailData->DevicePath; // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
+        i_UsbDev.ms_DevPath.MakeUpper();
 
-        // Append interface number for multi-interface adapters
-        int s32_Pos = s_DevPath.Find(L"&MI_0");
+        CString s_Container = (const WCHAR*)u8_Container; // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
+        s_Container.MakeUpper();
+        i_Serials.Lookup(s_Container, i_UsbDev.ms_SerialNo);
+
+        // Append interface number for multi-interface (MI) adapters
+        int s32_Pos = i_UsbDev.ms_DevPath.Find(L"&MI_0");
         if (s32_Pos > 0)
         {
             // MI_00 --> Candlelight 1
             // MI_01 --> DFU
             // MI_02 --> Candlelight 2
             // MI_03 --> Candlelight 3
-            int s32_Interface = _wtoi(s_DevPath.Mid(s32_Pos + 5, 1));
-            if (s32_Interface == 0)
-                s32_Interface = 1;  // display one-based interface number
-            
-            CString s_Number;
-            s_Number.Format(L" [%u]", s32_Interface);
-            s_DispName += s_Number;
+            i_UsbDev.ms32_Channel = _wtoi(i_UsbDev.ms_DevPath.Mid(s32_Pos + 5, 1));
+            if (i_UsbDev.ms32_Channel == 0)
+                i_UsbDev.ms32_Channel = 1;  // display one-based interface number           
         }
 
-        pi_DispNames  ->Add(s_DispName);
-        pi_DevicePaths->Add(s_DevPath);
+        // Insert sorted
+        int s32_Insert = pi_Devices->GetSize();
+        for (int i = 0; i < pi_Devices->GetSize(); i++) 
+        {
+            if (i_UsbDev.Compare(&pi_Devices->GetAt(i)) < 0)
+            {
+                s32_Insert = i;
+                break;
+            }
+        }
+        pi_Devices->InsertAt(s32_Insert, i_UsbDev);
     }
 
     SetupDiDestroyDeviceInfoList(h_DevInfo); // free memory
     return u32_Error;
 }
+
+// Get the serial numbers of all Candlelight devices
+// "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\VID_1D50&PID_606F\2066349E39455006"
+// The last part is the serial number: "2066349E39455006"
+// return a CMap with ContainerID --> Serial Number
+DWORD Candlelight::EnumSerialNumbers(CMapStringToString* pi_Serials)
+{
+    CString s_RootPath = L"System\\CurrentControlSet\\Enum\\USB\\VID_1D50&PID_606F";
+
+    HKEY  h_RootKey = 0;
+    DWORD u32_Error = RegOpenKeyExW(HKEY_LOCAL_MACHINE, s_RootPath, 0, KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS, &h_RootKey);
+    if (u32_Error != ERROR_SUCCESS) 
+        return u32_Error;
+
+    WCHAR c_Serial[100];
+    for (DWORD i=0; TRUE; i++)
+    {
+        c_Serial[0] = 0;
+        u32_Error = RegEnumKeyW(h_RootKey, i, c_Serial, sizeof(c_Serial)/2);
+        if (u32_Error == ERROR_NO_MORE_ITEMS)
+            break;
+
+        if (u32_Error != ERROR_SUCCESS || !c_Serial[0])
+        {
+            assert(false);
+            continue;
+        }
+        
+        // All interfaces of a multi-interface device have the same ContainerID
+        CString s_Container;
+        u32_Error = RegReadString(HKEY_LOCAL_MACHINE, s_RootPath + L"\\" + c_Serial, L"ContainerID", &s_Container);
+        if (u32_Error != ERROR_SUCCESS)
+        {
+            assert(false);
+            continue;
+        }
+
+        s_Container.MakeUpper();
+        pi_Serials->SetAt(s_Container, c_Serial);
+    }
+
+    RegCloseKey(h_RootKey);
+    return 0;
+}
+
+// read a string from the registry (max 1000 chars)
+DWORD Candlelight::RegReadString(HKEY h_Class, const WCHAR* u16_Path, const WCHAR* u16_Entry, CString* ps_Value)
+{
+    *ps_Value = L"";
+
+    HKEY  h_Key; 
+    DWORD u32_Error = RegOpenKeyExW(h_Class, u16_Path, 0, KEY_QUERY_VALUE, &h_Key);
+    if (u32_Error)
+        return u32_Error;
+
+    DWORD u32_Type;         // OUT
+    DWORD u32_Size  = 2000; // IN / OUT
+    BYTE* u8_Buffer = (BYTE*)ps_Value->GetBuffer(u32_Size / 2);
+    u32_Error = RegQueryValueExW(h_Key, u16_Entry, 0, &u32_Type, u8_Buffer, &u32_Size);
+
+    RegCloseKey(h_Key);
+
+    ps_Value->ReleaseBuffer(u32_Size / 2);
+    return u32_Error;
+}
+
 
 // --------------------------------------------------------------------
 
