@@ -7,9 +7,10 @@ Two new high quality, speed optimized firmwares for CANable adapters with lots o
 This is the first project that combines the two CANable firmware's Slcan and Candlelight into one code base.
 Dozens of bugs have been fixed.
 Dozens of new features have been added.
-This is the first Candlelight firmware for the STM32G431 processor that supports CAN FD and works without bugs.
-However the new firmware is still 100% backward compatible with legacy Slcan / Candlelight firmware.
-The firmware has been tested on the STM32G431 on the MKS Makerbase and Jhoinrch isolated boards up to 10 Mbaud.
+This is the first Candlelight firmware for the STM32Gxxx processor family that supports CAN FD and works without bugs.
+However the new firmware is still 100% backward compatible with the legacy Slcan / Candlelight firmware.
+The firmware has been tested on the STM32G431 on the isolated adapters from MKS Makerbase and Jhoinrch up to 10 Mbaud.
+It works also on the STM32G473 dual CAN channel board from Oleksii.
 The firmware has been designed to be easily expandable for future processors and boards.
 Precompiled binary firmware files can be uploaded to the CANable with the new Firmware Updater.
 
@@ -26,7 +27,7 @@ https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 ________________________
 
----- Latest Updates ----
+Latest Updates:
 You find the version history here:
 
 https://netcult.ch/elmue/CANable%20Firmware%20Update#Source_Code
