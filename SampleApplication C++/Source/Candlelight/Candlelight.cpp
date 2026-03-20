@@ -474,7 +474,7 @@ DWORD Candlelight::Open(CString s_DevicePath)
     if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetBoardInfo, mu8_Channel, &mk_Info.mk_BoardInfo, sizeof(kBoardInfo)))
         return u32_Error;
 
-    // IsBootPinEnabled cannot be calle dhere because mb_InitDone must be set at the end of this function.
+    // IsBootPinEnabled() cannot be called here because mb_InitDone must be set at the end of this function.
     WORD u16_PinStatus;
     if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetPinStatus, PINID_BOOT0, &u16_PinStatus, sizeof(u16_PinStatus)))
         return u32_Error;

@@ -1190,7 +1190,7 @@ public class Candlelight : IDisposable
 
             Byte[] u8_Feedback = new Byte[10];
             int s32_FbkError = mi_WinUSB.CtrlTansfer(eSetupRecip.Interface, eSetupType.Vendor, eDirection.In, 
-                                                        (Byte)eUsbRequest.GetLastError, wValue, wIndex, ref u8_Feedback);  
+                                                     (Byte)eUsbRequest.GetLastError, wValue, wIndex, ref u8_Feedback);  
 
             // An error feedback may also come if s32_CmdError == 0 !
             if (s32_FbkError == 0)
