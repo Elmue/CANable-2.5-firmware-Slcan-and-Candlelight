@@ -219,10 +219,11 @@
         <div>— &nbsp; <a href="#CAN_Settings"         class="MenuLink" onClick="ShowMenu(false)">CAN bus Settings</a></div>
         <div>— &nbsp; <a href="#Filter"               class="MenuLink" onClick="ShowMenu(false)">CAN Filter</a></div>
         <div>— &nbsp; <a href="#Sample_Baud"          class="MenuLink" onClick="ShowMenu(false)">Samplepoint &amp; Baudrate</a></div>
+        <div>— &nbsp; <a href="#CAN_Hardware"         class="MenuLink" onClick="ShowMenu(false)">CAN Hardware</a></div>
         <div>— &nbsp; <a href="#CAN_Errors"           class="MenuLink" onClick="ShowMenu(false)">CAN bus Errors</a></div>
         <div>— &nbsp; <a href="#Transmit_Timeout"     class="MenuLink" onClick="ShowMenu(false)">Transmit Timeout</a></div>
         <div>— &nbsp; <a href="#Echo_Marker"          class="MenuLink" onClick="ShowMenu(false)">Tx Echo Marker</a></div>
-        <div>— &nbsp; <a href="#Timestamps"           class="MenuLink" onClick="ShowMenu(false)">Timestamps</a></div>        
+        <div>— &nbsp; <a href="#Timestamps"           class="MenuLink" onClick="ShowMenu(false)">Timestamps</a></div>
         <div>— &nbsp; <a href="#Enter_DFU"            class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>        
         <div>— &nbsp; <a href="#Multi_Channel"        class="MenuLink" onClick="ShowMenu(false)">Multi Channel Adapters</a></div>  
         <div><a href="#Slcan_Manual"                  class="MenuLink" onClick="ShowMenu(false)">2.) Slcan Developer Manual</a></div>
@@ -843,23 +844,73 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <p>
 <img src="Images/CAN FD Arbitration.png" alt="CAN FD Arbitration / Data phase" width="746" height="209">
 
+<a name="CAN_Hardware"></a>
+<h3>CAN Hardware</h3>
+<div>CAN bus uses 2 wires, <b>CAN Hi</b> and <b>CAN Lo</b> which transmit the opposite voltage.</div>
+<div>The receiver calculates the difference between both wires which eliminates superimposed electrical interferences.</div>
+<div>To both ends of a CAN bus cable there must be a 120 Ohm <b>termination resistor</b> connected to avoid reflections.</div>
+<div>The neutral voltage on CAN bus is 2.5 Volt, which is the <b>recessive</b> state.</div>
+<div>The transceiver chip pulls CAN Hi up and CAN Lo down over 2 transistors to transmit the <b>dominant</b> state.</div>
+<div>In the dominant state CAN Lo has approx. 1.5 Volt and CAN Hi has 3.5 Volt.</div>
+<div>To see how dominant and recessive states look, study this <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer/#DecodeCAN" target="_blank">oscilloscope capture</a>.</div>
+<p>
+<table><tr><td>
+    <table class="TblImage NoTopMargin">
+        <tr><td align="center"><b>Termination</b></td></tr>
+        <tr><td><img src="Images/CAN Bus Termination.png" alt="CAN Bus termination" width="229" height="100"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CAN Bus Termination.png')">Show Full Size</span></td></tr>
+    </table>
+</td><td>
+    <table class="TblImage NoTopMargin">
+        <tr><td align="center"><b>Transceiver Chip</b></td></tr>
+        <tr><td><img src="Images/CAN Transceiver.png" alt="CAN Bus transceiver MCP2551" width="165" height="100"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CAN Transceiver.png')">Show Full Size</span></td></tr>
+    </table>
+</td></tr></table>
+
 
 <a name="CAN_Errors"></a>
 <h3>CAN bus Errors</h3>
-<div>The legacy <b>Slcan</b> firmware has no error reporting at all.</div>
-<div>When you send a packet to CAN bus you have <b>no idea</b> if the packet was really sent or not.</div>
-<div>After sending an invalid parameter, for example when setting the baudrate, you will never know why you cannot connect to CAN bus.</div>
-<div>And the legacy <b>Candlelight</b> firmware has an error reporting, but only for CAN bus errors and there are many issues.</div>
+<div>There are 2 types of CAN bus errors:</div>
+<ol>
+<li><div><u><b>No ACK Received</b></u></div>
+<div>When a packet is sent to CAN bus it must be acknowledged by at least one other controller on the bus.</div>
+<div>At the end of a packet there is the <b>ACK bit</b> that the receiver sets to dominant if the packet was received correctly.</div>
+<div>The receiving processor calculates the <a href="https://en.wikipedia.org/wiki/Cyclic_redundancy_check" target="_blank">CRC</a> of all bits and compares it with the CRC in the packet.</div>
+<div>If there is no error it will set the ACK bit to inform the sender that the packet was received successfully.</div>
+<div>As calculating the CRC and setting the ACK bit must happen within a few nanoseconds, this must be implemented in <b>hardware</b>.</div>
+<div>If a packet is sent to a CAN bus with multiple controllers they will all set the ACK bit at once.</div>
+<div>It is <b>important</b> to understand that setting the ACK bit does not depend on the CAN ID or the packet content.</div>
+<div>Even if a controller is not interested in the received packet, it will set the ACK bit anyway.</div>
+<div>This means that on a correctly working CAN bus <b>all</b> packets will <b>always</b> be acknowledged by <b>all</b> receivers at once.</div>
+<div>But if there is electrical <b>interference</b> (like a spike) on the CAN cable that disturbs some bits, the packet is not acknowledged.</div>
+<div>In this case the transmitting CAN controller detects that the ACK bit was not set and sends the packet again.</div>
+<li><div><u><b>Data Collision</b></u></div>
+<div>While a CAN controller is transmitting a packet, it permanently monitors the voltage of each bit on the bus.</div>
+<div>If the sender wants to send a recessive bit, but detects a dominant state on the bus, it has detected data collision.</div>
+<div>This means that another controller is sending at the same time. The transmission will be aborted immediately.</div>
+<div>If this happens in the <b>arbitration phase</b> it is not an error.</div>
+<div>The CAN ID with the higher priority will win the arbitration and the other controller must send the packet again.</div>
+<div>But if this happens in the <b>data phase</b> it is a severe error because only one controller may send data at the same time.</div>
+<div>This may happen in case of a hardware defect or if one controller is configured for a wrong baudrate.</div>
+<div>If the sending controller detects such a severe error it goes into <b>Bus Off</b> state, which means it does not send more packets.</div>
+<div>This mechanism is implemented in <b>hardware</b>, to avoid that a buggy firmware can corrupt the entire CAN communication.</div>
+</ol>
 <p>
-<div>I implemented a <b>proper error reporting</b> for CAN bus errors and also for command errors.</div>
-<div>Whenever a software or firmware does not work, but shows no error, be sure that it was written by a sloppy programmer.</div>
+<div>The legacy <b>Slcan</b> firmware had no error reporting at all.</div>
+<div>When you have sent a packet to the legacy firmware you had <b>no idea</b> if the packet was really sent to the bus or not.</div>
+<div>After sending an invalid parameter, for example when setting the baudrate, you had no idea why you could not connect to CAN bus.</div>
+<div>And the legacy <b>Candlelight</b> firmware had an error reporting, but only for CAN bus errors and there were many issues.</div>
+<div>The legacy firmware was written by sloppy programmers.</div>
+<p>
+<div>I fixed this and implemented a <b>proper error reporting</b> for CAN bus errors and also for command errors.</div>
 <div>With the new firmware it will never again happen that something does not work and you have no idea why.</div>
 <p>
 <ol>
-    <li><div>The first error on CAN bus is always reported immediately.</div>
+    <li><div>The first CAN bus error is always reported immediately.</div>
     <li><div>A second error is only reported after <b>100 ms</b> have elapsed and only if the second error is different from the </div>
     <div>previously reported. This is important to avoid flooding the host with thousands of errors as the legacy firmware did.</div>
-    <li><div>If the same error stays present for a long time, it is reported in intervals of <b>3 seconds</b>.</div>
+    <li><div>If the same error stays present for a long time, it is reported again in intervals of <b>3 seconds</b>.</div>
 </ol>
 
 <table class="Pre">
@@ -886,9 +937,9 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>Therefore all processors that have a CAN bus controller distinguish these 4 states:</div>
 <ol>
     <li><div><span class="Green"><b>Bus Actice</b></span>  (no errors or less than 96 errors)</div>
-    <li><div><span class="Warn">Warning Level</span> (between 96 and 128 errors)</div>
-    <li><div><span class="Error">Bus Passive</span> (between 128 and 248 errors)</div>
-    <li><div><span class="Error">Bus Off</span> (more than 248 errors)</div>
+    <li><div><span class="Warn">Warning Level</span> (between 96 and 128 errors, if no ACK received)</div>
+    <li><div><span class="Error">Bus Passive</span> (between 128 and 248 errors, if no ACK received)</div>
+    <li><div><span class="Error">Bus Off</span> (more than 248 errors, if data collision detected)</div>
 </ol>
 <p>
 <div>In the <b>arbitration phase</b> it is allowed that multiple controllers send at the same time. One of them will win the arbitration.</div>
@@ -1119,7 +1170,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
     <div>You can set up to <b>8 mask filters</b> separated by semicolons.</div>
     <div>11 bit and 29 bit filters can be mixed.</div>    
-    <div>See <a href="#Filter">CAN Filters</a>.</div>    
+    <div>See <a href="#Filter">CAN Filters</a>.</div>
     </td></tr>
 <tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
 <tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>Set 3 filters for 16 ID's each: 7EX, 72X and 73X</td></tr>
