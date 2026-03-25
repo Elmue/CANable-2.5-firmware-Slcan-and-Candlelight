@@ -884,7 +884,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>Even if a controller is not interested in the received packet, it will set the ACK bit anyway.</div>
 <div>On a correctly working CAN bus <b>all</b> packets will <b>always</b> be acknowledged by <b>all</b> receivers at the same time.</div>
 <div>But if there is electrical <b>interference</b> (like a spike) on the CAN cable that disturbs one or more bits, the packet is not acknowledged.</div>
-<div>In this case the transmitting CAN controller detects that the ACK bit was not set and has to send the packet again.</div>
+<div>In this case the transmitting CAN controller detects that the ACK bit was not set and it has to send the packet again.</div>
 <li><div><u><b>Data Corruption</b></u></div>
 <div>While a CAN controller is transmitting a packet, it permanently monitors the voltage of each bit on the bus.</div>
 <div>If the sender tries to send a recessive bit, but detects a dominant state on the bus, it has detected data collision.</div>
@@ -896,7 +896,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>If the sending controller detects such a severe error it goes into <b>Bus Off</b> state, it turns off it's transmitter permanently.</div>
 <div>Also on the receiving side data corruption can be detected if bits that must always be High or Low have the wrong state.</div>
 <div>The receiver may also detect invalid <b>stuff bits</b> that are inserted into the data stream after 4 or 5 consecutive bits of the same value.</div>
-<div>All this error detection is implemented in <b>hardware</b> to avoid that a buggy controller may corrupt the entire CAN communcation.</div>
+<div>All this error detection is implemented in <b>hardware</b>, this avoids that a buggy firmware can corrupt the entire CAN communcation.</div>
 </ol>
 <p>
 <div>The legacy <b>Slcan</b> firmware had no error reporting at all.</div>
