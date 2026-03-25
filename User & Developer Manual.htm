@@ -879,22 +879,24 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>The receiving processor calculates the <a href="https://en.wikipedia.org/wiki/Cyclic_redundancy_check" target="_blank">CRC</a> of all bits and compares it with the CRC in the packet.</div>
 <div>If there is no error it will set the ACK bit to inform the sender that the packet was received successfully.</div>
 <div>As calculating the CRC and setting the ACK bit must happen within a few nanoseconds, this must be implemented in <b>hardware</b>.</div>
-<div>If a packet is sent to a CAN bus with multiple controllers they will all set the ACK bit at once.</div>
+<div>If a packet is sent to a CAN bus with multiple controllers they will all set the ACK bit at the same time.</div>
 <div>It is <b>important</b> to understand that setting the ACK bit does not depend on the CAN ID or the packet content.</div>
 <div>Even if a controller is not interested in the received packet, it will set the ACK bit anyway.</div>
-<div>This means that on a correctly working CAN bus <b>all</b> packets will <b>always</b> be acknowledged by <b>all</b> receivers at once.</div>
-<div>But if there is electrical <b>interference</b> (like a spike) on the CAN cable that disturbs some bits, the packet is not acknowledged.</div>
-<div>In this case the transmitting CAN controller detects that the ACK bit was not set and sends the packet again.</div>
-<li><div><u><b>Data Collision</b></u></div>
+<div>On a correctly working CAN bus <b>all</b> packets will <b>always</b> be acknowledged by <b>all</b> receivers at the same time.</div>
+<div>But if there is electrical <b>interference</b> (like a spike) on the CAN cable that disturbs one or more bits, the packet is not acknowledged.</div>
+<div>In this case the transmitting CAN controller detects that the ACK bit was not set and has to send the packet again.</div>
+<li><div><u><b>Data Corruption</b></u></div>
 <div>While a CAN controller is transmitting a packet, it permanently monitors the voltage of each bit on the bus.</div>
-<div>If the sender wants to send a recessive bit, but detects a dominant state on the bus, it has detected data collision.</div>
+<div>If the sender tries to send a recessive bit, but detects a dominant state on the bus, it has detected data collision.</div>
 <div>This means that another controller is sending at the same time. The transmission will be aborted immediately.</div>
 <div>If this happens in the <b>arbitration phase</b> it is not an error.</div>
-<div>The CAN ID with the higher priority will win the arbitration and the other controller must send the packet again.</div>
-<div>But if this happens in the <b>data phase</b> it is a severe error because only one controller may send data at the same time.</div>
-<div>This may happen in case of a hardware defect or if one controller is configured for a wrong baudrate.</div>
-<div>If the sending controller detects such a severe error it goes into <b>Bus Off</b> state, which means it does not send more packets.</div>
-<div>This mechanism is implemented in <b>hardware</b>, to avoid that a buggy firmware can corrupt the entire CAN communication.</div>
+<div>The CAN ID with the higher priority will win the arbitration and the other controller must send the packet later again.</div>
+<div>But if this happens in the <b>data phase</b> it is a severe error because only one controller can send data at the same time.</div>
+<div>This may happen if a controller is configured for a wrong baudrate or a wrong CAN FD samplepoint.</div>
+<div>If the sending controller detects such a severe error it goes into <b>Bus Off</b> state, it turns off it's transmitter permanently.</div>
+<div>Also on the receiving side data corruption can be detected if bits that must always be High or Low have the wrong state.</div>
+<div>The receiver may also detect invalid <b>stuff bits</b> that are inserted into the data stream after 4 or 5 consecutive bits of the same value.</div>
+<div>All this error detection is implemented in <b>hardware</b> to avoid that a buggy controller may corrupt the entire CAN communcation.</div>
 </ol>
 <p>
 <div>The legacy <b>Slcan</b> firmware had no error reporting at all.</div>
