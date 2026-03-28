@@ -96,23 +96,23 @@
     .DataNarrow    { background-color:#AAAAAA; margin-top:10px; margin-bottom:10px; }
     .DataNarrow th { background-color:#777777; color:#FFFFFF; padding:1px 5px 1px 5px; font-weight:bold; }
     .DataNarrow tr { background-color:#F8F8F8; }
-    .DataNarrow td { background-color:#FFFFF8; padding:0px 5px 0px 5px; }    
+    .DataNarrow td { background-color:#FFFFF8; padding:0px 5px 0px 5px; }
     </style>
-        
+
     <script>
     var LastLink = null;
     var LastDiv  = null;
     var LastTop  = 0;
     var LastUrl  = null;
     function ShowFullSize(Link, ImgFile)
-    {    
+    {
         if (Link == LastLink)
         {
             HideFullSize(); // sets LastLink = null
             return;
         }
-            
-        HideFullSize();            
+
+        HideFullSize();
 
         var Div = document.getElementById("DivFullSize");
         var Img = document.getElementById("ImgFullSize");
@@ -212,7 +212,8 @@
         <div>— &nbsp; <a href="#Speed_Comparison"     class="MenuLink" onClick="ShowMenu(false)">Inefficient USB Data Transfer</a></div>
         <div>— &nbsp; <a href="#Legacy_Installation"  class="MenuLink" onClick="ShowMenu(false)">Legacy Candlelight Installation</a></div>
         <div>— &nbsp; <a href="#Ms_OS_Descriptor"     class="MenuLink" onClick="ShowMenu(false)">Microsoft OS Descriptor</a></div>
-        <div>— &nbsp; <a href="#Firmware_Updater"     class="MenuLink" onClick="ShowMenu(false)">Firmware Updater</a></div>
+        <div>— &nbsp; <a href="#Zadig"                class="MenuLink" onClick="ShowMenu(false)">Zadig</a></div>
+        <div>— &nbsp; <a href="#Firmware_Updater"     class="MenuLink" onClick="ShowMenu(false)">Firmware Programmer</a></div>
         <div>— &nbsp; <a href="#Meaning_of_LEDs"      class="MenuLink" onClick="ShowMenu(false)">Meaning of the LEDs</a></div>
         <div>— &nbsp; <a href="#Cangaroo"             class="MenuLink" onClick="ShowMenu(false)">Cangaroo</a></div>
         <div>— &nbsp; <a href="#HUD_ECU_Hacker"       class="MenuLink" onClick="ShowMenu(false)">HUD ECU Hacker</a></div>
@@ -224,8 +225,8 @@
         <div>— &nbsp; <a href="#Transmit_Timeout"     class="MenuLink" onClick="ShowMenu(false)">Transmit Timeout</a></div>
         <div>— &nbsp; <a href="#Echo_Marker"          class="MenuLink" onClick="ShowMenu(false)">Tx Echo Marker</a></div>
         <div>— &nbsp; <a href="#Timestamps"           class="MenuLink" onClick="ShowMenu(false)">Timestamps</a></div>
-        <div>— &nbsp; <a href="#Enter_DFU"            class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>        
-        <div>— &nbsp; <a href="#Multi_Channel"        class="MenuLink" onClick="ShowMenu(false)">Multi Channel Adapters</a></div>  
+        <div>— &nbsp; <a href="#Enter_DFU"            class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>
+        <div>— &nbsp; <a href="#Multi_Channel"        class="MenuLink" onClick="ShowMenu(false)">Multi Channel Adapters</a></div>
         <div><a href="#Slcan_Manual"                  class="MenuLink" onClick="ShowMenu(false)">2.) Slcan Developer Manual</a></div>
         <div>— &nbsp; <a href="#Slcan_Commands"       class="MenuLink" onClick="ShowMenu(false)">Commands</a></div>
         <div>— &nbsp; <a href="#Slcan_Responses"      class="MenuLink" onClick="ShowMenu(false)">Responses &amp; Events</a></div>
@@ -236,7 +237,7 @@
         <div><a href="#Candlelight_Manual"            class="MenuLink" onClick="ShowMenu(false)">3.) Candlelight Developer Manual</a></div>
         <div>— &nbsp; <a href="#Demo_Application"     class="MenuLink" onClick="ShowMenu(false)">Demo Applications C++ and C#</a></div>
         <div>— &nbsp; <a href="#Candle_NewProto"      class="MenuLink" onClick="ShowMenu(false)">The New Protocol</a></div>
-        <div>— &nbsp; <a href="#Candle_DFU"           class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>        
+        <div>— &nbsp; <a href="#Candle_DFU"           class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>
         <div><a href="#Firmware_Manual"               class="MenuLink" onClick="ShowMenu(false)">4.) Firmware Developer Manual</a></div>
         <div>— &nbsp; <a href="#Compiling"            class="MenuLink" onClick="ShowMenu(false)">Compiling the Code</a></div>
         <div>— &nbsp; <a href="#Source_Code"          class="MenuLink" onClick="ShowMenu(false)">Source Code Versions</a></div>
@@ -257,7 +258,7 @@
 <ol>
     <li><div>I united 2 formerly separate firmware projects <b>Slcan</b> and <b>Candlelight</b> into one project with a <b>common code base</b>.</div>
     <li><div>The new CANable 2.5 firmware is <b>high quality</b> and <b>open-source</b>.</div>
-    <li><div>If you noticed in the legacy firmware that CAN communication did not work you had <b>no chance</b> to find out why.</div>    
+    <li><div>If you noticed in the legacy firmware that CAN communication did not work you had <b>no chance</b> to find out why.</div>
     <li><div>Here you find the first CANable firmware with correctly implemented <b>error handling</b> telling you what is wrong.</div>
     <li><div>Although many new features were added, the new firmware is 100% <b>backward compatible</b> with legacy software.</div>
     <li><div>The firmware has been tested successfully with <b>CAN FD</b> baudrates up to <b>10 Mega baud</b>.</div>
@@ -266,7 +267,7 @@
 </ol>
 <div>Additionally with <a href="#HUD_ECU_Hacker">HUD ECU Hacker</a> you get a powerfull tool with lots of features, the <b>swiss knife</b> for CAN bus.</div>
 <ol>
-    <li><div>With the <a href="#Firmware_Updater">Firmware Updater</a> you can upload the new firmware to your CANable with one click.</div>
+    <li><div>With the <a href="#Firmware_Updater">Firmware Programmer</a> you can upload the new firmware to your CANable with one click.</div>
     <li><div>Additionally you get a high speed <a href="#HUD_ECU_Hacker">CAN Raw Terminal</a> that supports all the new features, but works also with legacy adapters.</div>
     <li><div>You can grab <b>logfiles</b> of CAN bus traffic.</div>
     <li><div>You can decode the CAN bus protocols <b>ISO 15765</b>, <b>J1939</b> and <b>NMEA 2000</b> that are used in motorbikes, cars, trucks and vessels.</div>
@@ -351,7 +352,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>In Boot Mode only the red LED is on.</div>
 <p>
 <div>To switch your adapter to <b>operation mode</b> try to disconnect the USB cable, wait 5 seconds and reconnect.</div>
-<div>If this does not work (Oleksii Adapter) you must use the <a href="#Firmware_Updater">Firmware Updater</a> to disable pin BOOT0.</div>
+<div>If this does not work (Oleksii Adapter) you must use the <a href="#Firmware_Updater">Firmware Programmer</a> to disable pin BOOT0.</div>
 <p>
 <div>In a correctly designed hardware the boot mode should only be enabled when the Boot Mode <b>jumper</b> is set.</div>
 <div>But the cheap version of the processor (LQFP48) that is used in these adapters has only a limited amount of pins.</div>
@@ -490,12 +491,25 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <p>
 <div><b>3.)</b></div>
 <div>And the worst is the Candlelight firmware <b>ba6b1dd</b> from the canable.io <a href="#WebUpdater">Web Updater</a>.</div>
-<div>No driver is installed at all because the firmware does not respond to the request. This firmware is garbage.</div>
+<div>No driver is installed at all because the firmware does not respond to the MS OS descriptor request. This firmware is <b>garbage</b>.</div>
 
+<a name="Zadig"></a>
+<h3>Zadig</h3>
+<div>The consequence using this buggy canable.io firmware is that Windows cannot install the WinUSB driver.</div>
+<div>In internet people were told to use Zadig as a workaround to force a driver installation for this buggy firmware.</div>
+<div>But Zadig is <b>garbage</b> software, that installs the driver with a totally wrong random GUID into the registry.</div>
+<div>If the adapter is not installed with the correct Candlelight GUID <code>c15b4308-04d3-11e6-b3ea-6057189e6443</code> it will not be found.</div>
+<div>CAN software searches for devices with this specific GUID. The adapter is not found if it is installed with a wrong GUID.</div>
+<p>
+<div>If you have corrupted your registry by using Zadig, HUD ECU Hacker can help you: Start the <b>Firmware Programmer</b>.</div>
+<div>It will check all registry entries of connected Candlelight devices and it will <b>fix registry errors</b> automatically.</div>
+<p>
+<div><b>Never</b> use Zadig! It will screw up your registry.</div>
+<div>With the new Candlelight firmware 2.5 Windows will install the WinUSB driver automatically and correctly.</div>
 
 <a name="Firmware_Updater"></a>
-<h3>The new Firmware Updater</h3>
-<div><a href="https://netcult.ch/elmue/HUD ECU Hacker" target="_blank">HUD ECU Hacker</a> has a built-in <b>Firmware Updater</b> for all types of STM32 processors from ST Microelectronics.</div>
+<h3>The new Firmware Programmer</h3>
+<div><a href="https://netcult.ch/elmue/HUD ECU Hacker" target="_blank">HUD ECU Hacker</a> has a built-in <b>Firmware Programmer</b> for all types of STM32 processors from ST Microelectronics.</div>
 
 <table>
 <tr><td>
@@ -508,15 +522,23 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <td>&nbsp;</td>
 <td>
     <table class="TblImage">
-        <tr><td align="center"><b>Firmware Updater</b></td></tr>
+        <tr><td align="center"><b>Firmware Programmer</b></td></tr>
         <tr><td><img src="Images/CANable STM32 Firmware Updater.png" alt="HUD ECU Hacker - CANAble Firmware Update" width="178" height="150"></td></tr>
         <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CANable STM32 Firmware Updater.png')">Show Full Size</span></td></tr>
+    </table>
+</td>
+<td>&nbsp;</td>
+<td>
+    <table class="TblImage">
+        <tr><td align="center"><b>Driver Registry Correction</b></td></tr>
+        <tr><td><img src="Images/Zadig Error.png" alt="Zadig creates regsitry corruption" width="284" height="150"></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Zadig Error.png')">Show Full Size</span></td></tr>
     </table>
 </td></tr>
 </table>
 
 <a name="FirmwareVersions"></a>
-<div>When you install HUD ECU Hacker you can chose between the following CANable 2.5 firmware versions:</div>
+<div>After installing HUD ECU Hacker you can chose between the following CANable 2.5 firmware versions:</div>
 
 <table class="DataTable">
 <tr><th>File Name</th><th>Adapters</th><th>Quartz</th><th>Channels</th><th>LED Pins</th></tr>
@@ -565,14 +587,14 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>STM32G473-Candlelight2.5-OleksiiDual.dfu</td></tr>
 </table>
 
-<div>If you install the wrong firmware the LED's will always be off or nothing works at all.</div>
+<div>If you install the <b>wrong firmware</b> the LED's will always be off or nothing works at all.</div>
 <div>If you have another adapter that needs different settings, send me an email, this can easily be added.</div>
 <p>
-<div>The firmware has been tested on the STM32G431 and 473 processors. But it should work on this entire serie:</div>
+<div>The firmware has been tested on the STM32G431 and 473 processors. But it should work with this entire family:</div>
 <div>STM32G441, STM32G471, STM32G474, STM32G483, STM32G484, STM32G491, STM32G4A1.</div>
 <p>
 <table class="Warning" cellpadding=0 cellspacing=0><tr><td>
-<div>The HUD ECU Hacker Firmware Updater can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
+<div>The HUD ECU Hacker Firmware Programmer can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
 <div>Flashing the CANable is no risk. The processor has a hard-coded bootloader that cannot be destroyed.</div>
 <div>When after connecting the USB cable the LED's are not blinking alternatingly, the firmware is not working.</div>
 <div>This may happen after uploading the wrong firmware. In this case you can simply flash it again.</div>
@@ -581,13 +603,13 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>This allows you to always revert the adapter to it's factory default.</div>
 </td></tr></table>
 <p>
-<div>The firmware updater works with the <b>DFU file format</b> that has been developed by ST Microelectronics.</div>
-<div>Apart from the flash data the DFU file contains additional information like name, target, version, memory address,...</div>
+<div>The firmware programmer works with the <b>DFU file format</b> that has been developed by ST Microelectronics.</div>
+<div>Apart from the binary flash data the DFU file contains additional information like name, target, version, memory address,...</div>
 <div>If you have other firmware formats, like <b>BIN</b>, <b>HEX</b> or <b>S19</b> you can copy them into the subfolder 'Firmware'.</div>
-<div>The firmware updater will convert the files automatically into DFU files that match the currently selected device.</div>
+<div>The firmware programmer will convert the files automatically into DFU files that match the currently selected device.</div>
 <p>
 <div>Before clicking the button <b>Upload</b> you must select the target <b>Internal Flash</b>.</div>
-<div>The Firmware Updater can also write the Option Bytes and the One Time Programmable memory. But this is only for experts.</div>
+<div>The firmware programmer can also write the Option Bytes and the One Time Programmable memory. But this is only for experts.</div>
 <p>
 <div>When you click the button <b>Identify</b> the LED's on the CANable will blink, and with the next click they stop blinking.</div>
 <div>This allows to distinguish with which adapter you are communicating if multiple adapters are connected at the same time.</div>
@@ -626,7 +648,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 </tr>
 <tr>
     <td><img src="Images/LED RxTxTraffic.gif" width="101" height="34"></td><td>The adapter is open: RX+TX CAN bus traffic.</td>
-    <td colspan="2"></td>    
+    <td colspan="2"></td>
 </tr>
 </table>
 
@@ -734,7 +756,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <p>
     <div><b>Suppress repeating identical CAN bus packets</b></div>
     <div>CAN bus traffic is often very repetitive.</div>
-    <div>Here you can hide all packets that have already been shown with the same ID and data bytes.</div> 
+    <div>Here you can hide all packets that have already been shown with the same ID and data bytes.</div>
     <div>You see each unique packet only once.</div>
 </td></tr>
 </table>
@@ -766,7 +788,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <p>
 <img src="Images/CanFdSamplepoint.png" alt="CAN Samplepoint" width="662" height="158">
 <p>
-<div>One bit of a CAN packet is sub-divided into multiple <b>Time Quantums</b>, in this example sixteen.</div> 
+<div>One bit of a CAN packet is sub-divided into multiple <b>Time Quantums</b>, in this example sixteen.</div>
 <div>The samplepoint is the exact moment when the processor measures the state of the CAN bus: High or Low.</div>
 <div>The samplepoint must be a fraction of 2 integers: 1/2 = <b>50%</b>, 3/4 = <b>75%</b>, 5/8 = <b>62.5%</b>, 4/5 = <b>80%</b>, 7/8 = <b>87.5%</b></div>
 <div>A later samplepoint has the advantage that it allows longer cables, to compensate for the delay of distant controllers.</div>
@@ -1171,7 +1193,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><th>Set Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
     <div>You can set up to <b>8 mask filters</b> separated by semicolons.</div>
-    <div>11 bit and 29 bit filters can be mixed.</div>    
+    <div>11 bit and 29 bit filters can be mixed.</div>
     <div>See <a href="#Filter">CAN Filters</a>.</div>
     </td></tr>
 <tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
@@ -1354,7 +1376,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <table class="DataTable">
 <tr><th>Digit</th><th>Meaning</th><th>Value</th></tr>
 <tr><td align="center">1</td><td class="Magenta">Bus Status</td>
-    <td>    
+    <td>
         <div>'0' = Bus Active</div>
         <div>'1' = Warning Level</div>
         <div>'2' = Bus Passive</div>
@@ -1475,7 +1497,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <h3>The new ElmüSoft Protocol</h3>
 <div>The legacy Candlelight protocol had several <b>design errors</b>.</div>
 <div>For example when a CAN FD packet was transmitted to the host they sent the timestamp behind a fix array of 64 data bytes.</div>
-<div>Adding more unneccessary overhead resulted in sending <b>always 80 bytes</b> over USB, even for a packet with only 8 data bytes.</div>
+<div>Adding more unneccessary overhead resulted in sending <b>always 80 bytes</b> over USB, even for a packet with only 4 data bytes.</div>
 <p>
 <div>Additionally the legacy protocol was never designed to transmit anything else than CAN packets.</div>
 <div>It was impossible to transfer other data to the host, like for example an ASCII <b>debug string</b>.</div>
@@ -1576,7 +1598,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>You can also copy make.exe and mmkdir.exe and their DLLs into the CubCLT directory and you need only one folder.</div>
 <li><div>Now double click the file <b>Build.cmd</b> in my project and the compilation should start.</div>
     <div>This script copies the compiled <b>BIN files</b> automatically into the Firmware folder of HUD ECU Hacker.</div>
-<li><div>The <b>Firmware Updater</b> will convert the BIN files automatically into <b>DFU files</b> that you can upload.</div>
+<li><div>The <b>Firmware Programmer</b> will convert the BIN files automatically into <b>DFU files</b> that you can upload.</div>
 </ol>
 
 <a name="Source_Code"></a>
