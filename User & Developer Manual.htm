@@ -225,6 +225,7 @@
         <div>— &nbsp; <a href="#Transmit_Timeout"     class="MenuLink" onClick="ShowMenu(false)">Transmit Timeout</a></div>
         <div>— &nbsp; <a href="#Echo_Marker"          class="MenuLink" onClick="ShowMenu(false)">Tx Echo Marker</a></div>
         <div>— &nbsp; <a href="#Timestamps"           class="MenuLink" onClick="ShowMenu(false)">Timestamps</a></div>
+        <div>— &nbsp; <a href="#Timing"               class="MenuLink" onClick="ShowMenu(false)">Timing</a></div>
         <div>— &nbsp; <a href="#Enter_DFU"            class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>
         <div>— &nbsp; <a href="#Multi_Channel"        class="MenuLink" onClick="ShowMenu(false)">Multi Channel Adapters</a></div>
         <div><a href="#Slcan_Manual"                  class="MenuLink" onClick="ShowMenu(false)">2.) Slcan Developer Manual</a></div>
@@ -1043,6 +1044,20 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>This 64 bit counter has a precision of nanoseconds.</div>
 <div>When a packet arrives over USB you attach a timestamp to it.</div>
 <div>The <a href="#Demo_Application">Demo Applications</a> show both: How to use timestamps from firmware and from performance counter.</div>
+
+<a name="Timing"></a>
+<h3>Timing</h3>
+<div>The timing depends on many factors like computer speed, operating system, CPU load, CAN baudrate,</div>
+<div>CAN or CAN FD protocol, 11 or 29 bit ID, amount of data bytes, ElmüSoft or legacy protocol.</div>
+<div>The following is an example for CAN classic, 500 kBaud, 11 bit ID, 8 data bytes, ElmüSoft protocol:</div>
+
+<table class="TblImage">
+    <tr><td><img src="Images/Timing Diagram.png" alt="CANable CAN / USB Timing" width="148" height="90"></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Timing Diagram.png')">Show Full Size</span></td></tr>
+</table>
+
+<div>Sending a packet from sender to receiver takes approx. 80 + 35 + 10 + 240 + 10 + 35 + 80 = 490 µs.</div>
+<div>The sender receives it's echo at the same time as the receiver gets the Rx packet.</div>
 
 <p>
 <a name="Enter_DFU"></a>
