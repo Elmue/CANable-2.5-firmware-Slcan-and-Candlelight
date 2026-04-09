@@ -102,9 +102,12 @@ void led_blink_power_on()
 void led_blink_identify(int channel, bool blink_on)
 {
     led_class* inst = &led_inst[channel];
-    
-    inst->next_blink = HAL_GetTick() + IDENTIFY_DURATION;
+
+    if (inst->identify == blink_on)
+        return;
+
     inst->identify   = blink_on;
+    inst->next_blink = HAL_GetTick() + IDENTIFY_DURATION;
     
     SetRxLed(channel, blink_on);
     SetTxLed(channel, blink_on);
