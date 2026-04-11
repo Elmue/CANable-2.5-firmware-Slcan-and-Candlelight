@@ -1597,24 +1597,26 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>an extremely slow software and you notice that it is not able to compile a Make file.</div>
 <div>Several menu items are greyed out without an understandable reason and the help file is no help.</div>
 <div>So don't <b>waste your time</b> with this.</div>
-<div>ST Microelectronics has only hardware engineers, they have nobody who is able to write desktop software.</div>
+<div>ST Microelectronics has only hardware engineers, they are not able to write user friendly desktop software.</div>
 <p>
 <div><b><u>Intallation</u></b></div>
+<div>Normally you would have to install <b>STM32 Cube CLT</b> and <b>MinGW</b> which would occupy a Gigabyte on your disk.</div>
+<div>Then you would have to rename mkdir.exe into mmkdir.exe and add 2 folders to your PATH variable.</div>
+<p>
+<div>But you are lucky. I made it much simpler for you:</div>
 <ol>
-<li><div>Install <a href="https://www.st.com/en/development-tools/stm32cubeclt.html" target="_blank">STM32 Cube CLT</a> (STM32 Command Line Compiler)</div>
-    <div>From the drop down list on the ST website you can select the oldest version (300 MB).</div>
-    <div>The newer the version, the bigger it gets. The latest version is 1 Gigabyte. You don't need that.</div>
-<li><div>Install <a href="https://sourceforge.net/projects/mingw" target="_blank">MinGW</a> (Minimalist GNU for Windows)</div>
-    <div>The only files that you need from this installation are <b>make.exe</b> and <b>mkdir.exe</b> and their 6 DLLs:</div>
-    <div>libgcc_s_dw2-1.dll, libiconv-2.dll, libintl-8.dll, msys-1.0.dll, msys-iconv-2.dll, msys-intl-8.dll</div>
-<li><div>Rename mkdir.exe into <b>mmkdir.exe</b> to avoid collision with the MKDIR command in the Windows console.</div>
-<li><div>In the Advanced System Settings search the <b>PATH variable</b> and add <b>two folders</b> separated by semicolon:</div>
-    <div>The folder into which CubeCLT has installed the file <b>arm-none-eabi-gcc.exe</b></div>
-    <div>The folder into which MinGW has installed the file <b>make.exe</b></div>
-    <div>You can also copy make.exe and mmkdir.exe and their DLLs into the CubCLT directory and you need only one folder.</div>
-<li><div>Now double click the file <b>Build.cmd</b> in my project and the compilation should start.</div>
+<li><div><b>Download</b> the file <a href="https://netcult.ch/elmue/CANable Firmware Update/STM32_Compiler_with_MingW.zip">STM32_Compiler_with_MingW.zip</a> from my homepage.</div>
+    <div>This ZIP file contains the STM32 Command Line Compiler and the MingW files <code>make.exe</code> and <code>mmkdir.exe</code></div>
+    <div>This ZIP file has only <b>32 MegaByte</b> instead of 1 GigaByte because I removed tons of unnecessary stuff.</div>  
+<li><div><span class="Error">IMPORTANT:</span> Right click the ZIP file <big>&rarr;</big> menu 'Properties' and click the button <b>Unblock</b>.</div>
+<li><div><b>Extract</b> the ZIP file into it's destination folder on your disk.</div>    
+<li><div>I merged the executables from the compiler with MingW so you have to add only one path to the environment variable.</div>
+    <div>In the Advanced System Settings search the <b>PATH variable</b> and add the path to the subfolder <code>bin</code>.</div>
+    <div>If you extracted the ZIP to <code>D:\MakeSTM32</code> you must append <code>;D:\MakeSTM32\bin</code> to the PATH variable.</div>
+    <div>Close all open Console windows, otherwise they will still use the old PATH variable.</div>
+<li><div>Now double click the file <b>Build.cmd</b> in my project and select the firmware to compile.</div>
     <div>This script copies the compiled <b>BIN files</b> automatically into the Firmware folder of HUD ECU Hacker.</div>
-<li><div>The <b>Firmware Programmer</b> will convert the BIN files automatically into <b>DFU files</b> that you can upload.</div>
+<li><div>The <b>Firmware Programmer</b> will convert the BIN files automatically into <b>DFU files</b> that you can flash.</div>
 </ol>
 
 <a name="Source_Code"></a>
