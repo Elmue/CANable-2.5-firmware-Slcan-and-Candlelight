@@ -1607,12 +1607,14 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <ol>
 <li><div><b>Download</b> the file <a href="https://netcult.ch/elmue/CANable Firmware Update/STM32_Compiler_with_MingW.zip">STM32_Compiler_with_MingW.zip</a> from my homepage.</div>
     <div>This ZIP file contains the STM32 Command Line Compiler and the MingW files <code>make.exe</code> and <code>mmkdir.exe</code></div>
-    <div>This ZIP file has only <b>32 MegaByte</b> instead of 1 GigaByte because I removed tons of unnecessary stuff.</div>  
+    <div>This ZIP file has only <b>32 MegaByte</b> instead of 1 GigaByte because I removed tons of unnecessary stuff.</div>
 <li><div><span class="Error">IMPORTANT:</span> Right click the ZIP file <big>&rarr;</big> menu 'Properties' and click the button <b>Unblock</b>.</div>
-<li><div><b>Extract</b> the ZIP file into it's destination folder on your disk.</div>    
+<li><div><b>Extract</b> the ZIP file into it's destination folder on your disk.</div>
 <li><div>I merged the executables from the compiler with MingW so you have to add only one path to the environment variable.</div>
-    <div>In the Advanced System Settings search the <b>PATH variable</b> and add the path to the subfolder <code>bin</code>.</div>
-    <div>If you extracted the ZIP to <code>D:\MakeSTM32</code> you must append <code>;D:\MakeSTM32\bin</code> to the PATH variable.</div>
+    <div>Go to Control Panel <big>&rarr;</big> System <big>&rarr;</big> Advanced System Settings <big>&rarr;</big> Environment Variables and double click the <b>PATH variable</b>.</div>
+    <div>Add the path to your subfolder <code>bin</code>.</div>
+    <div>If you extracted the ZIP to <code>D:\MakeSTM32</code> you must add <code>D:\MakeSTM32\bin</code> to the PATH variable:</div>
+    <img src="Images/PathVariable.png" width="527" height="145" style="padding-top:5px; padding-bottom:5px;">
     <div>Close all open Console windows, otherwise they will still use the old PATH variable.</div>
 <li><div>Now double click the file <b>Build.cmd</b> in my project and select the firmware to compile.</div>
     <div>This script copies the compiled <b>BIN files</b> automatically into the Firmware folder of HUD ECU Hacker.</div>
