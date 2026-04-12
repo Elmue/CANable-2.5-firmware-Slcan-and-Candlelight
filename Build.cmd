@@ -54,12 +54,12 @@ rem 'B', 'C',...
 if %errorlevel% ==  3 call :Compile  Make_G431_Slcan_Multiboard
 if %errorlevel% ==  4 call :Compile  Make_G431_Slcan_Jhoinrch
 if %errorlevel% ==  5 call :Compile  Make_G431_Slcan_Openlightlabs
-if %errorlevel% ==  6 call :Compile  Make_G473_Slcan_OleksiiSolo
+if %errorlevel% ==  6 call :Compile  Make_G431_Slcan_OleksiiSolo
 if %errorlevel% ==  7 call :Compile  Make_G473_Slcan_OleksiiDual
 if %errorlevel% ==  8 call :Compile  Make_G431_Candle_Multiboard
 if %errorlevel% ==  9 call :Compile  Make_G431_Candle_Jhoinrch
 if %errorlevel% == 10 call :Compile  Make_G431_Candle_Openlightlabs
-if %errorlevel% == 11 call :Compile  Make_G473_Candle_OleksiiSolo
+if %errorlevel% == 11 call :Compile  Make_G431_Candle_OleksiiSolo
 if %errorlevel% == 12 call :Compile  Make_G473_Candle_OleksiiDual
 
 rem Copy all BIN files to HUD ECU Hacker
