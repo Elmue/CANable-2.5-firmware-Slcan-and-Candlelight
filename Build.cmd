@@ -40,7 +40,7 @@ for /D %%i in ("Build_STM*") do (
 )
 
 rem 'X'
-if %errorlevel%==1 exit
+if %errorlevel% == 1 exit
 
 rem 'A'
 if %errorlevel% == 2 (
