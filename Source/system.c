@@ -358,3 +358,11 @@ eFeedback system_set_option_bytes(eOptionBytes e_Option)
     return FBK_Success;
 }
 
+void __weak _close(void) {
+}
+void __weak _lseek(void) {
+}
+void __weak _read(void) {
+}
+void __weak _write(void) {
+}
