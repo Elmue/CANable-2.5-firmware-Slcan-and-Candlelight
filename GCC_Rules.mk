@@ -33,7 +33,7 @@ LD_SCRIPT = $(CONFIG_DIR)/$(TARGET_MCU).ld
 USER_CFLAGS = -Wall -g -ffunction-sections -fdata-sections -O3
 
 # user LD flags
-USER_LDFLAGS = -fno-exceptions -ffunction-sections -fdata-sections -Wl,--gc-sections
+USER_LDFLAGS = -fno-exceptions -ffunction-sections -fdata-sections -Wl,--gc-sections --specs=nano.specs --specs=nosys.specs
 
 #######################################
 # binaries
