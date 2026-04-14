@@ -1600,14 +1600,15 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>ST Microelectronics has only hardware engineers, they are not able to write user friendly desktop software.</div>
 <p>
 <div><b><u>Intallation</u></b></div>
-<div>Normally you would have to install <b>STM32 Cube CLT</b> and <b>MinGW</b> which would occupy a Gigabyte on your disk.</div>
+<div>So we use the Cube CLT (Command Line Tools) instead.</div>
+<div>Normally you would have to download the <b>STM32 Cube CLT</b> and <b>MinGW</b> which would occupy a Gigabyte on your disk.</div>
 <div>Then you would have to rename mkdir.exe into mmkdir.exe and add 2 folders to your PATH variable.</div>
 <p>
 <div>But you are lucky. I made it much simpler for you:</div>
 <ol>
 <li><div><b>Download</b> the file <a href="https://netcult.ch/elmue/CANable Firmware Update/STM32_Compiler_with_MingW.zip">STM32_Compiler_with_MingW.zip</a> from my homepage.</div>
     <div>This ZIP file contains the STM32 Command Line Compiler and the MingW files <code>make.exe</code> and <code>mmkdir.exe</code></div>
-    <div>This ZIP file has only <b>32 MegaByte</b> instead of 1 GigaByte because I removed tons of unnecessary stuff.</div>
+    <div>This ZIP file has only <b>32 MegaByte</b> instead of 1 GigaByte because I removed folders full of stuff that is not needed.</div>
 <li><div><span class="Error">IMPORTANT:</span> Right click the ZIP file <big>&rarr;</big> menu 'Properties' and click the button <b>Unblock</b>.</div>
 <li><div><b>Extract</b> the ZIP file into it's destination folder on your disk.</div>
 <li><div>I merged the executables from the compiler with MingW so you have to add only one path to the environment variable.</div>
@@ -1618,7 +1619,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>Close all open Console windows, otherwise they will still use the old PATH variable.</div>
 <li><div>Now double click the file <b>Build.cmd</b> in my project and select the firmware to compile.</div>
     <div>This script copies the compiled <b>BIN files</b> automatically into the Firmware folder of HUD ECU Hacker.</div>
-<li><div>The <b>Firmware Programmer</b> will convert the BIN files automatically into <b>DFU files</b> that you can flash.</div>
+<li><div>The <a href="#Firmware_Updater">Firmware Programmer</a> will convert the BIN files automatically into <b>DFU files</b> that you can flash.</div>
 </ol>
 
 <a name="Source_Code"></a>
