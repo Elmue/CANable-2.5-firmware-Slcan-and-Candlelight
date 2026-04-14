@@ -60,3 +60,12 @@ static inline void system_enable_irq()
 	__ISB(); // Instruction Synchronization Barrier
 }
 
+// ---------------------------------------
+
+// These function stubs remove compiler warnings when compiling on Linux
+
+void __weak _close(void) { }
+void __weak _lseek(void) { }
+void __weak _read (void) { }
+void __weak _write(void) { }
+
