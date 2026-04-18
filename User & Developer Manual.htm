@@ -225,13 +225,14 @@
         <div>— &nbsp; <a href="#Transmit_Timeout"     class="MenuLink" onClick="ShowMenu(false)">Transmit Timeout</a></div>
         <div>— &nbsp; <a href="#Echo_Marker"          class="MenuLink" onClick="ShowMenu(false)">Tx Echo Marker</a></div>
         <div>— &nbsp; <a href="#Timestamps"           class="MenuLink" onClick="ShowMenu(false)">Timestamps</a></div>
-        <div>— &nbsp; <a href="#Timing"               class="MenuLink" onClick="ShowMenu(false)">Timing</a></div>
+        <div>— &nbsp; <a href="#Timing"               class="MenuLink" onClick="ShowMenu(false)">Timing - Round Trip Delay</a></div>
         <div>— &nbsp; <a href="#Enter_DFU"            class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>
         <div>— &nbsp; <a href="#Multi_Channel"        class="MenuLink" onClick="ShowMenu(false)">Multi Channel Adapters</a></div>
+        <div>— &nbsp; <a href="#RW_Flash"             class="MenuLink" onClick="ShowMenu(false)">Read / Write Flash Memory</a></div>
         <div><a href="#Slcan_Manual"                  class="MenuLink" onClick="ShowMenu(false)">2.) Slcan Developer Manual</a></div>
         <div>— &nbsp; <a href="#Slcan_Commands"       class="MenuLink" onClick="ShowMenu(false)">Commands</a></div>
         <div>— &nbsp; <a href="#Slcan_Responses"      class="MenuLink" onClick="ShowMenu(false)">Responses &amp; Events</a></div>
-        <div>— &nbsp; <a href="#Slcan_Version"        class="MenuLink" onClick="ShowMenu(false)">Version Info</a></div>
+        <div>— &nbsp; <a href="#Slcan_Version_Info"   class="MenuLink" onClick="ShowMenu(false)">Version Info</a></div>
         <div>— &nbsp; <a href="#Slcan_Packets"        class="MenuLink" onClick="ShowMenu(false)">Packets</a></div>
         <div>— &nbsp; <a href="#Slcan_Errors"         class="MenuLink" onClick="ShowMenu(false)">Error Reports</a></div>
         <div>— &nbsp; <a href="#Slcan_Initialization" class="MenuLink" onClick="ShowMenu(false)">Initialization</a></div>
@@ -312,6 +313,7 @@
 <div>When you connect to the CAN bus of a <b>vehicle</b> you must turn this resistor OFF.</div>
 <div>When you make tests between 2 adapters on your <b>desk</b> you must turn the resistors in both adaters ON.</div>
 
+<a name="Jhoinrch"></a>
 <h3>Jhoinrch RH02 Plus / Elite</h3>
 <table class="TblImage">
     <tr><td><img src="Images/Adapter Jhoinrch RH02 Elite.jpg" alt="CANable - Jhoinrch RH02" width="239" height="90"></td></tr>
@@ -328,6 +330,7 @@
 and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
 <div>The MKS Makerbase and Jhoinrch adapters with the ADM3050E support CAN traffic up to <b>10 Mega baud</b>.</div>
 
+<a name="Oleksii"></a>
 <h3>CAN-Module Dual</h3>
 <table class="TblImage">
     <tr><td><img src="Images/Adapter Oleksii Dual.jpg" alt="CANable - Jhoinrch RH02" width="200" height="90"></td></tr>
@@ -542,13 +545,14 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>After installing HUD ECU Hacker you can chose between the following CANable 2.5 firmware versions:</div>
 
 <table class="DataTable">
-<tr><th>File Name</th><th>Adapters</th><th>Quartz</th><th>Channels</th><th>LED Pins</th></tr>
+<tr><th>File Name</th><th>Adapters</th><th>Quartz</th><th>Channels</th><th>LED Pins</th><th>USB Speed</th></tr>
 <tr>
     <td>STM32G431-Slcan2.5-Multiboard.dfu</td>
     <td rowspan="2">MKS Makerbase<br>DSD Tech, Walfront</td>
     <td rowspan="2">None</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">A0,A15</td>
+    <td rowspan="2">Full Speed<br>12 MBit</td>
 </tr>
 <tr><td>STM32G431-Candlelight2.5-Multiboard.dfu</td></tr>
 
@@ -558,6 +562,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <td rowspan="2">None</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">B11,A15</td>
+    <td rowspan="2">Full Speed<br>12 MBit</td>
 </tr>
 <tr><td>STM32G431-Candlelight2.5-OpenlightLabs.dfu</td></tr>
 
@@ -566,6 +571,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <td rowspan="2">25 MHz<br>since 2026</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">A0,A15</td>
+    <td rowspan="2">Full Speed<br>12 MBit</td>
 </tr>
 <tr><td>STM32G431-Candlelight2.5-Jhoinrch.dfu</td></tr>
 
@@ -575,6 +581,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <td rowspan="2">8 MHz</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">A5,A6</td>
+    <td rowspan="2">Full Speed<br>12 MBit</td>
 </tr>
 <tr><td>STM32G431-Candlelight2.5-OleksiiSolo.dfu</td></tr>
 
@@ -584,6 +591,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <td rowspan="2">8 MHz</td>
     <td rowspan="2">Dual</td>
     <td rowspan="2">A5,A6<br>A3,A4</td>
+    <td rowspan="2">Full Speed<br>12 MBit</td>
 </tr>
 <tr><td>STM32G473-Candlelight2.5-OleksiiDual.dfu</td></tr>
 </table>
@@ -1047,7 +1055,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>The <a href="#Demo_Application">Demo Applications</a> show both: How to use timestamps from firmware and from performance counter.</div>
 
 <a name="Timing"></a>
-<h3>Timing</h3>
+<h3>Timing - Round Trip Delay</h3>
 <div>The timing depends on many factors like computer speed, operating system, CPU load, CAN baudrate,</div>
 <div>CAN or CAN FD protocol, 11 or 29 bit ID, amount of data bytes, ElmüSoft or legacy protocol.</div>
 <div>The following is an example for CAN classic, 500 kBaud, 11 bit ID, 8 data bytes, ElmüSoft protocol:</div>
@@ -1106,14 +1114,51 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>Transferring multiple CAN channels over one USB cable is only possible for CAN busses with low traffic / low baudrates.</div>
 <div>It is recommended to transfer 2 high-traffic CAN busses over 2 single-channel adapters instead of one dual-channel adapter.</div>
 
-<h3>Bugfixes</h3>
-<div>I fixed several bugs in the legacy firmware. The top worst bugs were:</div>
-<ol>
-<li><div>The Candlelight firmware could crash completely after a buffer overflow.</div>
-<li><div>Candlelight had a misdesign: it used only one buffer for CAN Rx and Tx.</div>
-    <div>The consequence was that after a CAN buffer overflow it could not even send the error status to the host.</div>
-<li><div>Candlelight did not send USB traffic correctly. USB Packets with exactly 64 bytes arrived wrong.</div>
-</ol>
+<p>
+<a name="RW_Flash"></a>
+<h3>Read / Write Flash Memory</h3>
+<div>You can permanently store your own data in the flash memory of the processor.</div>
+<div>Behind the firmware there is a lot of unused space available.</div>
+<div>The STM32Gxxx processors have flash memory sizes between 32 kB and 512 kB organized in sectors of 2 kB.</div>
+<div>To see details about the memory switch your adapter into DFU mode in the <a href="#Firmware_Updater">Firmware Programmer</a>:</div>
+<p>
+<img src="Images/FlashMemorySize.png" width="577" height="127" alt="STM32G431 flash memory size">
+<p>
+<div>Each 2 kB flash sector (0x800 bytes) can be erased and written individually. This takes 22 ms.</div>
+<div>In each unused sector you can store any binary data from 1 byte up to 2000 bytes.</div>
+<div>The firmware stores also the length of your data, so when reading you get back exactly what you have written before.</div>
+<p>
+<div>While the firmware is at the begin of the flash memory, the user data is stored at the end in descending order.</div>
+<div>User Data Segment 00 is in the last flash memoy sector.</div>
+<div>This avoids that the user data gets corrupted when you update to a bigger firmware some day.</div>
+<p>
+<div>Example for 4 user segments stored in a 128 kB flash memory:</div>
+
+<table class="DataNarrow" cellspacing="1">
+<tr><th>Sector</th><th>Start Address</th><th>End Address</th><th>Size</th><th>Content</th></tr>
+<tr><td>0</td><td>0x08000000</td><td>0x080007FF</td><td>2kB</td><td rowspan="3" align="center">Firmware<br>35 kB</td></tr>
+<tr><td colspan=4>etc...</td></tr>
+<tr><td>17</td><td>0x08008800</td><td>0x08008FFF</td><td>2kB</td></tr>
+<tr><td colspan=5 style="border-bottom:1px solid black"></td></tr>
+<tr><td>18</td><td>0x08009000</td><td>0x080097FF</td><td>2kB</td><td rowspan="3" align="center">unused<br>empty</td></tr>
+<tr><td colspan=4>etc...</td></tr>
+<tr><td>59</td><td>0x0801D800</td><td>0x0801DFFF</td><td>2kB</td></tr>
+<tr><td colspan=5 style="border-bottom:1px solid black"></td></tr>
+<tr><td>60</td><td>0x0801E000</td><td>0x0801E7FF</td><td>2kB</td><td>User Data Segment 03</td></tr>
+<tr><td>61</td><td>0x0801E800</td><td>0x0801EFFF</td><td>2kB</td><td>User Data Segment 02</td></tr>
+<tr><td>62</td><td>0x0801F000</td><td>0x0801F7FF</td><td>2kB</td><td>User Data Segment 01</td></tr>
+<tr><td>63</td><td>0x0801F800</td><td>0x0801FFFF</td><td>2kB</td><td>User Data Segment 00</td></tr>
+</table>
+
+<div>When you write to the flash memory the firmware first checks if the segment already contains identical data.</div>
+<div>Only if you write different data the segment is erased and the new data is written.</div>
+<div>This avoids that the flash memory is wearing off when your application writes the same data over and over again.</div>
+<p>
+<div>The firmware also prevents that you can accidentally overwrite a sector that is occupied by firmware.</div>
+
+<p>
+<div><b>Candlelight</b>: The <a href="#Demo_Application">C++ and C# Demo Projects</a> show how to read/write flash data.</div>
+<div><b>Slcan</b>: Use commands "*Flash:XX=Data" and "*Flash:XX?"</div>
 
 <h3>Bus Load</h3>
 <div>The new firmware can <b>calculate the bus load</b>. It is displayed in percent in an interval that the user can define.</div>
@@ -1136,6 +1181,16 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <p>
 <div>Normally transceiver chips have a delay around 50 ns.</div>
 <div>But the isolated chip in the MKS Makerbase that you see here is slower. (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>).</div>
+
+<h3>Bugfixes</h3>
+<div>I fixed several bugs in the legacy firmware. The top worst bugs were:</div>
+<ol>
+<li><div>The Candlelight firmware could crash completely after a buffer overflow.</div>
+<li><div>Candlelight had a misdesign: it used only one buffer for CAN Rx and Tx.</div>
+    <div>The consequence was that after a CAN buffer overflow it could not even send the error status to the host.</div>
+<li><div>Candlelight did not send USB traffic correctly. USB Packets with exactly 64 bytes arrived crippled.</div>
+</ol>
+
 
 
 <a name="Slcan_Manual"></a>
@@ -1166,7 +1221,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>"OS\r"</td><td>Closed</td><td>100</td><td>Open in silent mode</td><td>Ignore settings with M0 / M1</td></tr>
 <tr><td>"OI\r"</td><td>Closed</td><td>100</td><td>Open in internal loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
 <tr><td>"OE\r"</td><td>Closed</td><td>100</td><td>Open in external loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
-<tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns seven key/value pairs. See <a href="#Slcan_Version">Version Info</a></td></tr>
+<tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns seven key/value pairs. See <a href="#Slcan_Version_Info">Version Info</a></td></tr>
 <tr><th>Set Modes</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"M1\r"</td><td>Closed</td><td>legacy</td><td>Enable silent mode</td><td>The next command "O\r" will open in bus monitoring mode</td></tr>
 <tr><td>"M0\r"</td><td>Closed</td><td>legacy</td><td>Disable silent mode</td><td>The next command "O\r" will open in normal mode</td></tr>
@@ -1215,10 +1270,12 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
 <tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>Set 3 filters for 16 ID's each: 7EX, 72X and 73X</td></tr>
 <tr><td>"f\r"</td><td>Closed</td><td>100</td><td>Clear all filters</td><td>Remove all filters</td></tr>
-<tr><th>Boot Mode</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><th>Special Commands</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"*Boot0:Off\r"</td><td>Closed</td><td>100</td><td>Disable pin BOOT0</td><td>See <a href="#Hardware">Hardware Misdesign</a></td></tr>
 <tr><td>"*Boot0:?\r"</td><td>Open/Closed</td><td>100</td><td>Request status of pin BOOT0</td><td>returns "+1\r" if enabled or "+0\r" if disabled</td></tr>
 <tr><td>"*DFU\r"</td><td>Open/Closed</td><td>100</td><td>Enable pin BOOT0 and enter DFU mode</td><td>If feedback = <code>FBK_ResetRequired</code>: Reconnect USB cable!</td></tr>
+<tr><td>"*Flash:XX=Data\r"</td><td>Open/Closed</td><td>102</td><td>Writes data to <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00=48656C6C6F\r" writes "Hello" to segment 0</td></tr>
+<tr><td>"*Flash:XX?\r"</td><td>Open/Closed</td><td>102</td><td>Reads data from <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00?\r" returns "+48656C6C6F\r"</td></tr>
 <tr><th>Transmit Packets</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"Txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 29 bit ID</td><td>Bits: IDE  &nbsp; &nbsp; See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
 <tr><td>"txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 11 bit ID</td><td>Bits: None</td></tr>
@@ -1259,8 +1316,10 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>"#:\r"</td><td>100</td><td>The required baudrate has not been set</td><td>Requires Feedback mode to be enabled</td></tr>
 <tr><td>"#;\r"</td><td>100</td><td>Programming the Option Bytes in flash memory failed</td><td>Requires Feedback mode to be enabled</td></tr>
 <tr><td>"#&lt;\r"</td><td>100</td><td>Please reconnect the USB cable, a hardware reset is required</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><td>"#=\r"</td><td>102</td><td>A parameter is outside the valid range</td><td>Requires Feedback mode to be enabled</td></tr>
 <tr><th>Response</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"+Text\r"</td><td>100</td><td>The firmware sends a text response to a command</td><td>Used by commands "*Boot0:?\r" and "V\r"</td></tr>
+<tr><td>"+Text\r"</td><td>100</td><td>The firmware sends a plain text response to a command</td><td>Used by commands "*Boot0:?\r" and "V\r"</td></tr>
+<tr><td>"+Hex Data\r"</td><td>102</td><td>The firmware sends a hex byte response to a command</td><td>Used by command "*Flash:XX?\r"</td></tr>
 <tr><th>Event</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"&gt;Message\r"</td><td>100</td><td>The firmware sends a debug message (plain text)</td><td>Requires Debug Messages to be enabled</td></tr>
 <tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status (See <a href="#Slcan_Errors">Slcan Errors</a>)</td><td>Requires CAN Error Reports to be enabled</td></tr>
@@ -1281,7 +1340,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>"$response\r"</td><td>101</td><td>Origin is CAN channel 3</td><td>Only for multi-channel adapters</td></tr>
 </table>
 
-<a name="Slcan_Version"></a>
+<a name="Slcan_Version_Info"></a>
 <h3>Slcan Version Info</h3>
 <div>In the new firmware the command "V\r" returns one string with <b>seven key/value pairs</b> separatad by <b>tab characters</b>.</div>
 <div>It starts with a <b>plus character</b> that indicates a command response with text content, rather than a feedback response (#).</div>
@@ -1292,11 +1351,12 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>MCU: STM32G431\t</div>
 <div>DevID: 1128\t</div>
 <div>Firmware: 2427156\t</div>
-<div>Slcan: 101\t</div>
+<div>Slcan: 102\t</div>
 <div>Clock: 160\t</div>
 <div>Limits: 512,256,128,128,32,32,16,16\r</div>
 <div>Channels: 1\t</div>
 <div>Quartz: No\t</div>
+<div>Serial: 206249E3946306550\t</div>
 </td></tr>
 </table>
 <p>
@@ -1323,11 +1383,9 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>The legacy firmware has returned completely meaningless version numbers like "ba6b1dd".</div>
     <div>Here you get a <b>version</b> number that indicates <b>the date</b> when the firmware was created.</div>
     <div>Convert to hex and you get the BCD version 0x250914, which means 14th september of 2025.</div></td></tr>
-<tr><td>Slcan</td><td>101</td><td>100</td><td>
+<tr><td>Slcan</td><td>102</td><td>100</td><td>
     <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
-    <div>The first version created by ElmüSoft was version 100.</div>
-    <div>Version 101 adds support for adapters with multiple CAN channels.</div>
-    <div>Use this version number to detect which features are available in the firmware.</div></td></tr>
+    <div>Use this <a href="#Slcan_Versions">version number</a> to detect which features are available in the firmware.</div></td></tr>
 <tr><td>Clock</td><td>160</td><td>100</td><td>The CAN clock is 160 MHz</td></tr>
 <tr><td>Limits</td><td>512,256,128,128,<br>32,32,16,16</td><td>100</td><td>
     <div>These 8 values are the <b>upper limits</b> for the bitrate commands 's' and 'y'.</div>
@@ -1341,7 +1399,16 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>'Yes' if the board has a quartz and the correct firmware has been uploaded.</div>
     <div>'No' if the board has no quartz or the wrong firmware has been uploaded.</div>
     <div>If the board has no quartz, the processor's RC oscillator with only 1% precision is used.</div></td></tr>
+<tr><td>Serial</td><td>206249E3946306550</td><td>102</td><td>
+    <div>The serial number of the processor. STM guarantees that this is unique.</div></td></tr>
 </table>
+
+<a name="Slcan_Versions"></a>
+<h3>Slcan Versions</h3>
+<div>The first version created by ElmüSoft was version 100.</div>
+<div>Version 101 adds support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>.</div>
+<div>Version 102 allows to read/write user data from/to the <a href="#RW_Flash">flash memory</a> and returns the serial number.</div>
+
 
 <a name="Slcan_Packets"></a>
 <h3>Slcan Packets</h3>
@@ -1432,7 +1499,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 
 <div>When connecting to a CANable 2.5 adapter you should follow this sequence:</div>
 <ol>
-<li><div>Send command "C\r" to <b>close the device</b> if it is till open.</div>
+<li><div>Send command "\rC\r" to <b>close the device</b> if it is till open.</div>
     <div>But this command has also another purpose: It <b>resets all internal variables</b> in the firmware to their default.</div>
     <div>Baudrates and all modes are reset (back to legacy), reports turned off, filters removed, Rx/Tx buffers are emptied.</div>
     <div><b>ATTENTION:</b> The command 'Close' is the only command that does <b>not send a feedback</b>, although feedbacks are enabled.</div>
@@ -1440,7 +1507,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>When you connect to a CANable you don't know if the user has connected a legacy device or a CANable 2.5</div>
     <div>Additionally the firmware cannot know at this moment if you will enable feedback mode later or not.</div>
     <div>Therefore the command 'Close' behaves exactly as the legacy command: It never sends a feedback.</div>
-<li><div>Send command "V\r" to get the <a href="#Slcan_Version">Version String</a>.</div>
+<li><div>Send command "V\r" to get the <a href="#Slcan_Version_Info">Version String</a>.</div>
     <div>Split the response string at the <b>tab characters</b>.</div>
     <div>When you get <b>7 parts</b> or more you are communicating with a CANable 2.5, otherwise it is a legacy firmware.</div>
     <div>If you don't support legacy devices show an error message, otherwise switch to legacy mode.</div>
@@ -1470,6 +1537,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 </td></tr>
 </table>
 
+
 <p>
 <a name="Candlelight_Manual"></a>
 <p>&nbsp;
@@ -1498,6 +1566,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <li>Decode and display CAN bus errors
 <li>Use of multiple CAN channels
 <li>Disable boot pin / Enter DFU mode
+<li>Write and read user data to the flash memory
 </ul>
 <div>The <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/SampleApplication%20C%2B%2B" target="_blank">source code</a> is full of <b>detailed comments</b> so you can easily understand how it works.</div>
 <p>
@@ -1626,17 +1695,18 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <h3>Source Code Versions</h3>
 <ul>
 <li><div><b>14.Sep.2025</b>: Initial firmware release.</div>
-<li><div><b>23.Oct.2025</b>: New firmware allows to modify one filter after the adapter is already open.</div>
-<li><div><b>16.Nov.2025</b>: New firmware supports remote frames, Bugfix Slcan command <code>Y0</code>, Report error when sending FD packet in classic mode.</div>
-<li><div><b>18.Nov.2025</b>: New firmware fixes calculation of all Slcan baudrates for commands <code>S</code> and <code>Y</code>. Fix of legacy Candlelight packet size.</div>
-<li><div><b>21.Nov.2025</b>: Many improvements in C++ demo, added new C# demo.</div>
-<li><div><b>26.Nov.2025</b>: New firmware changes Slcan command <code>S</code> to use samplepoint 75% instead of 87.5% which is more robust.</div>
+<li><div><b>23.Oct.2025</b>: New firmware allows to modify one <a href="#Filter">filter</a> after the adapter is already open.</div>
+<li><div><b>16.Nov.2025</b>: New firmware supports remote frames, Bugfix <a href="#Slcan_Manual">Slcan</a> command <code>Y0</code>, Report error when sending FD packet in classic mode.</div>
+<li><div><b>18.Nov.2025</b>: New firmware fixes calculation of all <a href="#Slcan_Manual">Slcan</a> baudrates for commands <code>S</code> and <code>Y</code>. Fix of legacy Candlelight packet size.</div>
+<li><div><b>21.Nov.2025</b>: Many improvements in <a href="#Demo_Application">C++ demo</a>, added new <a href="#Demo_Application">C# demo</a>.</div>
+<li><div><b>26.Nov.2025</b>: New firmware changes <a href="#Slcan_Manual">Slcan</a> command <code>S</code> to use samplepoint 75% instead of 87.5% which is more robust.</div>
 <li><div><b>28.Nov.2025</b>: New firmware uses HAL 1.2.5 with improved double buffering, fixes lost Tx packets under Linux. (thanks to Marc)</div>
-<li><div><b>29.Dec.2025</b>: Added HAL files for STM32G473</div>
-<li><div><b>02.Jan.2026</b>: Jhoinrch is the first company that sells their CANable adpter with the new Elmüsoft 2.5 firmware.</div>
-<li><div><b>08.Jan.2026</b>: Added support for boards with quartz crystal. New firmware for Jhoinrch adapter with 25 MHz quartz.</div>
-<li><div><b>13.Jan.2026</b>: Hardware timestamps use precise 16 bit time from processor.</div>
-<li><div><b>04.Mar.2026</b>: Support for adapters with multiple CAN channels. Slcan: New version 101. Candlelight: Added <code>eBoardFlags</code>.</div>
+<li><div><b>29.Dec.2025</b>: Added HAL files for <a href="#Oleksii">STM32G473</a></div>
+<li><div><b>02.Jan.2026</b>: <a href="#Jhoinrch">Jhoinrch</a> is the first company that sells their CANable adpter with the new Elmüsoft 2.5 firmware.</div>
+<li><div><b>08.Jan.2026</b>: Added support for boards with <a href="#Firmware_Updater">quartz crystal</a>. New firmware for Jhoinrch adapter with 25 MHz quartz.</div>
+<li><div><b>13.Jan.2026</b>: Hardware <a href="#Timestamps">timestamps</a> use precise 16 bit time from processor.</div>
+<li><div><b>04.Mar.2026</b>: Support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>. Slcan: New version 101. Candlelight: Added <code>eBoardFlags</code>.</div>
+<li><div><b>16.Apr.2026</b>: User data can be stored in <a href="#RW_Flash">flash memory</a>. Slcan: New version 102.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 

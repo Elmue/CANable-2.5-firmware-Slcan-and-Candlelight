@@ -10,6 +10,8 @@
 
 #pragma once
 
+// ==============================================================================
+
 // Command sent from the host application in a SETUP request
 typedef enum // transferred as 8 bit 
 {
@@ -38,6 +40,8 @@ typedef enum // transferred as 8 bit
     ELM_ReqSetBusLoadReport,   // uint8_t: enable busload report in percent to be sent in a user defined interval
     ELM_ReqSetPinStatus,       // kPinStatus: set, reset, enable, disable,... processor pins
     ELM_ReqGetPinStatus,       // Receive: SETUP.wValue = ePinID, Send: ePinStatus in 2 data bytes
+    ELM_ReqReadFlash,          // Read  user data from a segment in flash memory
+    ELM_ReqWriteFlash,         // Write user data to   a segment in flash memory
 } eUsbRequest;
 
 // These flags are used to enable/disable a mode with GS_ReqSetDeviceMode 

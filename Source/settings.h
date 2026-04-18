@@ -43,8 +43,9 @@ typedef enum // sent as 8 bit
     FBK_BusIsOff,                 // "#8" = Sending is not possible because the processor is blocked in the BusOff state
     FBK_NoTxInSilentMode,         // "#9" = Sending is not possible because the adapter is in Bus Monitoring mode
     FBK_BaudrateNotSet,           // "#:" = Opening the adapter is not possible if no baudrate has been set
-    FBK_OptBytesProgrFailed,      // "#;" =Programming the Option Bytes failed
-    FBK_ResetRequired,            // "#<" =The user must disconnect and reconnect the USB cable to enter boot mode
+    FBK_OptBytesProgrFailed,      // "#;" = Programming the Option Bytes failed
+    FBK_ResetRequired,            // "#<" = The user must disconnect and reconnect the USB cable to enter boot mode
+    FBK_ParamOutOfRange,          // "#=" = A paramter is outside the valid range
 } eFeedback;
 
 // If bus status is BUS_OFF both LED's (green + blue) are permanently ON

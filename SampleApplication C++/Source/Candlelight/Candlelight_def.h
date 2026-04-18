@@ -39,12 +39,15 @@ typedef enum // transferred as 8 bit
     GS_ReqGetState,            // kDeviceState: not implemented, undocumented
 
     // ----------- ELM commands added by ElmüSoft -----------
+    ELM_ReqFIRST        = 20,  // First request that requires ElmüSoft protocol to be enabled
     ELM_ReqGetBoardInfo = 20,  // kBoardInfo: get name about target board and processor
     ELM_ReqSetFilter,          // kFilter: set up to 8 acceptance mask filters
     ELM_ReqGetLastError,       // uint8_t: get the eFeedback error of the last SETUP request. This works also in legacy mode!
     ELM_ReqSetBusLoadReport,   // uint8_t: enable busload report in percent to be sent in a user defined interval
     ELM_ReqSetPinStatus,       // kPinStatus: set, reset, enable, disable,... processor pins
     ELM_ReqGetPinStatus,       // Receive: SETUP.wValue = ePinID, Send: ePinStatus in 2 data bytes
+    ELM_ReqReadFlash,          // Read  user data from a segment in flash memory
+    ELM_ReqWriteFlash,         // Write user data to   a segment in flash memory
 } eUsbRequest;
 
 // These flags are used to enable/disable a mode with GS_ReqSetDeviceMode 
@@ -117,6 +120,7 @@ typedef enum // sent as 8 bit
     FBK_BaudrateNotSet,           // Opening the adapter is not possible if no baudrate has been set
     FBK_OptBytesProgrFailed,      // Programming the Option Bytes failed
     FBK_ResetRequired,            // The user must disconnect and reconnect the USB cable to enter boot mode
+    FBK_ParamOutOfRange,          // A paramter is outside the valid range
 } eFeedback;
 
 // If bus status is BUS_OFF both LED's (green + blue) are permanently ON

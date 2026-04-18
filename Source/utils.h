@@ -49,7 +49,7 @@ bool        utils_parse_next_decimal    (char buf[], int* pos, char separator, u
 bool        utils_parse_hex_value(char buf[], int* pos, int digits, uint32_t* value);
 bool        utils_parse_hex_delimiter(char buf[], int* pos, char separator, int* digits, uint32_t* value);
 bool        utils_to_hex_value(char buf[], int pos);
-uint8_t     utils_nibble_to_ascii(uint8_t nibble);
+char        utils_nibble_to_ascii(uint8_t nibble);
 const char* utils_get_MCU_name();
 
 

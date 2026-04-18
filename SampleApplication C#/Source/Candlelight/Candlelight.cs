@@ -77,12 +77,14 @@ public class Candlelight : IDisposable
 	    GetTermination,    // UInt32 (eTermination)     
 	    GetState,          // not implemented (eCanState ?)
         // ------- ElmüSoft -------
-        GetBoardInfo = 20,
-        SetFilter,
-        GetLastError,
-        SetBusLoadReport,  // set interval of report
-        SetPinStatus,
-        GetPinStatus,
+        GetBoardInfo = 20, // kBoardInfo: get name about target board and processor
+        SetFilter,         // kFilter: set up to 8 acceptance mask filters
+        GetLastError,      // Byte: get the eFeedback error of the last SETUP request. This works also in legacy mode!
+        SetBusLoadReport,  // Byte: enable busload report in percent to be sent in a user defined interval
+        SetPinStatus,      // kPinStatus: set, reset, enable, disable,... processor pins
+        GetPinStatus,      // Receive: SETUP.wValue = ePinID, Send: ePinStatus in 2 data bytes
+        ReadFlash,         // Read  user data from a segment in flash memory
+        WriteFlash,        // Write user data to   a segment in flash memory
     }
 
     enum eDevMode : int
@@ -270,13 +272,14 @@ public class Candlelight : IDisposable
         Adapter_must_be_open,   // this command must be executed after  opening the adapter
         Adapter_must_be_closed, // this command must be executed before opening the adapter
         Error_from_HAL,
-        Unsupported_feature,    // the processor is not implemented for DFU mode / no termination resistor
+        Unsupported_feature,    // The feature is not implemented or not supported by the board
         Tx_buffer_overflow,
         Bus_is_off,             // the adapter is closed or in Silent Mode or Bus is Off
         No_Tx_in_silent_mode,
         Baudrate_not_set,
         Option_bytes_programming_failed,
         Please_reconnect_the_USB_cable,
+        Parameter_outside_valid_range,
     }
 
     enum eFilterOperation : byte
@@ -776,7 +779,7 @@ public class Candlelight : IDisposable
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251118 = 18.nov.2025)
-    const int MIN_FIRMWARE = 0x260304;
+    const int MIN_FIRMWARE = 0x260416;
 
     // The firmware update interface is always interface 1
     const Byte DFU_INTERFACE = 1;
@@ -1144,6 +1147,26 @@ public class Candlelight : IDisposable
         return (u16_PinStatus & (UInt16)ePinStatus.Enabled) > 0;
     }
 
+    // Write user data to flash memory. The firmware also stores the length of the data and returns the same data in ReadFlash()
+    // A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
+    public void WriteFlash(Byte u8_Segment, Byte[] u8_Buffer)
+    {
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+            throw new Exception("The device must be opened for the Candlelight interface.");
+
+        CtrlTransfer<Byte[]>((Byte)eUsbRequest.WriteFlash, eDirection.Out, u8_Segment, u8_Buffer);
+    }
+
+    // Read user data from the flash memory that was written before with WriteFlash()
+    // A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
+    public Byte[] ReadFlash(Byte u8_Segment)
+    {
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+            throw new Exception("The device must be opened for the Candlelight interface.");
+
+        return CtrlTransfer<Byte[]>((Byte)eUsbRequest.ReadFlash, eDirection.In, u8_Segment);
+    }
+
     // -------------------------------------------------------------------------------------
 
     /// <summary>
@@ -1172,14 +1195,19 @@ public class Candlelight : IDisposable
         // wIndex is the interface number (0 = Candlelight, 1 = DFU)
         UInt16 wIndex = mi_WinUSB.Interface.Number;
 
+        // MSDN WinUsb_ControlTransfer(): The length of the buffer must not exceed 4KB.
+        int s32_SizeIN = 4096; // for ReadFlash()
+        if (typeof(T) != typeof(Byte[]))
+            s32_SizeIN = Marshal.SizeOf(typeof(T));
+
         // ATTENTION: kCapabilityFD has 72 bytes
         // However the legacy firmware complains about wLength > 64 byte
         Byte[] u8_Buffer;
         if (e_Dir == eDirection.Out) u8_Buffer = Utils.StructureToBytesFix(k_Struct);
-        else                         u8_Buffer = new Byte[Marshal.SizeOf(typeof(T))]; 
+        else                         u8_Buffer = new Byte[s32_SizeIN]; 
 
-        int s32_CmdError = mi_WinUSB.CtrlTansfer(eSetupRecip.Interface, e_Type, e_Dir, 
-                                                    u8_Request, wValue, wIndex, ref u8_Buffer);     
+        int s32_CmdError = mi_WinUSB.CtrlTansfer(eSetupRecip.Interface, e_Type, e_Dir, u8_Request, wValue, wIndex, ref u8_Buffer);     
+
         // The DFU interface has no feedback
         if (mi_WinUSB.Interface.Number != DFU_INTERFACE)
         {
@@ -1211,10 +1239,13 @@ public class Candlelight : IDisposable
 
         if (e_Dir == eDirection.In)
         {
-            int s32_Size = Marshal.SizeOf(typeof(T));
-            if (u8_Buffer.Length < s32_Size)
-                throw new Exception(String.Format("Error executing command {0}. The device has returned {1} instead of {2} bytes",
-                                    s_Request, u8_Buffer.Length, s32_Size));
+            // When reading flash memory the firmware will return less bytes than requested, this is not an error.
+            if (u8_Request != (Byte)eUsbRequest.ReadFlash)
+            {
+                if (u8_Buffer.Length < s32_SizeIN)
+                    throw new Exception(String.Format("Error executing command {0}. The device has returned {1} instead of {2} bytes",
+                                        s_Request, u8_Buffer.Length, s32_SizeIN));
+            }
 
             // throws if invalid byte count
             return Utils.BytesToStructureFix<T>(u8_Buffer);

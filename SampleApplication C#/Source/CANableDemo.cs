@@ -74,6 +74,9 @@ class Program
     // false --> create performance counter timestamps 
     static bool HW_TIMESTAMP = false;
 
+    // true --> test writing/reading user data to/from flash memory
+    static bool FLASH_MEMORY_TEST = false;
+
     static Candlelight mi_Candle = new Candlelight();
     static kDevInfo    mk_Info;
     static int         ms32_DeviceIndex; // user selection if multiple devices connected
@@ -116,6 +119,12 @@ class Program
         // open Candlelight interface
         if (!OpenDevice())
             return;
+
+        // -----------------------------------------
+
+        // Test flash writing / reading
+        if (FLASH_MEMORY_TEST)
+            FlashMemoryTest();
 
         // -----------------------------------------
 
@@ -479,6 +488,41 @@ class Program
     {
         Console.ForegroundColor = e_Color;
         Console.Write(String.Format(s_Format, o_Param));
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------------
+
+    // Write a string and a random into 2 flash segments, then read the data and verify that it is correct.
+    static void FlashMemoryTest()
+    {
+        Byte u8_SegmentA = 3;
+        Byte u8_SegmentB = 7;
+
+        Byte[]  u8_String = Encoding.ASCII.GetBytes("Hello World! This is flash data.");
+
+        UInt64 u64_Random = (UInt64)Environment.TickCount * 0x915B76F32;
+        Byte[]  u8_Random = Utils.StructureToBytesFix(u64_Random);
+
+        mi_Candle.WriteFlash(u8_SegmentA, u8_String);
+        mi_Candle.WriteFlash(u8_SegmentB, u8_Random);
+
+        // --------------------
+
+        Byte[] u8_Flash1 = mi_Candle.ReadFlash(u8_SegmentA);
+        if (!Utils.ByteArraysEqual(u8_String, u8_Flash1))
+        {
+            Print(ConsoleColor.Red, "\nFlash memory test 1 failed!\n");
+            return;
+        }
+
+        Byte[] u8_Flash2 = mi_Candle.ReadFlash(u8_SegmentB);
+        if (!Utils.ByteArraysEqual(u8_Random, u8_Flash2))
+        {
+            Print(ConsoleColor.Red, "\nFlash memory test 2 failed!\n");
+            return;
+        }
+
+        Print(ConsoleColor.Green, "\nFlash memory test: Success\n");
     }
 } // class
 } // namespace

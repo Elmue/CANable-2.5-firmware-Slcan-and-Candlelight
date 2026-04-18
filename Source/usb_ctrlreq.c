@@ -372,24 +372,9 @@ static void USBD_GetDescriptor(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *r
 
                 case USBD_IDX_SERIAL_STR:  // USB Device Serial String
                 {
-                    // get the 96 bit serial number which is unique for each processor that ST Microelectrons has ever produced.
-                    uint32_t serial_0 = *(uint32_t*)(UID_BASE    );
-                    uint32_t serial_1 = *(uint32_t*)(UID_BASE + 4);
-                    uint32_t serial_2 = *(uint32_t*)(UID_BASE + 8);
-
-                    // reduce 96 bit to 64 bit
-                    serial_0 += serial_2;
-
-                    // Format USB serial number
-                    char s8_Serial[20];
-#if defined(Candlelight)
-                    // Depending on the firmware that the user uploads the same device may have one or multiple Candlelight interfaces.
-                    // The operating system must install different drivers per interface depending on the interface count.
-                    sprintf(s8_Serial, "%08lX%08lX%u", serial_0, serial_1, USBD_INTERFACES_COUNT);
-#else // Slcan
-                    sprintf(s8_Serial, "%08lX%08lX",   serial_0, serial_1);
-#endif
-                    pbuf = USBD_GetStringDescr(s8_Serial, &len);
+                    char serial_no[20];
+                    USBD_GetSerialNumber(serial_no);
+                    pbuf = USBD_GetStringDescr(serial_no, &len);
                     break;
                 }
                 default: // Interface string descriptors and MS OS descriptors (Candlelight only)
@@ -646,6 +631,26 @@ void USBD_CtlError(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     USBD_LL_StallEP(pdev, 0U);
 }
 
+// Gets the serial number of the processor as ASCII string.
+// STM guarantees that each procesor has a unique serial number.
+void USBD_GetSerialNumber(char s8_Serial[20])
+{
+    // get the 96 bit serial number which is unique for each processor that ST Microelectrons has ever produced.
+    uint32_t serial_0 = *(uint32_t*)(UID_BASE    );
+    uint32_t serial_1 = *(uint32_t*)(UID_BASE + 4);
+    uint32_t serial_2 = *(uint32_t*)(UID_BASE + 8);
+
+    // reduce 96 bit to 64 bit
+    serial_0 += serial_2;
+
+#if defined(Candlelight)
+    // Depending on the firmware that the user uploads the same device may have one or multiple Candlelight interfaces.
+    // The operating system must install different drivers per interface depending on the interface count.
+    sprintf(s8_Serial, "%08lX%08lX%u", serial_0, serial_1, USBD_INTERFACES_COUNT);
+#else // Slcan
+    sprintf(s8_Serial, "%08lX%08lX",   serial_0, serial_1);
+#endif
+}
 
 // @brief  Convert Ascii string into unicode one
 // @param  desc : descriptor buffer (ASCII)

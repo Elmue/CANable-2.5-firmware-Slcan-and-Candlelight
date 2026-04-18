@@ -29,11 +29,11 @@ kDeviceVersion        GS_DeviceVersion = {0};
 kBoardInfo            ELM_BoardInfo    = {0};
 eFeedback             ELM_LastError    = FBK_Success;
 
-// 64 byte buffer for Endpoint 0 data (SETUP requests)
+// Buffer for Endpoint 0 data (SETUP requests with Flash Write Data of 2 kB)
 // This buffer contains OUT data from the host in the second stage of SETUP requests.
-uint8_t __aligned(4)  ep0_buf[USB_MAX_EP0_SIZE];
+uint8_t __aligned(4)  ep0_buf[MAX(USB_MAX_EP0_SIZE, MAX_FLASH_DATA_LEN + 8)];
 
-// SETUP requests with OUT data are executed in two stages, 
+// SETUP requests with OUT data are executed in two stages,
 // the first stage uses this variable to pass the request to the second stage.
 USBD_SetupReqTypedef  last_setup_request = {0};
 
@@ -99,7 +99,7 @@ void control_init()
     ELM_BoardInfo.McuDeviceID = (uint16_t)HAL_GetDEVID();
     strcpy(ELM_BoardInfo.McuName,   utils_get_MCU_name()); // "STM32G431"  (from makefile)
     strcpy(ELM_BoardInfo.BoardName, TARGET_BOARD);         // "Multiboard", "OpenlightLabs", "Jhoinrch"  (from makefile)
-    
+
 #if HSE_VALUE > 0
     ELM_BoardInfo.BoardFlags |= BRD_Quartz_In_Use;
 #endif
@@ -114,20 +114,14 @@ void control_init()
 // IMPORTANT: Read the comment for USBD_GS_Vendor_Request()
 bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 {
-    uint8_t  value8;
-    uint16_t value16;
-    uint32_t value32;
-    void*    src = NULL;
-    uint16_t len = 0;
-
     // GetLastError always sends a valid response even if the ElmüSoft protocol is not enabled or the host sends an invalid channel.
     if (req->bRequest == ELM_ReqGetLastError)
     {
-        value8 = ELM_LastError;
-        USBD_CtlSendData(pdev, &value8, 1);
-        return true; // stall endpoint 0
+        uint8_t last_err = ELM_LastError;
+        USBD_CtlSendData(pdev, &last_err, 1);
+        return true;
     }
-    
+
     // To enable the new ElmüSoft commands the host must send as the first command:
     // GS_ReqSetDeviceMode with GS_ModeReset and ELM_DevFlagProtocolElmue.
     if (req->bRequest >= ELM_ReqFIRST && !GLB_ProtoElmue)
@@ -135,16 +129,30 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
         ELM_LastError = FBK_InvalidCommand;
         return false; // stall endpoint 0
     }
-    
-    int    channel = 0;
-    ePinID pin_id  = 0; // invalid
+
+    // -------- handle wValue -----------
+
+    int      channel    = 0;
+    ePinID   pin_id     = 0; // invalid
+    uint32_t flash_addr = 0; // invalid
     switch (req->bRequest)
     {
-        // for getting the pin status req->wValue is the pin ID
+        // req->wValue is the pin ID
         case ELM_ReqGetPinStatus:
-            pin_id = req->wValue;  
+            pin_id = req->wValue;
             break;
-            
+
+        // req->wValue is the flash segment
+        case ELM_ReqReadFlash:
+        case ELM_ReqWriteFlash:
+            flash_addr = system_get_flash_addr(req->wValue);
+            if (flash_addr == 0) // invalid segment
+            {
+                ELM_LastError = FBK_ParamOutOfRange; // segment is occupied by firmware
+                return false; // stall endpoint 0
+            }
+            break;
+
         // for per-device messages req->wValue is ignored (the Linux driver sets wValue = 1)
         case GS_ReqSetHostFormat:
         case GS_ReqGetDeviceVersion:
@@ -165,137 +173,155 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
             }
             break;
     }
+
     // If the channel is closed the Rx LED indicates that a SETUP command was recived.
-    // If the channel is open   the Rx LED indicates that a CAN packet was received. 
+    // If the channel is open   the Rx LED indicates that a CAN packet was received.
     if (!can_is_open(channel))
-        led_flash_RX(channel); // Flash the blue Rx LED shortly for 15 ms           
-        
+        led_flash_RX(channel); // Flash the blue Rx LED shortly for 15 ms
+
     ELM_LastError = FBK_Success; // reset error from the last command
-    
-    switch (req->bRequest)
-    {
-        // ------- Host -> Device (error checking in next function) --------
-        case GS_ReqSetHostFormat: // ignores channel
-            len = sizeof(uint32_t);
-            break;
-        case GS_ReqIdentify:
-            len = sizeof(uint32_t); // the application sends a 32 bit "mode", but the value is ignored here
-            break;
-        case GS_ReqSetBitTiming:
-        case GS_ReqSetBitTimingFD:
-            len = sizeof(kBitTiming);
-            break;
-        case GS_ReqSetDeviceMode:
-            len = sizeof(kDeviceMode);
-            break;
-        case GS_ReqSetTermination:
-            len = sizeof(uint32_t);
-            break;
-        case ELM_ReqSetFilter:
-            len = sizeof(kFilter);
-            break;
-        case ELM_ReqSetBusLoadReport:
-            len = sizeof(uint8_t);
-            break;
-        case ELM_ReqSetPinStatus: // ignores channel
-            len = sizeof(kPinStatus);
-            break;
 
-        // -------- Device -> Host (error checking here) --------
-        case GS_ReqGetCapabilities: // channel ignored, but must be valid
-            src = &GS_CapabilityClassic;
-            len = sizeof(kCapabilityClassic);
-            break;
-        case GS_ReqGetCapabilitiesFD: // channel ignored, but must be valid
-            src = &GS_CapabilityFD;
-            len = sizeof(kCapabilityFD);
-            break;
-        case GS_ReqGetDeviceVersion: // ignores channel
-            src = &GS_DeviceVersion;
-            len = sizeof(kDeviceVersion);
-            break;
-        case GS_ReqGetTimestamp: // ignores channel
-            // Bugfix: The legacy firmware used a timestamp created only when a USB SOF packet was received.
-            // This is totally stupid, because the timestamp has a precision of 1 µs, but SOF packets are received once every millisecond.
-            value32 = system_get_timestamp();
-            src = &value32;
-            len = sizeof(uint32_t);
-            break;
-        case GS_ReqGetTermination:
+    // ------- OUT: Host -> Device (error checking in next function) --------
+
+    if ((req->bRequestType & USB_REQ_DIRECTION_MASK) == USB_REQ_DIRECTION_OUT)
+    {
+        uint16_t min_len;
+
+        switch (req->bRequest)
         {
-            bool bEnabled;
-            if (!can_get_termination(channel, &bEnabled))
-            {
-                ELM_LastError = FBK_UnsupportedFeature;
-                return false; // the board cannot switch on/off the termination resistor
-            }
-            value32 = bEnabled ? GS_TerminationON : GS_TerminationOFF;
-            src = &value32;
-            len = sizeof(uint32_t);
-            break;
+            case GS_ReqSetHostFormat:
+                min_len = sizeof(uint32_t);
+                break;
+            case GS_ReqIdentify:
+                min_len = sizeof(uint32_t); // the application sends a 32 bit "mode", but the value is ignored here
+                break;
+            case GS_ReqSetBitTiming:
+            case GS_ReqSetBitTimingFD:
+                min_len = sizeof(kBitTiming);
+                break;
+            case GS_ReqSetDeviceMode:
+                min_len = sizeof(kDeviceMode);
+                break;
+            case GS_ReqSetTermination:
+                min_len = sizeof(uint32_t);
+                break;
+            case ELM_ReqSetFilter:
+                min_len = sizeof(kFilter);
+                break;
+            case ELM_ReqSetBusLoadReport:
+                min_len = sizeof(uint8_t);
+                break;
+            case ELM_ReqSetPinStatus:
+                min_len = sizeof(kPinStatus);
+                break;
+            case ELM_ReqWriteFlash:
+                if (req->wLength > MAX_FLASH_DATA_LEN)
+                {
+                    ELM_LastError = FBK_ParamOutOfRange;
+                    return false; // stall endpoint 0
+                }
+                min_len = req->wLength;
+                break;
+            default:
+                ELM_LastError = FBK_InvalidCommand;
+                return false; // stall endpoint 0
         }
-        case ELM_ReqGetBoardInfo:
-            src = &ELM_BoardInfo;
-            len = sizeof(kBoardInfo);
-            break;
-        case ELM_ReqGetPinStatus:
+
+        if (req->wLength < min_len)
         {
-            // ePinID must be transmitted in wValue
-            // Normally wValue transmits the channel index, but processor pins do not depend on channels.
-            switch (pin_id) 
-            {
-                case PINID_BOOT0: // currently the only implemented pin (PINST_High is irrelevant here)
-                    value16 = system_is_option_enabled(OPT_BOOT0_Enable) ? PINST_Enabled : 0;
-                    break;
-                default:
-                    ELM_LastError = FBK_InvalidParameter;
-                    return false;
-            }
-            src = &value16;
-            len = sizeof(uint16_t);
-            break;
+            // host has sent incomplete OUT data
+            ELM_LastError = FBK_InvalidParameter;
+            return false; // stall endpoint 0
         }
-        default:
-            ELM_LastError = FBK_InvalidCommand;
-            return false;
+
+        // provide the buffer ep0_buf in which the OUT data from the host is passed to control_setup_OUT_data()
+        last_setup_request = *req;
+        USBD_CtlPrepareRx(pdev, ep0_buf, req->wLength);
+        return true;
     }
-
-    // If the host passes a buffer that is too small for the entire response, this is not an error.
-    // All USB devices return a partial response in this case.
-    len = MIN(len, req->wLength);
-
-    switch (req->bRequest)
+    else  // -------- IN: Device -> Host (error checking here) --------
     {
-        // -------- Host -> Device (OUT) --------
-        case  GS_ReqIdentify:
-        case  GS_ReqSetHostFormat:
-        case  GS_ReqSetBitTiming:
-        case  GS_ReqSetBitTimingFD:
-        case  GS_ReqSetDeviceMode:
-        case  GS_ReqSetTermination:
-        case ELM_ReqSetFilter:
-        case ELM_ReqSetBusLoadReport:
-        case ELM_ReqSetPinStatus:
-            // provide the buffer ep0_buf in which the data from the host is passed to control_setup_OUT_data()
-            last_setup_request = *req;
-            USBD_CtlPrepareRx(pdev, ep0_buf, req->wLength);
-            return true;
+        uint16_t value16;
+        uint32_t value32;
+        void*    src;
+        uint16_t len;
 
-        // -------- Device -> Host (IN) --------
-        case  GS_ReqGetCapabilities:
-        case  GS_ReqGetCapabilitiesFD:
-        case  GS_ReqGetDeviceVersion:
-        case  GS_ReqGetTimestamp:
-        case  GS_ReqGetTermination:
-        case ELM_ReqGetBoardInfo:
-        case ELM_ReqGetPinStatus:
-            // return the requested data
-            USBD_CtlSendData(pdev, (uint8_t*)src, len);
-            return true;
+        switch (req->bRequest)
+        {
+            case GS_ReqGetCapabilities:   // channel ignored, but must be valid
+                src = &GS_CapabilityClassic;
+                len = sizeof(kCapabilityClassic);
+                break;
+            case GS_ReqGetCapabilitiesFD: // channel ignored, but must be valid
+                src = &GS_CapabilityFD;
+                len = sizeof(kCapabilityFD);
+                break;
+            case GS_ReqGetDeviceVersion:
+                src = &GS_DeviceVersion;
+                len = sizeof(kDeviceVersion);
+                break;
+            case GS_ReqGetTimestamp:
+                // Bugfix: The legacy firmware used a timestamp created only when a USB SOF packet was received.
+                // This is totally stupid, because the timestamp has a precision of 1 µs, but SOF packets are received once every millisecond.
+                value32 = system_get_timestamp();
+                src = &value32;
+                len = sizeof(uint32_t);
+                break;
+            case GS_ReqGetTermination:
+            {
+                bool bEnabled;
+                if (!can_get_termination(channel, &bEnabled))
+                {
+                    ELM_LastError = FBK_UnsupportedFeature;
+                    return false; // the board cannot switch on/off the termination resistor
+                }
+                value32 = bEnabled ? GS_TerminationON : GS_TerminationOFF;
+                src = &value32;
+                len = sizeof(uint32_t);
+                break;
+            }
+            case ELM_ReqGetBoardInfo:
+                src = &ELM_BoardInfo;
+                len = sizeof(kBoardInfo);
+                break;
+            case ELM_ReqGetPinStatus:
+                // ePinID must be transmitted in wValue
+                // Normally wValue transmits the channel index, but processor pins do not depend on channels.
+                switch (pin_id)
+                {
+                    case PINID_BOOT0: // currently the only implemented pin (PINST_High is irrelevant here)
+                        value16 = system_is_option_enabled(OPT_BOOT0_Enable) ? PINST_Enabled : 0;
+                        break;
+                    default:
+                        ELM_LastError = FBK_InvalidParameter;
+                        return false;
+                }
+                src = &value16;
+                len = sizeof(uint16_t);
+                break;
 
-        default:
-            ELM_LastError = FBK_InvalidCommand;
-            return false;
+            case ELM_ReqReadFlash:
+                // The first 2 bytes of the flash segment contain the length of the data
+                src = (void*)(flash_addr + 2);
+                len = ((uint16_t*)flash_addr)[0];
+                
+                if (len == 0xFFFF) len = 0; // erased segment
+                len = MIN(len, MAX_FLASH_DATA_LEN);
+                break;
+
+            default:
+                ELM_LastError = FBK_InvalidCommand;
+                return false; // stall endpoint 0
+        }
+
+        // If the host passes a buffer that is too small for the entire response, this is not an error.
+        // All USB devices return a partial response in this case.
+        // If the host passes a buffer that is bigger than the response, only the response size is sent.
+        len = MIN(len, req->wLength);
+
+        // return the requested IN data to the host
+        USBD_CtlSendData(pdev, (uint8_t*)src, len);
+        return true;
     }
 }
 
@@ -304,7 +330,7 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 // This function is called from ISR handler -> HAL_PCD_DataOutStageCallback -> USBD_LL_DataOutStage() -> USBD_GS_EP0_RxReady()
 // IMPORTANT:
 // The HAL does not allow to stall endpoint 0 in this stage anymore.
-// If the user has sent invalid data for BitTiming or for a Filter we have no way to inform the host about this error.
+// If the host has sent invalid data for BitTiming or for a Filter we have no way to inform the host about this error.
 // Calling  USBD_CtlError() in this stage will not stall the endpoint. This is EXTREMLY stupid.
 // So the ONLY way to transmit errors of SETUP requests to the host is with the new ElmüSoft protocol and command ELM_ReqGetLastError.
 // The host must call ELM_ReqGetLastError after each SETUP request to check for errors!
@@ -315,7 +341,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
 
     switch (last_setup_request.bRequest)
     {
-        case GS_ReqSetHostFormat: // ignores channel
+        case GS_ReqSetHostFormat:
         {
             // The firmware of the original USB2CAN by Geschwister Schneider exchanges all data in host byte order.
             // The application sends the value 0xbeef indicating the desired byte order.
@@ -341,7 +367,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
         case GS_ReqSetDeviceMode:
         {
             // ------------------------- 1.) Error Checking --------------------------------
-            
+
             kDeviceMode* dev_Mode = (kDeviceMode*)ep0_buf;
             if (dev_Mode->mode != GS_ModeStart && dev_Mode->mode != GS_ModeReset)
             {
@@ -363,19 +389,19 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
                     return;
                 }
             }
-            
+
             // ------------------------- 2.) Set Flags -------------------------------------
-            
+
             if (!can_is_any_open())
                 GLB_ProtoElmue = false; // reset global flag if all channels are closed
 
-            GLB_UserFlags[channel] = USR_CandleDefault; // reset channel flags to their default                
+            GLB_UserFlags[channel] = USR_CandleDefault; // reset channel flags to their default
             if (dev_Mode->flags &  GS_DevFlagOneShot)       GLB_UserFlags[channel] &= ~USR_Retransmit;
             if (dev_Mode->flags &  GS_DevFlagTimestamp)     GLB_UserFlags[channel] |=  USR_Timestamp;
             if (dev_Mode->flags & ELM_DevFlagDisableTxEcho) GLB_UserFlags[channel] &= ~USR_ReportTX;
             if (dev_Mode->flags & ELM_DevFlagProtocolElmue) GLB_ProtoElmue = true;
-            
-            if (GLB_ProtoElmue)    
+
+            if (GLB_ProtoElmue)
             {
                 for (int C=0; C<CHANNEL_COUNT; C++)
                 {
@@ -384,7 +410,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
             }
 
             // ------------------------- 3.) Start / Reset ----------------------------------
-            
+
             if (dev_Mode->mode == GS_ModeStart)
             {
                 uint32_t open_mode = FDCAN_MODE_NORMAL;
@@ -399,7 +425,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
                 {
                     if ((dev_Mode->flags & GS_DevFlagLoopback) > 0)
                         open_mode = FDCAN_MODE_EXTERNAL_LOOPBACK; // Send packets to CAN bus and Loopback Tx -> Rx
-                }              
+                }
                 ELM_LastError = can_open(channel, open_mode);
                 return;
             }
@@ -445,7 +471,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
             ELM_LastError = can_enable_busload(channel, interval); // interval in 100 ms steps
             return;
         }
-        case ELM_ReqSetPinStatus: // ignores channel
+        case ELM_ReqSetPinStatus:
         {
             kPinStatus* pin_status = (kPinStatus*)ep0_buf;
 
@@ -457,6 +483,11 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
                 return;
             }
             ELM_LastError = FBK_InvalidParameter;
+            return;
+        }
+        case ELM_ReqWriteFlash:
+        {
+            ELM_LastError = system_write_flash(last_setup_request.wValue, ep0_buf, last_setup_request.wLength);
             return;
         }
     }
@@ -471,7 +502,7 @@ void control_process(int channel, uint32_t tick_now)
 {
     if (error_is_report_due(channel, tick_now))
         buf_store_error(channel);
-    
+
     // Revover BusOff AFTER printing error BusOff to the Trace output!
     can_recover_bus_off(channel);
 }
@@ -480,7 +511,7 @@ void control_report_busload(int channel, uint8_t busload_percent)
 {
     // only called for ElmüSoft protocol
     buf_class* usb_buf = buf_get_instance(channel);
-    
+
     kHostFrameObject* obj_to_host = buf_get_frame_locked(&usb_buf->list_host_pool);
     if (!obj_to_host)
         return; // buffer overflow! buf_process() will report this error to the host
@@ -501,14 +532,14 @@ void control_report_busload(int channel, uint8_t busload_percent)
 // If the device has a legacy firmware it will ignore any flags that are passed with GS_ModeReset.
 // Only the new ElmüSoft firmware allows to set flags when closing the device.
 bool control_send_debug_mesg(int channel, const char* message)
-{   
+{
     // USR_DebugReport is only set if GLB_ProtoElmue == true
     if ((GLB_UserFlags[channel] & USR_DebugReport) == 0)
         return false;
-    
+
     // only called for ElmüSoft protocol
-    buf_class* usb_buf = buf_get_instance(channel);   
-    
+    buf_class* usb_buf = buf_get_instance(channel);
+
     kHostFrameObject* obj_to_host = buf_get_frame_locked(&usb_buf->list_host_pool);
     if (!obj_to_host)
         return false; // buffer overflow! buf_process() will report this error to the host

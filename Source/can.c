@@ -593,7 +593,7 @@ eFeedback can_set_baudrate(int channel, can_nom_bitrate bitrate)
         !IS_FDCAN_NOMINAL_TSEG2    (inst->bitrate_nominal.Seg2))
     {
         inst->bitrate_nominal.Brp = 0; // baudrate not valid
-        return FBK_InvalidParameter;
+        return FBK_ParamOutOfRange;
     }
     return FBK_Success;
 }
@@ -654,7 +654,7 @@ eFeedback can_set_data_baudrate(int channel, can_data_bitrate bitrate)
         !IS_FDCAN_DATA_TSEG2    (inst->bitrate_data.Seg2))
     {
         inst->bitrate_data.Brp = 0; // baudrate not valid
-        return FBK_InvalidParameter;
+        return FBK_ParamOutOfRange;
     }
     return FBK_Success;
 }
@@ -671,7 +671,7 @@ eFeedback can_set_nom_bit_timing(int channel, uint32_t BRP, uint32_t Seg1, uint3
         !IS_FDCAN_NOMINAL_TSEG1    (Seg1) ||
         !IS_FDCAN_NOMINAL_TSEG2    (Seg2) ||
         !IS_FDCAN_NOMINAL_SJW      (Sjw))
-            return FBK_InvalidParameter;
+            return FBK_ParamOutOfRange;
 
     inst->bitrate_nominal.Brp  = BRP;
     inst->bitrate_nominal.Seg1 = Seg1;
@@ -693,7 +693,7 @@ eFeedback can_set_data_bit_timing(int channel, uint32_t BRP, uint32_t Seg1, uint
         !IS_FDCAN_DATA_TSEG1    (Seg1) ||
         !IS_FDCAN_DATA_TSEG2    (Seg2) ||
         !IS_FDCAN_DATA_SJW      (Sjw))
-            return FBK_InvalidParameter;
+            return FBK_ParamOutOfRange;
 
     inst->bitrate_data.Brp  = BRP;
     inst->bitrate_data.Seg1 = Seg1;
@@ -782,7 +782,7 @@ eFeedback can_set_mask_filter(int channel, bool extended, uint32_t filter, uint3
 
     uint32_t maximum = extended ? 0x1FFFFFFF : 0x7FF;
     if (filter > maximum || mask > maximum)
-        return FBK_InvalidParameter;
+        return FBK_ParamOutOfRange;
 
     if (inst->is_open)
     {
@@ -875,7 +875,7 @@ bool can_get_termination(int channel, bool* enabled)
 eFeedback can_enable_busload(int channel, uint32_t interval)
 {
     if (interval > 100)
-        return FBK_InvalidParameter;
+        return FBK_ParamOutOfRange;
 
     can_inst[channel].busload_interval = interval;
     return FBK_Success;

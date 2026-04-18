@@ -188,7 +188,7 @@ bool utils_to_hex_value(char buf[], int pos)
     return true;
 }
 
-uint8_t utils_nibble_to_ascii(uint8_t nibble)
+char utils_nibble_to_ascii(uint8_t nibble)
 {
     if (nibble < 10) return nibble + '0';
     else             return nibble + 'A' - 10;

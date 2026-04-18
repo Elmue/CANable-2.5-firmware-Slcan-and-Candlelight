@@ -222,6 +222,19 @@ public class Utils
         return i_List.ToArray();
     }
 
+    public static bool ByteArraysEqual(Byte[] u8_Array1, Byte[] u8_Array2)
+    {
+        if (u8_Array1.Length != u8_Array2.Length)
+            return false;
+
+        for (int i=0; i<u8_Array1.Length; i++)
+        {
+            if (u8_Array1[i] != u8_Array2[i])
+                return false;
+        }
+        return true;
+    }
+
     // ------------------------------------------------
 
     /// <summary>
@@ -229,6 +242,9 @@ public class Utils
     /// </summary>
     public static T BytesToStructureFix<T>(Byte[] u8_Bytes)
     {
+        if (typeof(T) == typeof(Byte[]))
+            return (T)(Object)u8_Bytes;
+
         int s32_Size = Marshal.SizeOf(typeof(T));
         if (s32_Size != u8_Bytes.Length)
             throw new Exception("Invalid data for structure " + typeof(T).Name);
@@ -266,7 +282,7 @@ public class Utils
     /// </summary>
     public static Byte[] StructureToBytesFix(Object o_Structure)
     {
-        if (o_Structure is Byte[]) // only used for eDfuRequest.Detach
+        if (o_Structure is Byte[]) // only used for eDfuRequest.Detach and WriteFlash()
             return (Byte[])o_Structure;
 
         return StructureToBytesVar(o_Structure, Marshal.SizeOf(o_Structure.GetType()));

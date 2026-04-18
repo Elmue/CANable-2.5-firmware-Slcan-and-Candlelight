@@ -47,7 +47,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251118 = 18.nov.2025)
-const DWORD MIN_FIRMWARE = 0x260304;
+const DWORD MIN_FIRMWARE = 0x260416;
 
 // The firmware update interface is always interface 1
 const BYTE DFU_INTERFACE = 1;
@@ -986,14 +986,44 @@ DWORD Candlelight::IsBootPinEnabled(bool* pb_Enabled)
     return 0;
 }
 
+// Write user data to flash memory. The firmware also stores the length of the data and returns the same data in ReadFlash()
+// A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
+// ATTENTION: u8_Buffer must point to RAM memory, otherwise ERROR_NOACCESS.
+DWORD Candlelight::WriteFlash(BYTE u8_Segment, BYTE* u8_Buffer, DWORD u32_DataLen)
+{
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+        return ERROR_INVALID_OPERATION;
+
+    return CtrlTransfer(DIR_Out, ELM_ReqWriteFlash, u8_Segment, u8_Buffer, u32_DataLen);
+}
+
+// Read user data from the flash memory that was written before with WriteFlash()
+// A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
+// *pu32_DataRead returns the count of bytes that was written into u8_Buffer.
+DWORD Candlelight::ReadFlash(BYTE u8_Segment, BYTE* u8_Buffer, DWORD u32_BufSize, DWORD* pu32_DataRead)
+{
+    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+        return ERROR_INVALID_OPERATION;
+
+    return CtrlTransfer(DIR_In, ELM_ReqReadFlash, u8_Segment, u8_Buffer, u32_BufSize, pu32_DataRead);
+}
+
 // --------------------------------------------------------------------
 
 // Send a SETUP request to the firmware
 // u32_DataSize must be the expected byte count to be received from the firmware or to be sent to the firmware.
 // u8_Request must be eUsbRequest for interface 0 and eDfuRequest for interface 1.
 // This function can obtain the feedback from the ElmüSoft firmware, but works also with legacy firmware.
-DWORD Candlelight::CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, void* p_Data, DWORD u32_DataSize)
+// ATTENTION: p_Data must point to RAM memory, otherwise ERROR_NOACCESS.
+DWORD Candlelight::CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, 
+                                void* p_Data, DWORD u32_DataSize, 
+                                DWORD* pu32_DataRead) // = NULL
 {
+    if (pu32_DataRead) *pu32_DataRead = 0;
+
+    // MSDN WinUsb_ControlTransfer(): The length of the buffer must not exceed 4KB.
+    u32_DataSize = min(u32_DataSize, 4096);
+
     // The Candlelight interface implements Vendor requests while the DFU interface implements Class requests.
     eSetupType e_Type = (mu8_Interface == DFU_INTERFACE) ? TYP_Class : TYP_Vendor;
 
@@ -1008,6 +1038,7 @@ DWORD Candlelight::CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Valu
 
     DWORD u32_CmdErr = ERROR_SUCCESS;
     DWORD u32_CmdBytes;
+    // ATTENTION: returns ERROR_NOACCESS if p_Data is not in RAM !
     if (!WinUsb_ControlTransfer(mh_WinUsb, k_Setup, (BYTE*)p_Data, u32_DataSize, &u32_CmdBytes, NULL))
         u32_CmdErr = GetLastError();
 
@@ -1041,9 +1072,17 @@ DWORD Candlelight::CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Valu
     if (u32_CmdErr)
         return u32_CmdErr;
 
-    if (u32_CmdBytes < u32_DataSize)
-        return ERROR_INVALID_DATA; 
+    if (e_Dir == DIR_In)
+    {
+        // When reading flash memory the firmware will return less bytes than requested, this is not an error.
+        if (u8_Request != ELM_ReqReadFlash)
+        {
+            if (u32_CmdBytes < u32_DataSize) 
+                return ERROR_INVALID_DATA; 
+        }
+    }
 
+    if (pu32_DataRead) *pu32_DataRead = u32_CmdBytes;
     return ERROR_SUCCESS;
 }
 
@@ -1339,6 +1378,7 @@ CString Candlelight::FormatLastError(DWORD u32_Error)
                 case FBK_BaudrateNotSet:      return L"The baudrate has not been set.";
                 case FBK_OptBytesProgrFailed: return L"Programming the Option Bytes failed.";
                 case FBK_ResetRequired:       return L"Please reconnect the USB cable.";
+                case FBK_ParamOutOfRange:     return L"A paramter is outside the valid range.";
                 default:                      return L"Unknown feedback received from the device.";
             }
         }

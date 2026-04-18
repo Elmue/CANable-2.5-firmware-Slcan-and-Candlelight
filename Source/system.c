@@ -9,6 +9,9 @@
 #include "can.h"
 #include "control.h"
 
+// Linker symbol points to end of firmware (.text section)
+extern uint32_t _etext;
+
 uint32_t canfd_clock;
 uint32_t timestamp_wrap = 0;
 
@@ -251,7 +254,7 @@ uint32_t system_get_timewrap()
     return timestamp_wrap;
 }
 
-// ------------------------------------------------------------------
+// ----------------------------- Option Bytes ----------------------------------
 
 // returns true if the requested option is set in the Option Bytes
 bool system_is_option_enabled(eOptionBytes e_Option)
@@ -282,6 +285,7 @@ bool system_is_option_enabled(eOptionBytes e_Option)
 // ====================================================================================================
 // IMPORTANT ## IMPORTANT ## IMPORTANT ## IMPORTANT ## IMPORTANT ## IMPORTANT ## IMPORTANT ## IMPORTANT
 // If you modify this code and introduce a bug you may end up in a frozen firmware that cannot be updated anymore!
+// ====================================================================================================
 eFeedback system_set_option_bytes(eOptionBytes e_Option)
 {
     // IMPORTANT:
@@ -358,3 +362,108 @@ eFeedback system_set_option_bytes(eOptionBytes e_Option)
     return FBK_Success;
 }
 
+// ----------------------------- R/W Flash Memory ----------------------------------
+
+// Read/Write user data from/to one segment in flash memory.
+// Firmware  is stored at the begin of the flash memory
+// User data is stored at the end   of the flash memory
+// This avoids that uploading a bigger firmware would corrupt the user data.
+
+// Example: STM32G431 with 128 kB flash memory = 64 segments of 2 kB
+// FLASH_BASE      = 0x08000000 (start address of flash memory)
+// FLASH_SIZE      = 128 * 1024 (128 kB)
+// FLASH_PAGE_SIZE = 2048       (2 kB)
+// _etext          = linker constant pointing to end of firmware (.text section)
+
+// ============================================
+// ATTENTION: 
+// ST Microelectronics is so incredibly STUPID that FLASH_SIZE is wrong for the STM32G473.
+// FLASH_SIZE is 128 kB although the processor has 512 kB flash.
+// FLASH_BANK_SIZE is also wrong: 64 kB instead of 256 kB (the STM32G473 has 2 banks).
+// Also LL_GetFlashSize() returns the same wrong size.
+// There is no way to obtain the correct flash size because the STM32G473 may have 128, 256 or 512 kB.
+// See RM0440 page 75.
+// ============================================
+
+// Get the start address of the segment (segment 0 is the last segment at the end of the flash memory)
+// returns 0 if segment is invalid or occupied by firmware.
+uint32_t system_get_flash_addr(uint32_t segment)
+{   
+    if (segment > 255)
+        return 0;
+    
+    uint32_t firm_end  = (uint32_t)&_etext; // end of firmware    
+    uint32_t dest_addr = FLASH_BASE + FLASH_SIZE - (segment + 1) * FLASH_PAGE_SIZE;
+    
+    if (dest_addr < firm_end)
+        dest_addr = 0;
+#if 0
+    char buf[300];
+    sprintf(buf, "Fl=%lukB at x%08lX Pg=%lukB Fw=x%08lX Seg %lu --> x%08lX", 
+            FLASH_SIZE/1024, (uint32_t)FLASH_BASE, (uint32_t)FLASH_PAGE_SIZE/1024, firm_end, segment, dest_addr);
+    control_send_debug_mesg(0, buf);
+#endif
+    return dest_addr;
+}
+
+// Erase a flash segment and write user data to it (this takes approx. 22 ms)
+// The first 2 bytes in the segment store the data length.
+// If the same data is already stored in the flash segment, the function does nothing.
+// This avoids wearing off the flash memory.
+// The buffer will be modified here and the buffer must have MAX_FLASH_DATA_LEN + 2 bytes!
+eFeedback system_write_flash(uint32_t segment, uint8_t* buffer, uint16_t data_len)
+{
+    uint32_t flash_addr = system_get_flash_addr(segment);
+    if (flash_addr == 0 || data_len > MAX_FLASH_DATA_LEN)
+        return FBK_ParamOutOfRange;
+    
+    // Avoid wearing off the flash memory by useless erase and write operations.
+    uint32_t cur_len = ((uint16_t*)flash_addr)[0];
+    if (cur_len == 0xFFFF) cur_len = 0; // empty segment
+    if (cur_len == data_len && memcmp((uint8_t*)(flash_addr + 2), buffer, data_len) == 0)
+        return FBK_Success;
+       
+    // Clear pending flash errors
+    __HAL_FLASH_CLEAR_FLAG(FLASH_FLAG_ALL_ERRORS);
+
+    if (HAL_FLASH_Unlock() != HAL_OK) // Unlock flash
+        return FBK_ErrorFromHAL;
+
+    FLASH_EraseInitTypeDef erase_init;
+    erase_init.TypeErase = FLASH_TYPEERASE_PAGES;
+    erase_init.Page      = (flash_addr - FLASH_BASE) / FLASH_PAGE_SIZE;
+    erase_init.Banks     = FLASH_BANK_1;
+    erase_init.NbPages   = 1;
+
+    // Erase entire 2 kB flash segment.
+    uint32_t page_error;
+    if (HAL_FLASHEx_Erase(&erase_init, &page_error) != HAL_OK) 
+    {
+        HAL_FLASH_Lock();
+        return FBK_ErrorFromHAL;
+    }
+    
+    // If the user passes a length of zero --> only erase the flash segment (entirely FF FF FF ...)
+    if (data_len > 0)
+    {
+        // Move data two bytes up and store the length (2 bytes) before the data.
+        memmove(buffer + 2, buffer, data_len);
+        ((uint16_t*)buffer)[0] = data_len;
+        data_len += 2;        
+        
+        // The HAL writes 64 bit double words to the flash memory
+        uint16_t  len_64 = (data_len + 7) / 8;
+        uint64_t* buf_64 = (uint64_t*)buffer;
+        for (uint16_t i=0; i<len_64; i++, flash_addr += 8) 
+        {
+            if (HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, flash_addr, buf_64[i]) != HAL_OK) 
+            {
+                HAL_FLASH_Lock();
+                return FBK_ErrorFromHAL;
+            }
+        }
+    }
+
+    HAL_FLASH_Lock();   
+    return FBK_Success;
+}

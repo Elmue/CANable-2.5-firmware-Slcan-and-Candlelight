@@ -11,7 +11,7 @@
 # The year and month are stored in the device descriptor.
 # The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
 # Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
-FIRMWARE_VERSION = 0x260304
+FIRMWARE_VERSION = 0x260416
 
 # TARGET_BOARD, TARGET_FIRMWARE, TARGET_FILE and TARGET_MCU must be set in the main makefile before including this file
 

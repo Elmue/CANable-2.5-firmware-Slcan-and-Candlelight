@@ -120,6 +120,8 @@ public:
     DWORD    EnterDfuMode();
     DWORD    DisableBootPin();
     DWORD    IsBootPinEnabled(bool* pb_Enabled);
+    DWORD    ReadFlash (BYTE u8_Segment, BYTE* u8_Buffer, DWORD u32_BufSize, DWORD* pu32_DataRead);
+    DWORD    WriteFlash(BYTE u8_Segment, BYTE* u8_Buffer, DWORD u32_DataLen);
     // ------------------------------------
     inline kDevInfo GetDeviceInfo() { return mk_Info; }
     inline CString  GetDetails()    { return ms_Details; }
@@ -128,7 +130,7 @@ private:
     DWORD    EnumSerialNumbers(CMapStringToString* pi_Serials);
     DWORD    RegReadString(HKEY h_Class, const WCHAR* u16_Path, const WCHAR* u16_Entry, CString* ps_Value);
     DWORD    ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHAR s_String[128]);
-    DWORD    CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, void* p_Data, DWORD u32_DataSize);
+    DWORD    CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, void* p_Data, DWORD u32_DataSize, DWORD* pu32_DataRead = NULL);
     DWORD    Reset();
 
     HANDLE                   mh_Device;

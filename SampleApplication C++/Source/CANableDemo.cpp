@@ -49,10 +49,14 @@ bool SET_FILTERS = false;
 // false --> create performance counter timestamps 
 bool HW_TIMESTAMP = false;
 
+// true --> test writing/reading user data to/from flash memory
+bool FLASH_MEMORY_TEST = false;
+
 // forward declarations
 void CandlelightDemo();
 void DfuDemo();
 bool OpenDevice();
+void FlashMemoryTest();
 
 // global instances
 Candlelight gi_Candle;
@@ -148,6 +152,12 @@ void CandlelightDemo()
     // open Candlelight interface
     if (!OpenDevice())
         return;
+
+    // -----------------------------------------
+
+    // Test flash writing / reading
+    if (FLASH_MEMORY_TEST)
+        FlashMemoryTest();
 
     // -----------------------------------------
 
@@ -475,3 +485,63 @@ bool OpenDevice()
     }
     return true;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// Write a string and a random into 2 flash segments, then read the data and verify that it is correct.
+void FlashMemoryTest()
+{
+    DWORD u32_Error;
+    DWORD u32_Read;
+    BYTE u8_Hello[50];
+    BYTE u8_FlashData[5000];
+    BYTE u8_SegmentA = 2;
+    BYTE u8_SegmentB = 5;
+
+    const char* s8_Hello = "Hello World of flash data!";
+    DWORD   u32_LenHello = strlen(s8_Hello);
+    // ATTENTION: String must be copied to RAM, otherwise ERROR_NOACCESS from WinUSB.
+    strcpy_s((char*)u8_Hello, sizeof(u8_Hello), s8_Hello);
+
+    ULONGLONG u64_Random = (ULONGLONG)GetTickCount() * 0x815A78F3D;
+    DWORD  u32_LenRandom = sizeof(u64_Random);
+
+    // --------------------
+
+    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentA, u8_Hello, u32_LenHello))
+        goto _Error;
+
+    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentB, (BYTE*)&u64_Random, u32_LenRandom))
+        goto _Error;
+
+    // --------------------
+
+    if (u32_Error = gi_Candle.ReadFlash(u8_SegmentA, u8_FlashData, sizeof(u8_FlashData), &u32_Read))
+        goto _Error;
+
+    if (u32_Read != u32_LenHello || memcmp(u8_Hello, u8_FlashData, u32_Read) != 0)
+    {
+        PrintConsole(RED, L"\nFlash memory test 1 failed!\n");
+        return;
+    }
+
+    // --------------------
+
+    if (u32_Error = gi_Candle.ReadFlash(u8_SegmentB, u8_FlashData, sizeof(u8_FlashData), &u32_Read))
+        goto _Error;
+
+    if (u32_Read != u32_LenRandom || memcmp(&u64_Random, u8_FlashData, u32_Read) != 0)
+    {
+        PrintConsole(RED, L"\nFlash memory test 2 failed!\n");
+        return;
+    }
+
+    // --------------------
+
+    PrintConsole(LIME, L"\nFlash memory test: Success\n");
+    return;
+
+_Error:
+    PrintConsole(RED,  L"\nFlash memory test Error: %s\n", gi_Candle.FormatLastError(u32_Error));
+}
+

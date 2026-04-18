@@ -7,6 +7,13 @@
 #pragma once
 
 #include "settings.h"
+#include "usb_def.h"
+
+// The USB SETUP transfer is limited to 4096 bytes
+// The SLCAN buffer also has it's limits.
+// The user cannot transfer more than 2000 bytes (= 4000 hex digits for SLCAN)
+// 2 bytes are subtracted from the flash page size for the unit16_t length stored before the flash data.
+#define MAX_FLASH_DATA_LEN   MIN(2000, FLASH_PAGE_SIZE - 2)
 
 typedef enum 
 {
@@ -29,6 +36,8 @@ uint32_t  system_get_can_clock();
 eMcuSerie system_get_mcu_serie();
 uint32_t  system_get_timestamp();
 uint32_t  system_get_timewrap();
+uint32_t  system_get_flash_addr(uint32_t segment);
+eFeedback system_write_flash(uint32_t segment, uint8_t* buffer, uint16_t data_len);
 
 // ARM's
 // "Application Note 321 ARM Cortex-M Programming Guide to Memory Barrier Instructions"

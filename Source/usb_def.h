@@ -64,6 +64,12 @@ extern "C" {
 #define  USBD_IDX_SERIAL_STR                            0x03U // Device descriptor: Serial Number string
 #define  USBD_IDX_NEXT_STR                              0x04U // further class specific strings defined in usb_class.c
 
+// ------------ bRequestType --------------
+
+#define  USB_REQ_DIRECTION_OUT                          0x00U
+#define  USB_REQ_DIRECTION_IN                           0x80U
+#define  USB_REQ_DIRECTION_MASK                         0x80U
+
 #define  USB_REQ_TYPE_STANDARD                          0x00U
 #define  USB_REQ_TYPE_CLASS                             0x20U
 #define  USB_REQ_TYPE_VENDOR                            0x40U
@@ -73,6 +79,8 @@ extern "C" {
 #define  USB_REQ_RECIPIENT_INTERFACE                    0x01U
 #define  USB_REQ_RECIPIENT_ENDPOINT                     0x02U
 #define  USB_REQ_RECIPIENT_MASK                         0x1FU  // not 3 !
+
+// ----------------------------------------
 
 #define  USB_REQ_GET_STATUS                             0x00U
 #define  USB_REQ_CLEAR_FEATURE                          0x01U
@@ -130,9 +138,9 @@ extern "C" {
 
 typedef struct  
 {
-  uint8_t   bRequestType; // USB_REQ_RECIPIENT_XXX | USB_REQ_TYPE_XXX | 0x80 if direction == IN
+  uint8_t   bRequestType; // USB_REQ_RECIPIENT_XXX | USB_REQ_TYPE_XXX | USB_REQ_DIRECTION_XXX
   uint8_t   bRequest;     // USB_REQ_GET_DESCRIPTOR, USB_REQ_SET_FEATURE,.. / DFU_RequDetach, DFU_RequGetStatus,..
-  uint16_t  wValue;       // CAN Channel / ePinID for ELM_ReqGetPinStatus
+  uint16_t  wValue;       // CAN Channel / ePinID / flash segment
   uint16_t  wIndex;       // Interface number (0 = Candlelight, 1 = DFU)
   uint16_t  wLength;      // Byte count
 } USBD_SetupReqTypedef;

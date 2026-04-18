@@ -18,7 +18,7 @@
 // The first version was 100.
 // In version 101 support for multi-channel adapters has been added.
 // (Candlelight does not need a version number because it returns the supported features as bit flags)
-#define SLCAN_VERSION          101
+#define SLCAN_VERSION          102
 
 
 // ----- Globals
@@ -28,8 +28,9 @@ extern eUserFlags GLB_UserFlags[CHANNEL_COUNT];
 uint32_t  CanMode[CHANNEL_COUNT];
 
 // ----- Private Methods
-eFeedback control_parse_str (int channel, char buf[], int len);
-eFeedback control_parse_filter(int channel, char buf[], uint8_t len);
+eFeedback control_parse_str   (int channel, char buf[], int len);
+eFeedback control_parse_filter(int channel, char buf[]);
+eFeedback control_parse_flash (int channel, char buf[]);
 
 // ==================================================================================================================
 
@@ -47,18 +48,18 @@ void control_parse_command(char* buf, int len)
 {
     // IMPORTANT: Terminate the command string with zero
     buf[len] = 0;
-    
+
     int channel = 0;
     switch (buf[0])
     {
-#if CHANNEL_COUNT > 1        
+#if CHANNEL_COUNT > 1
         case '&': channel = 1; buf ++; len --; break;
-#endif    
+#endif
 #if CHANNEL_COUNT > 2
         case '$': channel = 2; buf ++; len --; break;
-#endif    
+#endif
     }
-     
+
     eFeedback e_Ret = control_parse_str(channel, buf, len);
     if ((GLB_UserFlags[channel] & USR_Feedback) == 0)
         return;
@@ -82,7 +83,7 @@ void control_parse_command(char* buf, int len)
 // Parse an incoming slcan command from the USB CDC port.
 // The termination '\r' has already been removed.
 eFeedback control_parse_str(int channel, char buf[], int len)
-{   
+{
     // Flash the blue LED very shortly if bus is closed
     // ATTENTION: If the bus is closed the green LED is on, so this is not the same as blue flashing with bus open.
     if (!can_is_open(channel))
@@ -93,7 +94,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
         return FBK_Success;
 
     char tempbuf[200];
-    
+
     eFeedback e_Ret = FBK_InvalidParameter;
     switch (buf[0])
     {
@@ -127,11 +128,11 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                 {
                     case 'A':                                        // "MA"  Enable Auto re-transmit (same as legacy "A1")
                         if (can_is_open(channel)) return FBK_AdapterMustBeClosed;
-                        GLB_UserFlags[channel] |=  USR_Retransmit; 
+                        GLB_UserFlags[channel] |=  USR_Retransmit;
                         break;
                     case 'a':                                        // "Ma"
                         if (can_is_open(channel)) return FBK_AdapterMustBeClosed;
-                        GLB_UserFlags[channel] &= ~USR_Retransmit;  
+                        GLB_UserFlags[channel] &= ~USR_Retransmit;
                         break;
                     case 'D': GLB_UserFlags[channel] |=  USR_DebugReport; break; // "MD"  Enable string debug messages
                     case 'd': GLB_UserFlags[channel] &= ~USR_DebugReport; break; // "Md"
@@ -148,7 +149,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                     case 'i': led_blink_identify(channel, false);         break; // "Mi"  stop blinking
                     case '0':                                                    // "M0"  Use normal mode for Open (legacy command)
                     case '1':                                                    // "M1"  Use silent (bus monitoring) mode for Open (legacy command)
-                        if (can_is_open(channel)) 
+                        if (can_is_open(channel))
                             return FBK_AdapterMustBeClosed;
                         CanMode[channel] = (buf[i] == '1') ? FDCAN_MODE_BUS_MONITORING : FDCAN_MODE_NORMAL;
                         break;
@@ -199,8 +200,8 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                 CanMode      [channel] = FDCAN_MODE_NORMAL;
                 GLB_UserFlags[channel] = USR_SlcanDefault;
 
-                // Do not call buf_enqueue_cdc() here --> never send a response. 
-                // This is the only command that behaves the same way as the legacy command.
+                // Do not call buf_enqueue_cdc() here --> never send a response.
+                // This is the only command that behaves the same way as in the legacy firmware.
                 return FBK_RetString;
             }
             return e_Ret;
@@ -214,6 +215,9 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                 // The host application needs these limits to calculate the bitrates (commands 's' and 'y')
                 bitlimits* lim = utils_get_bit_limits();
 
+                char serial_no[20];
+                USBD_GetSerialNumber(serial_no);
+
                 // HAL_GetDEVID() returns a unique identifier (DBG_IDCODE) for each processor family.
                 // The STM32G0xx serie uses 0x460, 0x465, 0x476, 0x477 and STM32G4xx uses 0x468, 0x469, 0x479.
                 // String responses start with '+', all other command responses start with '#'
@@ -224,18 +228,20 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                                  "\tSlcan: "     STR(SLCAN_VERSION)        // 101         (from settings.h)
                                  "\tClock: %lu"                            // 160         (from system variable)
                                  "\tChannels: "  STR(CHANNEL_COUNT)        // 1           (from settings.h)
-#if HSE_VALUE > 0                                 
+#if HSE_VALUE > 0
                                  "\tQuartz: Yes"                           // Yes / No    (from make file)
 #else
-                                 "\tQuartz: No"                            // Yes / No    (from make file)    
+                                 "\tQuartz: No"                            // Yes / No    (from make file)
 #endif
-                                 "\tLimits: %lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu\r",
+                                 "\tLimits: %lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu"
+                                 "\tSerial: %s\r",
                                  utils_get_MCU_name(),
                                  HAL_GetDEVID(),
                                  FIRMWARE_VERSION_BCD, // defined as hex, but sent as decimal for easier parsing in the host software
-                                 system_get_can_clock() / 1000000,                                 
+                                 system_get_can_clock() / 1000000,
                                  lim->nom_brp_max, lim->nom_seg1_max, lim->nom_seg2_max, lim->nom_sjw_max,
-                                 lim->fd_brp_max,  lim->fd_seg1_max,  lim->fd_seg2_max,  lim->fd_sjw_max);
+                                 lim->fd_brp_max,  lim->fd_seg1_max,  lim->fd_seg2_max,  lim->fd_sjw_max,
+                                 serial_no);
 
                 buf_enqueue_cdc(channel, tempbuf, strlen(tempbuf));
                 return FBK_RetString;
@@ -245,7 +251,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
         // ----------------------------
 
         // Set baudrate (always samplepoint nominal: 87.5%, data: 75%)
-        // ATTENTION: Deprecated! Read the manual.        
+        // ATTENTION: Deprecated! Read the manual.
         case 'S':
             if (len == 2) e_Ret = can_set_baudrate(channel, (can_nom_bitrate)(buf[1] - '0')); // "S1"
             return e_Ret;
@@ -273,7 +279,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 
         // Set CAN filter:
         case 'F':
-            return control_parse_filter(channel, buf, len); // "F7E0,7FF"
+            return control_parse_filter(channel, buf); // "F7E0,7FF"
         // Clear all CAN filters:
         case 'f':
             if (len == 1) return can_clear_filters(channel); // "f"
@@ -304,29 +310,33 @@ eFeedback control_parse_str(int channel, char buf[], int len)
             // The response will be received by the host because the bootloader is started with a delay of 300 ms.
             if (strcmp(buf, "*DFU") == 0)
                 return dfu_switch_to_bootloader(); // closes adapter
-                
-            // Set register OPTR, bit nSWBOOT0 = 0 --> Disable processor pin BOOT0 --> always boot into main flash memory 
+
+            // Set register OPTR, bit nSWBOOT0 = 0 --> Disable processor pin BOOT0 --> always boot into main flash memory
             // Read https://netcult.ch/elmue/CANable Firmware Update
             // Enabling the pin needs not to be implemented here.
-            // The pin is automatically enabled when entering DFU mode in dfu_switch_to_bootloader()           
-            if (strcmp(buf, "*Boot0:Off") == 0) 
+            // The pin is automatically enabled when entering DFU mode in dfu_switch_to_bootloader()
+            if (strcmp(buf, "*Boot0:Off") == 0)
                 return system_set_option_bytes(OPT_BOOT0_Disable);
 
             // return if the pin BOOT0 is enabled or disabled
-            if (strcmp(buf, "*Boot0:?") == 0) 
+            if (strcmp(buf, "*Boot0:?") == 0)
             {
                 // String responses start with '+', all other command responses start with '#'
                 char* resp = system_is_option_enabled(OPT_BOOT0_Enable) ? "+1\r" : "+0\r";
                 buf_enqueue_cdc(channel, resp, 3);
                 return FBK_RetString;
             }
-            return FBK_InvalidParameter;
+
+            if (strncmp(buf, "*Flash:", 7) == 0)
+                return control_parse_flash(channel, buf);
+
+            return FBK_InvalidCommand;
         }
     }
 
     // ================ Transmit Packet =================
     // "t600801020304050607083A\r"
-    
+
     FDCAN_TxHeaderTypeDef* tx_header;
     uint8_t*               tx_data;
     if (!buf_get_can_dest(channel, &tx_header, &tx_data))
@@ -382,12 +392,12 @@ eFeedback control_parse_str(int channel, char buf[], int len)
         default:
             return FBK_InvalidCommand;
     }
-    
+
     // Sending a message with FDF flag requires a data baudrate to be set.
     // It is allowed that the data baudrate is the same as the nominal baudrate to send messages up to 64 bytes without BRS.
     if (tx_header->FDFormat == FDCAN_FD_CAN && !can_using_FD(channel))
         return FBK_BaudrateNotSet;
-    
+
     // Start parsing at second byte (skip command byte)
     int parse_loc = 1;
 
@@ -400,10 +410,10 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 
     // check CAN ID
     if (tx_header->IdType == FDCAN_STANDARD_ID && tx_header->Identifier > 0x7FF)
-        return FBK_InvalidParameter;
+        return FBK_ParamOutOfRange;
 
     if (tx_header->IdType == FDCAN_EXTENDED_ID && tx_header->Identifier > 0x1FFFFFFF)
-        return FBK_InvalidParameter;
+        return FBK_ParamOutOfRange;
 
     // parse DLC
     uint32_t dlc_code;
@@ -413,7 +423,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
     // classic frames allow a DLC of 0...8
     if (tx_header->FDFormat == FDCAN_CLASSIC_CAN && dlc_code > 8)
         return FBK_InvalidParameter;
-    
+
     tx_header->DataLength = dlc_code;
 
     // remote frames may have DLC > 0 but never send data bytes
@@ -452,7 +462,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 
 // Command: "F7E0,7FF;1F005000,1FFFFFFF\r" --> set 11 bit filter: 0x7E0, mask: 0x7FF and 29 bit filter 0x1F005000.
 // see comment for can_set_mask_filter()
-eFeedback control_parse_filter(int channel, char buf[], uint8_t len)
+eFeedback control_parse_filter(int channel, char buf[])
 {
     int  pos = 1;
     bool abort = false;
@@ -487,6 +497,67 @@ eFeedback control_parse_filter(int channel, char buf[], uint8_t len)
     return FBK_Success;
 }
 
+// "*Flash:1A=48656C6C6F\r" writes "Hello" to   flash segment 1A
+// "*Flash:1A?\r"           reads  "Hello" from flash segment 1A --> return "+48656C6C6F\r"
+eFeedback control_parse_flash(int channel, char buf[])
+{
+    // Read the segment (00 ... FF)
+    int pos = 7;
+    uint32_t segment;
+    if (!utils_parse_hex_value(buf, &pos, 2, &segment))
+        return FBK_InvalidParameter; // syntax error or invalid digit count
+
+    // 2 hex digits per flash byte
+    uint8_t hex_data[MAX_FLASH_DATA_LEN * 2 + 8];
+    int idx = 0;    
+
+    switch (buf[pos++])
+    {
+        case '?': // Read
+            if (buf[pos] != 0)
+                return FBK_InvalidParameter; // invalid data behind '?'
+
+            uint32_t flash_addr = system_get_flash_addr(segment);
+            if (flash_addr == 0)
+                return FBK_ParamOutOfRange; // segment is occupied by firmware
+
+            uint8_t*  flash_data =  (uint8_t*)(flash_addr + 2);
+            uint16_t  flash_len  = ((uint16_t*)flash_addr)[0];
+
+            if (flash_len == 0xFFFF) flash_len = 0; // erased segment
+            flash_len = MIN(flash_len, MAX_FLASH_DATA_LEN);
+
+            // convert flash data bytes to hex digits
+            hex_data[idx++] = '+';
+            for (uint16_t i=0; i<flash_len; i++)
+            {
+                hex_data[idx++] = utils_nibble_to_ascii(flash_data[i] >> 4);
+                hex_data[idx++] = utils_nibble_to_ascii(flash_data[i] & 0x0F);
+            }
+            hex_data[idx++] = '\r';
+
+            buf_enqueue_cdc(channel, (char*)hex_data, idx);
+            return FBK_RetString;
+
+        case '=': // Write
+            while (buf[pos] != 0)
+            {
+                if (idx >= MAX_FLASH_DATA_LEN)
+                    return FBK_ParamOutOfRange;
+                
+                uint32_t byte;
+                if (!utils_parse_hex_value(buf, &pos, 2, &byte))
+                    return FBK_InvalidParameter; // syntax error or invalid digit count
+
+                hex_data[idx++] = (uint8_t)byte;
+            }
+            return system_write_flash(segment, hex_data, idx);
+            
+        default:
+            return FBK_InvalidParameter;
+    }
+}
+
 // This function is called approx 100 times in one millisecond from the main loop
 // if the error state has changed, report it every 100 ms
 // if the error state did not change, report the same state only every 3000 ms.
@@ -506,7 +577,7 @@ void control_process(int channel, uint32_t tick_now)
                                             (uint8_t)state->rx_err_count);
     buf_enqueue_cdc(channel, tempbuf, 10);
     error_clear(channel);
-    
+
     // Revover BusOff AFTER printing error BusOff to the Trace output!
     can_recover_bus_off(channel);
 }

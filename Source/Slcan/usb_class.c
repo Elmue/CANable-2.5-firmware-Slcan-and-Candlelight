@@ -550,13 +550,13 @@ static uint8_t USBD_CDC_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *re
     case USB_REQ_TYPE_CLASS :
       if (req->wLength)
       {
-        if (req->bRequestType & 0x80)
+        if ((req->bRequestType & USB_REQ_DIRECTION_MASK) == USB_REQ_DIRECTION_IN) // IN
         {
           USBD_InterfaceCallbacks.Control(req->bRequest, (uint8_t *)(void *)hcdc->data, req->wLength);
 
           USBD_CtlSendData(pdev, (uint8_t *)(void *)hcdc->data, req->wLength);
         }
-        else
+        else // OUT
         {
           hcdc->CmdOpCode = req->bRequest;
           hcdc->CmdLength = (uint8_t)req->wLength;
