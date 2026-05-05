@@ -257,6 +257,8 @@
 <div>While I added support for CANable adapters to <a href="https://netcult.ch/elmue/HUD ECU Hacker" target="_blank">HUD ECU Hacker</a> I found so <b>many issues</b> that I ended up writing a new firmware.</div>
 <div>The official firmware that you find on Github and that comes with the adapters bought in China is of <b>low quality</b>.</div>
 <div>Here you find the first CANable firmware that can be used for <b>professional</b> CAN bus applications.</div>
+<p>
+<div>This firmware can be used with all adapters that are listed in the <a href="#Firmware_Updater">Table of CANable 2.5 firmware versions</a>.</div>
 <ol>
     <li><div>I united 2 formerly separate firmware projects <b>Slcan</b> and <b>Candlelight</b> into one project with a <b>common code base</b>.</div>
     <li><div>The new CANable 2.5 firmware is <b>high quality</b> and <b>open-source</b>.</div>
@@ -277,12 +279,41 @@
     <li><div>You can write ultra fast <b>macro scripts</b> that communicate with devices on CAN bus.</div>
 </ol>
 
+<p>
+<div>&nbsp;</div>
+<table border="0" cellspacing="0" cellpadding="10" style="border:solid 2px #007799;">
+<tr><td>
+    <div><img src="https://api.oosmetrics.com/api/v1/badge/achievement/da21943d-acc0-4f0c-84d8-4b68ff45293b.svg" width="408" height="20"></div>
+    <p>
+    <div>This firmware is ranked under the <b>Top Ten</b> in the embedded category on <a href="https://oosmetrics.com/repo/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight" target="_blank">oosmetrics</a>.</div>
+</td></tr>
+</table>
+
 <a name="User_Manual"></a>
 <p>&nbsp;
 <h2>1.) User Manual</h2>
 
 <a name="Adapters"></a>
-<h3>CANable Adapters</h3>
+<h3>CANable v1.0 Adapters</h3>
+<div>The older CANable 1.0 adapters with STM32<span class="Error">F</span>xxx processors are not supported by this firmware.</div>
+<div>They are obsolete. They do not support CAN FD.</div>
+
+<h3>CANable v2.0 Adapters</h3>
+
+<div>The newer CANable 2.0 adapters with STM32<span class="Error">G</span>xxx processors support CAN FD with up to 5 Mbaud, 8 Mbaud or 10 Mbaud.</div>
+<div>The majority of adapters listed below completely isolate the CAN side from the USB side. Several adapters use the chips:</div>
+<ul>
+<li><div>The ADM3050E is an isolated CAN Transceiver (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>)</div>
+<li><div>The B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
+</ul>
+<p>
+<div>Most adapters have a <b>switch</b> that can connect a 120 Ω <b>termination resistor</b> to CAN bus. See chapter <a href="#CAN_Hardware">CAN Hardware</a>.</div>
+<div>When you connect to the CAN bus of a <b>vehicle</b> you must turn this resistor OFF.</div>
+<div>When you make tests between 2 adapters on your <b>desk</b> you must turn the resistors ON in both adapters.</div>
+
+<a name="Multiboard"></a>
+<h3>Multiboard Adapters</h3>
+
 <table cellpadding=0 cellspacing=0>
 <tr><td>
     <table class="TblImage">
@@ -299,19 +330,16 @@
 </td></tr>
 </table>
 
-<div>The CANable is a family of very cheap ($15 US) CAN bus adapter with <b>CAN FD</b> support.</div>
-<div>Several Chinese and Japanese companies sell different versions like:
+<div>Several Chinese and Japanese companies sell different adapters like:
 <a href="https://www.aliexpress.com/w/wholesale-canable-makerbase.html" target="_blank">MKS Makerbase</a>,&nbsp;
 <a href="https://www.deshide.com/product-details_SH-C31A.html" target="_blank">DSD Tech</a>,&nbsp;
 <a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a>.
 </div>
 <div>These cheap boards have no quartz. The RC oscillator in the processor has only a precision of 1%.</div>
 <p>
-<div>When you buy one of these adapters make sure that it has the STM32G431 processor.</div>
-<p>
-<div>All these adapters have a manual switch that can connect a 120 Ω <b>termination resistor</b> to CAN bus.</div>
-<div>When you connect to the CAN bus of a <b>vehicle</b> you must turn this resistor OFF.</div>
-<div>When you make tests between 2 adapters on your <b>desk</b> you must turn the resistors in both adaters ON.</div>
+<div>The MKS Makerbase adapter ($15 US) supports CAN traffic up to <b>10 Mega baud</b>.</div>
+<div>I asked <b>MKS Makerbase</b> to send me a diagram of their adapter, but they never answer on none of their email addresses.</div>
+
 
 <a name="Jhoinrch"></a>
 <h3>Jhoinrch RH02 Plus / Elite</h3>
@@ -320,15 +348,27 @@
     <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Jhoinrch RH02 Elite.jpg')">Show Full Size</span></td></tr>
 </table>
 <div><a href="https://jhoinrch.net" target="_blank">Jhoinrch</a> in China is the first company that uses my CANable 2.5 as stock firmware for their <a href="https://www.amazon.com/stores/Jhoinrch/page/BEC6FB30-6DA6-421E-80B6-1904FA0C0783" target="_blank">RH02 adapters</a>.</div>
-<div>The Plus and the Elite adapters have a STM32G431 processor and since 2026 also a 25 MHz quartz.</div>
+<div>The <b>Plus</b> and the <b>Elite</b> adapters ($18 US) have a STM32G431 processor and since 2026 also a 25 MHz quartz.</div>
+<div>The Jhoinrch Elite adapter supports CAN traffic up to <b>10 Mega baud</b>.</div>
+<div>Here you can download the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02 Elite</a> (PDF).</div>
 
-<h3>Diagram</h3>
-<div>I asked <b>MKS Makerbase</b> to send me a diagram of their adapter, but they never responded on none of their email addresses.</div>
-<div>But <b>Jhoinrch</b> allows me to publish the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02 Elite</a> (PDF).</div>
-<div>Both adapters <b>isolate</b> the CAN side from the USB side and use the same chips:</div>
-<div>The ADM3050E is an isolated CAN Transceiver (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>)
-and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet Hi-Link B05050S-1WR3 Isolated DC-DC Converter.pdf" target="_blank">Datasheet</a>).</div>
-<div>The MKS Makerbase and Jhoinrch adapters with the ADM3050E support CAN traffic up to <b>10 Mega baud</b>.</div>
+<!--
+<a name="WeActStudioV1"></a>
+<h3>USB2CANFD v1</h3>
+<div>The <a href="https://weactstudio.aliexpress.com" target="_blank">WeActStudio</a> USB2CANFD v1 is a cheap ($8 US) and small (4 x 2 cm) adapter with STM32G0B1 processor.</div>
+<div>WeActStudio has published the <a href="Images/Diagram WeActStudio USB2CANFD v1.pdf" target="_blank">diagram of the USB2CANFD v1</a> (PDF).</div>
+<div>The hardware is good quality, however the processor with 64 MHz clock is slower than the STM32G431 with 160 MHz clock.</div>
+
+
+<a name="WeActStudioV2"></a>
+<h3>USB2CANFD v2</h3>
+<div>The newer WeActStudio version 2 comes with the STM32G431 processor.</div>
+<p>
+<div>WeActStudio has published the <a href="Images/Diagram WeActStudio USB2CANFD v2.pdf" target="_blank">diagram of the USB2CANFD v2</a> (PDF).</div>
+<div>The CA-IS2062 is an isolated CAN Transceiver chip (<a href="Images/Datasheet CA-IS2062A Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>).</div>
+<div>And a SN74LVC1G125 (<a href="Images/Datasheet SN74LVC1G125 Three State Buffer.pdf" target="_blank">Datasheet</a>) assures that the processor does not go into boot mode when connecting USB power.</div>
+-->
+
 
 <a name="Oleksii"></a>
 <h3>CAN-Module Dual</h3>
@@ -336,7 +376,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <tr><td><img src="Images/Adapter Oleksii Dual.jpg" alt="CANable - Jhoinrch RH02" width="200" height="90"></td></tr>
     <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Oleksii Dual.jpg')">Show Full Size</span></td></tr>
 </table>
-<div>Can-Module from Oleksii in Ukraine uses my CANable 2.5 as stock firmware for the <a href="https://can-module.com/#dual" target="_blank">Dual Channel Adapter</a>.</div>
+<div>Can-Module from Oleksii in Ukraine uses my CANable 2.5 as stock firmware for the <a href="https://can-module.com/#dual" target="_blank">Dual Channel Adapter</a> ($25 US).</div>
 <div>It offers 2 CAN channels, has a STM32G473 processor and a 8 MHz quartz. It is a naked board without enclosure.</div>
 <div>Please read chapter <a href="#Multi_Channel">Multi Channel Aadpters</a>.</div>
 <p>
@@ -347,22 +387,23 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <a name="Hardware"></a>
 <h3>Hardware Misdesign</h3>
 <div>A correctly designed USB adapter should work immediately when you plug in the USB cable.</div>
-<div>But the CANable adapters may enter <b>DFU Mode</b> alone. Then you see in Control Panel:</div>
+<div>But some adapters with STM32<span class="Error">G4</span>xx processor may enter <b>DFU Mode</b> alone. Then you see in Control Panel:</div>
 <p>
 <img src="Images/STM Device in DFU Mode.png" width="208" height="38" class="Img">
 <p>
-<div>'ST Microelectronics Device in DFU (Device Firmware Upgrade) Mode', also called <b>Bootloader Mode</b>.</div>
+<div>'ST Microelectronics Device in DFU (Device Firmware Upgrade) Mode' is also called <b>Bootloader Mode</b>.</div>
 <div>In Boot Mode the processor runs it's internal bootloader and is ready to receive a <b>firmware update</b>.</div>
-<div>In Boot Mode only the red LED is on.</div>
+<div>In Boot Mode only the power LED is on.</div>
 <p>
 <div>To switch your adapter to <b>operation mode</b> try to disconnect the USB cable, wait 5 seconds and reconnect.</div>
-<div>If this does not work (Oleksii Adapter) you must use the <a href="#Firmware_Updater">Firmware Programmer</a> to disable pin BOOT0.</div>
+<div>If this does not work (Oleksii adapters) you must use the <a href="#Firmware_Updater">Firmware Programmer</a> to disable pin BOOT0.</div>
 <p>
 <div>In a correctly designed hardware the boot mode should only be enabled when the Boot Mode <b>jumper</b> is set.</div>
-<div>But the cheap version of the processor (LQFP48) that is used in these adapters has only a limited amount of pins.</div>
-<div>Stupidly ST Microelectronics offers only 2 options for the CAN Rx and Tx pins, which are both not useful:</div>
+<div>But the cheap version of the STM32G4xx processor (LQFP48) has only a limited amount of pins.</div>
+<div>ST Microelectronics offers only 2 options for the CAN Rx and Tx pins, which are both not useful:</div>
 <div>1.) Pins PA11 and PA12 could be configured for CAN bus, but they are already occupied with USB.</div>
 <div>2.) So the only other option must be used: pins PB8 and PB9. But pin PB8 is also the <b>BOOT0</b> pin.</div>
+<div>This is an extremely stupid processor design.</div>
 <table>
 <tr><td>
     <table class="TblImage">
@@ -374,15 +415,16 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 
 <div>When the pin <b>BOOT0</b> is High during power ON the processor goes into <b>Bootloader Mode</b>.</div>
 <div>To avoid this the hardware must assure that the CAN Rx pin is Low when the processor is reset.</div>
-<div>Therefore most adapters use the transistors Q1 and Q2 to delay the power supply for the CAN transceiver.</div>
-<div>Without these transistors the processor would always start in Boot Mode.</div>
+<div>Therefore some adapters use 2 transistors to delay the power supply for the CAN transceiver.</div>
 <p>
 <div>The consequence is that short interruptions of the 5V USB power will immediately enter Boot Mode.</div>
 <div>This happens when you merely move the USB plug a little bit or when you <b>reboot</b> the computer.</div>
 <div>During a reboot the mainboard interrupts the USB power supply for a short time.</div>
 <p>
 <div>This misdesign <b>really sucks</b>. Therefore my CANable 2.5 firmware offers a solution: You can <b>disable</b> the pin BOOT0.</div>
-<div>In the boards from Oleksii the 2 transistors are missing, so you MUST disable the pin BOOT0.</div>
+<p>
+<div>The adapters from <b>Oleksii</b> are the worst: If you don't disable pin BOOT0 you cannot use them at all.</div>
+<div>The adapters from <b>Jhoinrch</b> have a more intelligent hardware design, they don't have this problem.</div>
 
 <a name="WebUpdater"></a>
 <h3>Official Firmware for STM32G431</h3>
@@ -436,10 +478,10 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 
 <table class="DataTable">
 <tr><th>Firmware</th><th>Payload</th><th>Transferred over USB</th><th>Efficiency</th></tr>
-<tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td style="color:#CC8800"><b>48 %</b></td></tr>
-<tr><td>ElmüSoft Slcan 2.5</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td style="color:#CC8800"><b>48 %</b></td></tr>
-<tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td style="color:#FF0000"><b>0 %</b></td></tr>
-<tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td style="color:#00AA00"><b>91 %</b></td></tr>
+<tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
+<tr><td>ElmüSoft Slcan 2.5</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
+<tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td align="right"><span style="color:#FF0000"><b>0 %</b></span></td></tr>
+<tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td>21 / 23 = <span style="color:#00AA00"><b>91 %</b></span></td></tr>
 </table>
 
 <a name="Legacy_Installation"></a>
@@ -508,6 +550,12 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>If you have corrupted your registry by using Zadig, HUD ECU Hacker can help you: Start the <b>Firmware Programmer</b>.</div>
 <div>It will check all registry entries of connected Candlelight devices and it will <b>fix registry errors</b> automatically.</div>
 <p>
+<table class="TblImage">
+    <tr><td align="center"><b>Driver Registry Correction</b></td></tr>
+    <tr><td><img src="Images/Zadig Error.png" alt="Zadig creates regsitry corruption" width="189" height="100"></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Zadig Error.png')">Show Full Size</span></td></tr>
+</table>
+<p>
 <div><b>Never</b> use Zadig! It will screw up your registry.</div>
 <div>With the new Candlelight firmware 2.5 Windows will install the WinUSB driver automatically and correctly.</div>
 
@@ -531,76 +579,95 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
         <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CANable STM32 Firmware Updater.png')">Show Full Size</span></td></tr>
     </table>
 </td>
-<td>&nbsp;</td>
-<td>
-    <table class="TblImage">
-        <tr><td align="center"><b>Driver Registry Correction</b></td></tr>
-        <tr><td><img src="Images/Zadig Error.png" alt="Zadig creates regsitry corruption" width="284" height="150"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Zadig Error.png')">Show Full Size</span></td></tr>
-    </table>
-</td></tr>
+</tr>
 </table>
 
 <a name="FirmwareVersions"></a>
 <div>After installing HUD ECU Hacker you can chose between the following CANable 2.5 firmware versions:</div>
 
 <table class="DataTable">
-<tr><th>File Name</th><th>Adapters</th><th>Quartz</th><th>Channels</th><th>LED Pins</th><th>USB Speed</th></tr>
+<tr><th>File Name</th><th>Adapters</th><th>Quartz</th><th>Clock</th><th>Channels</th><th>LED Pins</th><th>USB Speed</th><th>BOOT0</th></tr>
 <tr>
-    <td>STM32G431-Slcan2.5-Multiboard.dfu</td>
+    <td>STM32G<span class="Green">431</span>-Slcan2.5-Multiboard.dfu</td>
     <td rowspan="2">MKS Makerbase<br>DSD Tech, Walfront</td>
     <td rowspan="2">None</td>
+    <td rowspan="2">160 MHz</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">A0,A15</td>
     <td rowspan="2">Full Speed<br>12 MBit</td>
+    <td rowspan="2">Bad</td>
 </tr>
-<tr><td>STM32G431-Candlelight2.5-Multiboard.dfu</td></tr>
+<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-Multiboard.dfu</td></tr>
 
 <tr>
-    <td>STM32G431-Slcan2.5-OpenlightLabs.dfu</td>
+    <td>STM32G<span class="Green">431</span>-Slcan2.5-OpenlightLabs.dfu</td>
     <td rowspan="2">Openlight Labs</td>
     <td rowspan="2">None</td>
+    <td rowspan="2">160 MHz</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">B11,A15</td>
     <td rowspan="2">Full Speed<br>12 MBit</td>
+    <td rowspan="2">Bad</td>
 </tr>
-<tr><td>STM32G431-Candlelight2.5-OpenlightLabs.dfu</td></tr>
+<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OpenlightLabs.dfu</td></tr>
 
-<tr><td>STM32G431-Slcan2.5-Jhoinrch.dfu</td>
+<tr><td>STM32G<span class="Green">431</span>-Slcan2.5-Jhoinrch.dfu</td>
     <td rowspan="2">Jhoinrch RH02 Plus<br>Jhoinrch RH02 Elite</td>
     <td rowspan="2">25 MHz<br>since 2026</td>
+    <td rowspan="2">160 MHz</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">A0,A15</td>
     <td rowspan="2">Full Speed<br>12 MBit</td>
+    <td rowspan="2">OK</td>
 </tr>
-<tr><td>STM32G431-Candlelight2.5-Jhoinrch.dfu</td></tr>
+<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-Jhoinrch.dfu</td></tr>
 
 <tr>
-    <td>STM32G431-Slcan2.5-OleksiiSolo.dfu</td>
+    <td>STM32G<span class="Green">431</span>-Slcan2.5-OleksiiSolo.dfu</td>
     <td rowspan="2">Oleksii Solo</td>
     <td rowspan="2">8 MHz</td>
+    <td rowspan="2">160 MHz</td>
     <td rowspan="2">Single</td>
     <td rowspan="2">A5,A6</td>
     <td rowspan="2">Full Speed<br>12 MBit</td>
+    <td rowspan="2">Worst</td>
 </tr>
-<tr><td>STM32G431-Candlelight2.5-OleksiiSolo.dfu</td></tr>
+<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OleksiiSolo.dfu</td></tr>
 
+<!--
 <tr>
-    <td>STM32G473-Slcan2.5-OleksiiDual.dfu</td>
+    <td>STM32G<span class="Green">431</span>-Slcan2.5-WeActSudioV2.dfu</td>
+    <td rowspan="2">WeActSudio<br>USB2CANFD v2</td>
+    <td rowspan="2">16 MHz</td>
+    <td rowspan="2">160 MHz</td>
+    <td rowspan="2">Single</td>
+    <td rowspan="2">A1,A0</td>
+    <td rowspan="2">Full Speed<br>12 MBit</td>
+    <td rowspan="2">OK</td>
+</tr>
+<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-WeActSudioV2.dfu</td></tr>
+-->
+<tr>
+    <td>STM32G<span class="Blue">473</span>-Slcan2.5-OleksiiDual.dfu</td>
     <td rowspan="2">Oleksii Dual</td>
     <td rowspan="2">8 MHz</td>
+    <td rowspan="2">160 MHz</td>
     <td rowspan="2">Dual</td>
     <td rowspan="2">A5,A6<br>A3,A4</td>
     <td rowspan="2">Full Speed<br>12 MBit</td>
+    <td rowspan="2">Worst</td>
 </tr>
-<tr><td>STM32G473-Candlelight2.5-OleksiiDual.dfu</td></tr>
+<tr><td>STM32G<span class="Blue">473</span>-Candlelight2.5-OleksiiDual.dfu</td></tr>
 </table>
 
-<div>If you install the <b>wrong firmware</b> the LED's will always be off or nothing works at all.</div>
-<div>If you have another adapter that needs different settings, send me an email, this can easily be added.</div>
+<div><b>BOOT0 = OK</b> means that the hardware design does not require to disable pin BOOT0.</div>
+<div><b>BOOT0 = Bad</b> means that pin BOOT0 must be disabled to avoid that the board goes into boot mode alone.</div>
+<div><b>BOOT0 = Worst</b> means that the board does not work at all if pin BOOT0 is not disabled.</div>
 <p>
-<div>The firmware has been tested on the STM32G431 and 473 processors. But it should work with this entire family:</div>
-<div>STM32G441, STM32G471, STM32G474, STM32G483, STM32G484, STM32G491, STM32G4A1.</div>
+<div><span class="Error">IMPORTANT:</span> Only one Slcan firmware and only one Candlelight firmware matches your adapter.</div>
+<div>If you upload the <b>wrong firmware</b> you must not be surprised that the adapter does not work.</div>
+<p>
+<div>The firmware is ready for the STM32G4xx serie. It can be extended for other processors.</div>
 <p>
 <table class="Warning" cellpadding=0 cellspacing=0><tr><td>
 <div>The HUD ECU Hacker Firmware Programmer can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
@@ -623,7 +690,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div>When you click the button <b>Identify</b> the LED's on the CANable will blink, and with the next click they stop blinking.</div>
 <div>This allows to distinguish with which adapter you are communicating if multiple adapters are connected at the same time.</div>
 <p>
-<div>The button <b>Disable pin Boot0</b> is a workaround for the annoying <a href="#Hardware">hardware misdesign</a>.</div>
+<div>The button <b>Disable pin Boot0</b> is a workaround for the annoying <a href="#Hardware">hardware misdesign</a> of the STM32<b>G4</b>xx processors.</div>
 <div>The processor will ignore the pin Boot0 and not enter bootloader mode alone when you only reboot the computer.</div>
 <div>But this means that the processor will also NOT enter bootloader mode when you set the <b>Boot Mode jumper</b>.</div>
 <div>You can easily revert this by clicking the button <b>Enter DFU mode</b>.</div>
@@ -1271,20 +1338,20 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>Set 3 filters for 16 ID's each: 7EX, 72X and 73X</td></tr>
 <tr><td>"f\r"</td><td>Closed</td><td>100</td><td>Clear all filters</td><td>Remove all filters</td></tr>
 <tr><th>Special Commands</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"*Boot0:Off\r"</td><td>Closed</td><td>100</td><td>Disable pin BOOT0</td><td>See <a href="#Hardware">Hardware Misdesign</a></td></tr>
+<tr><td>"*Boot0:Off\r"</td><td>Closed</td><td>100</td><td>Disable pin BOOT0 of STM32<b>G4</b>xx processors</td><td>See <a href="#Hardware">Hardware Misdesign</a></td></tr>
 <tr><td>"*Boot0:?\r"</td><td>Open/Closed</td><td>100</td><td>Request status of pin BOOT0</td><td>returns "+1\r" if enabled or "+0\r" if disabled</td></tr>
 <tr><td>"*DFU\r"</td><td>Open/Closed</td><td>100</td><td>Enable pin BOOT0 and enter DFU mode</td><td>If feedback = <code>FBK_ResetRequired</code>: Reconnect USB cable!</td></tr>
 <tr><td>"*Flash:XX=Data\r"</td><td>Open/Closed</td><td>102</td><td>Writes data to <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00=48656C6C6F\r" writes "Hello" to segment 0</td></tr>
 <tr><td>"*Flash:XX?\r"</td><td>Open/Closed</td><td>102</td><td>Reads data from <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00?\r" returns "+48656C6C6F\r"</td></tr>
 <tr><th>Transmit Packets</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"Txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 29 bit ID</td><td>Bits: IDE  &nbsp; &nbsp; See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
-<tr><td>"txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 11 bit ID</td><td>Bits: None</td></tr>
-<tr><td>"Rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
+<tr><td>"txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp; See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
+<tr><td>"Txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
 <tr><td>"rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
-<tr><td>"Dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
+<tr><td>"Rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
 <tr><td>"dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
-<tr><td>"Bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+<tr><td>"Dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
 <tr><td>"bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
+<tr><td>"Bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
 <tr><th>CAN Channel</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"command\r"</td><td>----</td><td>legacy</td><td>Destination is CAN channel 1</td><td>All adapters</td></tr>
 <tr><td>"&amp;command\r"</td><td>----</td><td>101</td><td>Destination is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
@@ -1322,18 +1389,18 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>"+Hex Data\r"</td><td>102</td><td>The firmware sends a hex byte response to a command</td><td>Used by command "*Flash:XX?\r"</td></tr>
 <tr><th>Event</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"&gt;Message\r"</td><td>100</td><td>The firmware sends a debug message (plain text)</td><td>Requires Debug Messages to be enabled</td></tr>
-<tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status (See <a href="#Slcan_Errors">Slcan Errors</a>)</td><td>Requires CAN Error Reports to be enabled</td></tr>
+<tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status. See <a href="#Slcan_Errors">Slcan Errors</a></td><td>Requires CAN Error Reports to be enabled</td></tr>
 <tr><td>"L27\r"</td><td>100</td><td>The firmware has calculated a bus load of 27%.<br>If the bus load is zero, no report is sent.</td><td>Requires Bus Load Reports to be enabled</td></tr>
-<tr><td>"M3C\r"</td><td>100</td><td>The firmware reports the Tx echo marker 0x3C (See <a href="#Slcan_Packets">Slcan Packets</a>)</td><td>Requires Tx Echo Report markers to be enabled</td></tr>
+<tr><td>"M3C\r"</td><td>100</td><td>The firmware reports the Tx echo marker 0x3C. See <a href="#Slcan_Packets">Slcan Packets</a></td><td>Requires Tx Echo Report markers to be enabled</td></tr>
 <tr><th>Rx Packets</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"Txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 29 bit ID</td><td>Bits: IDE  &nbsp;  (See <a href="#Slcan_Packets">Slcan Packets</a>)</td></tr>
-<tr><td>"txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 11 bit ID</td><td>Bits: None</td></tr>
-<tr><td>"Rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
+<tr><td>"txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp;  See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
+<tr><td>"Txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
 <tr><td>"rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
-<tr><td>"Dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
+<tr><td>"Rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
 <tr><td>"dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
-<tr><td>"Bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+<tr><td>"Dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
 <tr><td>"bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
+<tr><td>"Bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
 <tr><th>CAN Channel</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"response\r"</td><td>legacy</td><td>Origin is CAN channel 1</td><td>All adapters</td></tr>
 <tr><td>"&amp;response\r"</td><td>101</td><td>Origin is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
@@ -1342,7 +1409,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 
 <a name="Slcan_Version_Info"></a>
 <h3>Slcan Version Info</h3>
-<div>In the new firmware the command "V\r" returns one string with <b>seven key/value pairs</b> separatad by <b>tab characters</b>.</div>
+<div>In the new firmware the command "V\r" returns one string with <b>multiple key/value pairs</b> separatad by <b>tab characters</b>.</div>
 <div>It starts with a <b>plus character</b> that indicates a command response with text content, rather than a feedback response (#).</div>
 <p>
 <table class="Pre">
@@ -1385,7 +1452,7 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
     <div>Convert to hex and you get the BCD version 0x250914, which means 14th september of 2025.</div></td></tr>
 <tr><td>Slcan</td><td>102</td><td>100</td><td>
     <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
-    <div>Use this <a href="#Slcan_Versions">version number</a> to detect which features are available in the firmware.</div></td></tr>
+    <div>Use the <a href="#Slcan_Versions">Slcan Version</a> to detect which features are available in the firmware.</div></td></tr>
 <tr><td>Clock</td><td>160</td><td>100</td><td>The CAN clock is 160 MHz</td></tr>
 <tr><td>Limits</td><td>512,256,128,128,<br>32,32,16,16</td><td>100</td><td>
     <div>These 8 values are the <b>upper limits</b> for the bitrate commands 's' and 'y'.</div>
@@ -1402,12 +1469,6 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <tr><td>Serial</td><td>206249E3946306550</td><td>102</td><td>
     <div>The serial number of the processor. STM guarantees that this is unique.</div></td></tr>
 </table>
-
-<a name="Slcan_Versions"></a>
-<h3>Slcan Versions</h3>
-<div>The first version created by ElmüSoft was version 100.</div>
-<div>Version 101 adds support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>.</div>
-<div>Version 102 allows to read/write user data from/to the <a href="#RW_Flash">flash memory</a> and returns the serial number.</div>
 
 
 <a name="Slcan_Packets"></a>
@@ -1662,22 +1723,22 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <div><b><u>Cube Programmer</u></b></div>
 <div>If you think that you can install the <b>STM32 Cube Programmer</b> from ST Microelectronics</div>
 <div>and you will get a comfortable developer environment, you are completely wrong!</div>
-<div>After downloading this Gigabyte monster you will find a very badly designed user interface,</div>
-<div>an extremely slow software and you notice that it is not able to compile a Make file.</div>
+<div>After installing this monster of 2 Gigabyte you will find a <b>very badly designed</b> user interface,</div>
+<div>an <b>eternally slow</b> software and you notice that it is not able to compile a Make file.</div>
 <div>Several menu items are greyed out without an understandable reason and the help file is no help.</div>
 <div>So don't <b>waste your time</b> with this.</div>
 <div>ST Microelectronics has only hardware engineers, they are not able to write user friendly desktop software.</div>
 <p>
 <div><b><u>Intallation</u></b></div>
 <div>So we use the Cube CLT (Command Line Tools) instead.</div>
-<div>Normally you would have to download the <b>STM32 Cube CLT</b> and <b>MinGW</b> which would occupy a Gigabyte on your disk.</div>
+<div>Normally you would have to download the <b>STM32 Cube CLT</b> and <b>MinGW</b> which would occupy 2 Gigabyte on your disk.</div>
 <div>Then you would have to rename mkdir.exe into mmkdir.exe and add 2 folders to your PATH variable.</div>
 <p>
 <div>But you are lucky. I made it much simpler for you:</div>
 <ol>
 <li><div><b>Download</b> the file <a href="https://netcult.ch/elmue/CANable Firmware Update/STM32_Compiler_with_MingW.zip">STM32_Compiler_with_MingW.zip</a> from my homepage.</div>
     <div>This ZIP file contains the STM32 Command Line Compiler and the MingW files <code>make.exe</code> and <code>mmkdir.exe</code></div>
-    <div>This ZIP file has only <b>32 MegaByte</b> instead of 1 GigaByte because I removed folders full of stuff that is not needed.</div>
+    <div>This ZIP file has only <b>32 MegaByte</b> instead of GigaBytes because I removed folders full of stuff that is not needed.</div>
 <li><div><span class="Error">IMPORTANT:</span> Right click the ZIP file <big>&rarr;</big> menu 'Properties' and click the button <b>Unblock</b>.</div>
 <li><div><b>Extract</b> the ZIP file into it's destination folder on your disk.</div>
 <li><div>I merged the executables from the compiler with MingW so you have to add only one path to the environment variable.</div>
@@ -1705,16 +1766,19 @@ and the B05050S-1WR3 is an isolated DC-DC Converter (<a href="Images/Datasheet H
 <li><div><b>02.Jan.2026</b>: <a href="#Jhoinrch">Jhoinrch</a> is the first company that sells their CANable adpter with the new Elmüsoft 2.5 firmware.</div>
 <li><div><b>08.Jan.2026</b>: Added support for boards with <a href="#Firmware_Updater">quartz crystal</a>. New firmware for Jhoinrch adapter with 25 MHz quartz.</div>
 <li><div><b>13.Jan.2026</b>: Hardware <a href="#Timestamps">timestamps</a> use precise 16 bit time from processor.</div>
-<li><div><b>04.Mar.2026</b>: Support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>. Slcan: New version 101. Candlelight: Added <code>eBoardFlags</code>.</div>
-<li><div><b>16.Apr.2026</b>: User data can be stored in <a href="#RW_Flash">flash memory</a>. Slcan: New version 102.</div>
+<li><div><b>04.Mar.2026</b>: Support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>. Candlelight: Added <code>eBoardFlags</code>.</div>
+<li><div><b>16.Apr.2026</b>: User data can be stored in <a href="#RW_Flash">flash memory</a>.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
+<p>
 <div>You find the source code on <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight" target="_blank">Github</a>.</div>
 
-<h3>Version Numbers</h3>
-<div>When you add new features to the firmware don't forget to adapt <code>FIRMWARE_VERSION</code> in <b>GCC_Rules.mk</b></div>
-<div>After adding new Slcan commands you must increase <code>SLCAN_VERSION</code> and add the new commands to the documentation.</div>
+<a name="Slcan_Versions"></a>
+<h3>Slcan Versions</h3>
+<div>The first version created by ElmüSoft was Slcan 100.</div>
+<div>Slcan 101 (since 04.Mar.2026) adds support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>.</div>
+<div>Slcan 102 (since 16.Apr.2026) allows to read/write user data from/to the <a href="#RW_Flash">flash memory</a> and returns the serial number.</div>
 
 
 <div>&nbsp;</div>
