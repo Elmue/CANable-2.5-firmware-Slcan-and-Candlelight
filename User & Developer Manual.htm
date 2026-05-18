@@ -372,10 +372,12 @@
 <div>They programmed the processor to <b>erase</b> the entire flash memory when the read protection is turned off.</div>
 <div>WeActStudio sells you a <span class="Error">crippled adapter</span>. They do not allow you to chose which firmware you want to use.</div>
 <p>
-<div>There is <b>no easy way</b> to remove their 'firmware updater' and the several protections and to enable pin BOOT0:</div>
-<div>buy a <b>ST-Link adapter</b>, solder 4 pins, install the <b>Cube Programmer</b> of 1.5 GB and manipulate the <b>option bytes</b>.</div>
+<div>There is <b>no easy way</b> to remove their 'firmware updater' and the several protections and to enable pin BOOT0.</div>
+<div>They force you to buy a <b>ST-Link adapter</b>, solder 4 pins to the board, install the STM <b>Cube Programmer</b>,</div>
+<div>which is a monster of of 1.5 GB and manually manipulate the <b>option bytes</b> which is critical.</div>
+<div>Cube Programmer is a garbage that mostly does not connect to the adapter without any error message.</div>
 <p>
-<div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer v5.0</a> removes all this WeAct stuff with one click.</div>
+<div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer v5.0</a> removes all this WeAct stuff with <b>one click</b>.</div>
 <div>To achieve this I had to write a firmware that I upload with the <b>Y-Modem</b> protocol through their firmware updater.<//div>
 <div>My <b>ElmüSoft Restore Adapter</b> fimware removes all this <b>crap</b> and leaves a clean and unprotected flash memory.</div>
 <div>Just click the button <b>Enter DFU Mode</b> and you can upload the CANable 2.5 firmware via DFU protocol.</div>
