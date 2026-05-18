@@ -95,7 +95,10 @@ typedef enum
     DfuState_Manifest,          // Device is in the Manifestation phase.  
     DfuState_ManifestWaitReset, // Device has programmed its memories and is waiting for a USB reset or a power-on reset
     DfuState_UploadIdle,        // Device is processing an upload operation. 
-    DfuState_Error              // An error has occurred. Awaiting the DFU_CLRSTATUS request. 
+    DfuState_Error,             // An error has occurred. Awaiting the DFU_CLRSTATUS request. 
+    // -------------
+    DfuState_UploadSync  = 0x91,
+    DfuState_UploadBusy  = 0x92,
 } eDfuState;
 
 #pragma pack(push,1)

@@ -6,8 +6,8 @@
 
 #include "utils.h"
 
-bitlimits limits;
-char      MCU_name[30]; // name is never longer than 24 characters
+bitlimits limits_nom;
+bitlimits limits_data;
 
 // called from the main loop
 void utils_init()
@@ -16,34 +16,20 @@ void utils_init()
     // They only give us the macros IS_FDCAN_NOMINAL_PRESCALER(), IS_FDCAN_NOMINAL_TSEG1(), ...
     // But the host application needs these limits to calculate the bitrates (commands 's' and 'y')
     
-    for (limits.nom_brp_max  = 2; IS_FDCAN_NOMINAL_PRESCALER(limits.nom_brp_max  +1); limits.nom_brp_max ++) { }
-    for (limits.nom_seg1_max = 2; IS_FDCAN_NOMINAL_TSEG1    (limits.nom_seg1_max +1); limits.nom_seg1_max++) { }
-    for (limits.nom_seg2_max = 2; IS_FDCAN_NOMINAL_TSEG2    (limits.nom_seg2_max +1); limits.nom_seg2_max++) { }
-    for (limits.nom_sjw_max  = 2; IS_FDCAN_NOMINAL_SJW      (limits.nom_sjw_max  +1); limits.nom_sjw_max ++) { }
+    for (limits_nom.brp_max   = 2; IS_FDCAN_NOMINAL_PRESCALER(limits_nom.brp_max   +1); limits_nom.brp_max ++) { }
+    for (limits_nom.seg1_max  = 2; IS_FDCAN_NOMINAL_TSEG1    (limits_nom.seg1_max  +1); limits_nom.seg1_max++) { }
+    for (limits_nom.seg2_max  = 2; IS_FDCAN_NOMINAL_TSEG2    (limits_nom.seg2_max  +1); limits_nom.seg2_max++) { }
+    for (limits_nom.sjw_max   = 2; IS_FDCAN_NOMINAL_SJW      (limits_nom.sjw_max   +1); limits_nom.sjw_max ++) { }
     
-    for (limits.fd_brp_max   = 2; IS_FDCAN_DATA_PRESCALER   (limits.fd_brp_max   +1); limits.fd_brp_max  ++) { }
-    for (limits.fd_seg1_max  = 2; IS_FDCAN_DATA_TSEG1       (limits.fd_seg1_max  +1); limits.fd_seg1_max ++) { }
-    for (limits.fd_seg2_max  = 2; IS_FDCAN_DATA_TSEG2       (limits.fd_seg2_max  +1); limits.fd_seg2_max ++) { }
-    for (limits.fd_sjw_max   = 2; IS_FDCAN_DATA_SJW         (limits.fd_sjw_max   +1); limits.fd_sjw_max  ++) { }
-    
-    // remove trailing "x" in "STM32G431xx" from makefile
-    strcpy(MCU_name, TARGET_MCU);
-    int len = strlen(MCU_name);
-    while (MCU_name[--len] == 'x')
-    {
-        MCU_name[len] = 0;
-    }
+    for (limits_data.brp_max  = 2; IS_FDCAN_DATA_PRESCALER   (limits_data.brp_max  +1); limits_data.brp_max  ++) { }
+    for (limits_data.seg1_max = 2; IS_FDCAN_DATA_TSEG1       (limits_data.seg1_max +1); limits_data.seg1_max ++) { }
+    for (limits_data.seg2_max = 2; IS_FDCAN_DATA_TSEG2       (limits_data.seg2_max +1); limits_data.seg2_max ++) { }
+    for (limits_data.sjw_max  = 2; IS_FDCAN_DATA_SJW         (limits_data.sjw_max  +1); limits_data.sjw_max  ++) { }   
 }
 
-bitlimits* utils_get_bit_limits()
+bitlimits* utils_get_bit_limits(bool get_data)
 {
-    return &limits;
-}
-
-// returns "STM32G431" 
-const char* utils_get_MCU_name()
-{
-    return MCU_name;
+    return get_data ? &limits_data : &limits_nom;
 }
 
 // Check if a memory area has only zero bytes

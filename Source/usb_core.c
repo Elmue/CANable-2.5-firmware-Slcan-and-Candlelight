@@ -16,114 +16,98 @@
 
 #include "usb_core.h"
 
-extern USBD_ClassTypeDef       USBD_ClassCallbacks;
+// global variables
+extern USBD_ClassTypeDef   USBD_ClassCallbacks;
 
-USBD_HandleTypeDef GLB_UsbDevice;
+// member variables
+USBD_HandleTypeDef  __aligned(4) USB_Handle;
 
 // Configure and Start the USB module.
+// called from main()
 bool USBD_Init()
 {
-    GLB_UsbDevice.id        = DEVICE_FS;  
-    GLB_UsbDevice.dev_state = USBD_STATE_DEFAULT;
-    GLB_UsbDevice.pClass    = &USBD_ClassCallbacks;      // device specific (Slcan / Candlelight)
-
-    return (USBD_LL_Init (&GLB_UsbDevice) == USBD_OK &&
-            USBD_LL_Start(&GLB_UsbDevice) == USBD_OK);
-}
-
-// This simulates an USB disconnect / reconnect which is noticed by the host.
-// But this does not help to replace a hardware reset after enabling pin BOOT0.
-bool USBD_DetachAttach()
-{
-    USBD_DeInit(&GLB_UsbDevice); // Stop USB
-    HAL_Delay(50);
-    return USBD_Init(); // Start USB
+    USB_Handle.id        = DEVICE_FS;  
+    USB_Handle.dev_state = USBD_STATE_DEFAULT;
+    
+    return (USBD_LL_Init()  == USBD_OK &&
+            USBD_LL_Start() == USBD_OK);
 }
 
 // De-Initialize and Stop the USB module
-USBD_StatusTypeDef USBD_DeInit(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_DeInit()
 {
-  /* Set Default State */
-  pdev->dev_state = USBD_STATE_DEFAULT;
+  // Set Default State
+  USB_Handle.dev_state = USBD_STATE_DEFAULT;
 
-  /* Free Class Resources */
-  pdev->pClass->DeInit(pdev, (uint8_t)pdev->dev_config);
+  // Free Class Resources
+  USBD_ClassCallbacks.DeInit((uint8_t)USB_Handle.dev_config);
 
-  /* Stop the low level driver  */
-  USBD_LL_Stop(pdev);
+  // Stop the low level driver 
+  USBD_LL_Stop();
 
-  /* Initialize low level driver */
-  USBD_LL_DeInit(pdev);
+  // Initialize low level driver
+  USBD_LL_DeInit();
   return USBD_OK;
 }
 
 // Stop the USB Device Core.
-// @param  pdev: Device Handle
-USBD_StatusTypeDef USBD_Stop(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_Stop()
 {
-  /* Free Class Resources */
-  pdev->pClass->DeInit(pdev, (uint8_t)pdev->dev_config);
+  // Free Class Resources
+  USBD_ClassCallbacks.DeInit((uint8_t)USB_Handle.dev_config);
 
-  /* Stop the low level driver */
-  USBD_LL_Stop(pdev);
+  // Stop the low level driver
+  USBD_LL_Stop();
   return USBD_OK;
 }
 
 // Launch test mode process
-USBD_StatusTypeDef  USBD_RunTestMode(USBD_HandleTypeDef  *pdev)
+USBD_StatusTypeDef USBD_RunTestMode()
 {
-  /* Prevent unused argument compilation warning */
-  UNUSED(pdev);
   return USBD_OK;
 }
 
 // Configure device and start the interface
 // @param  cfgidx: configuration index
-USBD_StatusTypeDef USBD_SetClassConfig(USBD_HandleTypeDef  *pdev, uint8_t cfgidx)
+USBD_StatusTypeDef USBD_SetClassConfig(uint8_t cfgidx)
 {
-  USBD_StatusTypeDef ret = USBD_FAIL;
-
-  if (pdev->pClass != NULL)
-  {
-    /* Set configuration  and Start the Class*/
-    if (pdev->pClass->Init(pdev, cfgidx) == 0U)
-    {
-      ret = USBD_OK;
-    }
-  }
-  return ret;
+    // Set configuration and start the class
+    if (USBD_ClassCallbacks.Init(cfgidx) == USBD_OK)
+        return USBD_OK;
+    else
+        return USBD_FAIL;
 }
 
 // Clear current configuration
 // @param  cfgidx: configuration index
-USBD_StatusTypeDef USBD_ClrClassConfig(USBD_HandleTypeDef  *pdev, uint8_t cfgidx)
+USBD_StatusTypeDef USBD_ClrClassConfig(uint8_t cfgidx)
 {
-  /* Clear configuration  and De-initialize the Class process*/
-  pdev->pClass->DeInit(pdev, cfgidx);
+  // Clear configuration  and De-initialize the Class process
+  USBD_ClassCallbacks.DeInit(cfgidx);
   return USBD_OK;
 }
 
 // Handle the setup stage
-USBD_StatusTypeDef USBD_LL_SetupStage(USBD_HandleTypeDef *pdev, uint8_t *psetup)
+USBD_StatusTypeDef USBD_LL_SetupStage(uint8_t *psetup)
 {
-  USBD_ParseSetupRequest(&pdev->request, psetup);
+  USBD_ParseSetupRequest(&USB_Handle.request, psetup);
 
-  pdev->ep0_state = USBD_EP0_SETUP;
-  pdev->ep0_data_len = pdev->request.wLength;
+  USB_Handle.ep0_state = USBD_EP0_SETUP;
+  USB_Handle.ep0_data_len = USB_Handle.request.wLength;
 
-  switch (pdev->request.bRequestType & USB_REQ_RECIPIENT_MASK)
+  switch (USB_Handle.request.bRequestType & USB_REQ_RECIPIENT_MASK)
   {
     case USB_REQ_RECIPIENT_DEVICE:
-      USBD_StdDevReq(pdev, &pdev->request);
+      USBD_StdDevReq(&USB_Handle.request);
       break;
     case USB_REQ_RECIPIENT_INTERFACE:
-      USBD_StdItfReq(pdev, &pdev->request);
+      USBD_StdItfReq(&USB_Handle.request);
       break;
     case USB_REQ_RECIPIENT_ENDPOINT:
-      USBD_StdEPReq(pdev, &pdev->request);
+      USBD_StdEPReq(&USB_Handle.request);
       break;
     default:
-      USBD_LL_StallEP(pdev, (pdev->request.bRequestType & 0x80));
+      USBD_LL_StallEP(USB_Handle.request.bRequestType & 0x80);
       break;
   }
   return USBD_OK;
@@ -131,46 +115,46 @@ USBD_StatusTypeDef USBD_LL_SetupStage(USBD_HandleTypeDef *pdev, uint8_t *psetup)
 
 // Handle data OUT stage
 // @param  epnum: endpoint index
-USBD_StatusTypeDef USBD_LL_DataOutStage(USBD_HandleTypeDef *pdev, uint8_t epnum, uint8_t *pdata)
+USBD_StatusTypeDef USBD_LL_DataOutStage(uint8_t epnum, uint8_t *pdata)
 {
   USBD_EndpointTypeDef *pep;
-  if (epnum == 0U)
+  if (epnum == 0)
   {
-    pep = &pdev->ep_out[0];
-    if (pdev->ep0_state == USBD_EP0_DATA_OUT)
+    pep = &USB_Handle.ep_out[0];
+    if (USB_Handle.ep0_state == USBD_EP0_DATA_OUT)
     {
       if (pep->rem_length > pep->maxpacket)
       {
         pep->rem_length -= pep->maxpacket;
 
-        USBD_CtlContinueRx(pdev, pdata, (uint16_t)MIN(pep->rem_length, pep->maxpacket));
+        USBD_CtlContinueRx(pdata, (uint16_t)MIN(pep->rem_length, pep->maxpacket));
       }
       else
       {
-        if ((pdev->pClass->EP0_RxReady != NULL) && (pdev->dev_state == USBD_STATE_CONFIGURED))
-             pdev->pClass->EP0_RxReady(pdev);
+        if ((USBD_ClassCallbacks.EP0_RxReady != NULL) && (USB_Handle.dev_state == USBD_STATE_CONFIGURED))
+             USBD_ClassCallbacks.EP0_RxReady();
 
-        USBD_CtlSendStatus(pdev); // send zero length packet on the ctl pipe
+        USBD_CtlSendStatus(); // send zero length packet on the ctl pipe
       }
     }
     else
     {
-      if (pdev->ep0_state == USBD_EP0_STATUS_OUT)
+      if (USB_Handle.ep0_state == USBD_EP0_STATUS_OUT)
       {
         // STATUS PHASE completed, update ep0_state to idle
-        pdev->ep0_state = USBD_EP0_IDLE;
-        USBD_LL_StallEP(pdev, 0U);
+        USB_Handle.ep0_state = USBD_EP0_IDLE;
+        USBD_LL_StallEP(0);
       }
     }
   }
-  else if ((pdev->pClass->DataOut != NULL) &&
-           (pdev->dev_state == USBD_STATE_CONFIGURED))
+  else if ((USBD_ClassCallbacks.DataOut != NULL) &&
+           (USB_Handle.dev_state == USBD_STATE_CONFIGURED))
   {
-    pdev->pClass->DataOut(pdev, epnum);
+    USBD_ClassCallbacks.DataOut(epnum);
   }
   else
   {
-    /* should never be in this condition */
+    // should never be in this condition
     return USBD_FAIL;
   }
 
@@ -179,71 +163,71 @@ USBD_StatusTypeDef USBD_LL_DataOutStage(USBD_HandleTypeDef *pdev, uint8_t epnum,
 
 // Handle data in stage
 // @param  epnum: endpoint index
-USBD_StatusTypeDef USBD_LL_DataInStage(USBD_HandleTypeDef *pdev, uint8_t epnum, uint8_t *pdata)
+USBD_StatusTypeDef USBD_LL_DataInStage(uint8_t epnum, uint8_t *pdata)
 {
   USBD_EndpointTypeDef *pep;
 
-  if (epnum == 0U)
+  if (epnum == 0)
   {
-    pep = &pdev->ep_in[0];
-    if (pdev->ep0_state == USBD_EP0_DATA_IN)
+    pep = &USB_Handle.ep_in[0];
+    if (USB_Handle.ep0_state == USBD_EP0_DATA_IN)
     {
       if (pep->rem_length > pep->maxpacket)
       {
         pep->rem_length -= pep->maxpacket;
-        USBD_CtlContinueSendData(pdev, pdata, (uint16_t)pep->rem_length);
+        USBD_CtlContinueSendData(pdata, (uint16_t)pep->rem_length);
 
-        /* Prepare endpoint for premature end of transfer */
-        USBD_LL_PrepareReceive(pdev, 0U, NULL, 0U);
+        // Prepare endpoint for premature end of transfer
+        USBD_LL_PrepareReceive(0, NULL, 0);
       }
       else
       {
-        /* last packet is MPS multiple, so send ZLP packet */
-        if ((pep->total_length %  pep->maxpacket == 0U) &&
+        // last packet is MPS multiple, so send ZLP packet
+        if ((pep->total_length %  pep->maxpacket == 0) &&
             (pep->total_length >= pep->maxpacket) &&
-            (pep->total_length <  pdev->ep0_data_len))
+            (pep->total_length <  USB_Handle.ep0_data_len))
         {
-          USBD_CtlContinueSendData(pdev, NULL, 0U);
-          pdev->ep0_data_len = 0U;
+          USBD_CtlContinueSendData(NULL, 0);
+          USB_Handle.ep0_data_len = 0;
 
-          /* Prepare endpoint for premature end of transfer */
-          USBD_LL_PrepareReceive(pdev, 0U, NULL, 0U);
+          // Prepare endpoint for premature end of transfer
+          USBD_LL_PrepareReceive(0, NULL, 0);
         }
         else
         {
-          if ((pdev->pClass->EP0_TxSent != NULL) &&
-              (pdev->dev_state == USBD_STATE_CONFIGURED))
+          if ((USBD_ClassCallbacks.EP0_TxSent != NULL) &&
+              (USB_Handle.dev_state == USBD_STATE_CONFIGURED))
           {
-            pdev->pClass->EP0_TxSent(pdev);
+            USBD_ClassCallbacks.EP0_TxSent();
           }
-          USBD_LL_StallEP(pdev, 0x80U);
-          USBD_CtlReceiveStatus(pdev);
+          USBD_LL_StallEP(0x80U);
+          USBD_CtlReceiveStatus();
         }
       }
     }
     else
     {
-      if ((pdev->ep0_state == USBD_EP0_STATUS_IN) ||
-          (pdev->ep0_state == USBD_EP0_IDLE))
+      if ((USB_Handle.ep0_state == USBD_EP0_STATUS_IN) ||
+          (USB_Handle.ep0_state == USBD_EP0_IDLE))
       {
-        USBD_LL_StallEP(pdev, 0x80U);
+        USBD_LL_StallEP(0x80U);
       }
     }
 
-    if (pdev->dev_test_mode == 1U)
+    if (USB_Handle.dev_test_mode == 1U)
     {
-      USBD_RunTestMode(pdev);
-      pdev->dev_test_mode = 0U;
+      USBD_RunTestMode();
+      USB_Handle.dev_test_mode = 0;
     }
   }
-  else if ((pdev->pClass->DataIn != NULL) &&
-           (pdev->dev_state == USBD_STATE_CONFIGURED))
+  else if ((USBD_ClassCallbacks.DataIn != NULL) &&
+           (USB_Handle.dev_state == USBD_STATE_CONFIGURED))
   {
-    pdev->pClass->DataIn(pdev, epnum);
+    USBD_ClassCallbacks.DataIn(epnum);
   }
   else
   {
-    /* should never be in this condition */
+    // should never be in this condition
     return USBD_FAIL;
   }
 
@@ -251,100 +235,91 @@ USBD_StatusTypeDef USBD_LL_DataInStage(USBD_HandleTypeDef *pdev, uint8_t epnum, 
 }
 
 // Handle Reset event
-USBD_StatusTypeDef USBD_LL_Reset(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_LL_Reset()
 {
-  /* Open EP0 OUT */
-  USBD_LL_OpenEP(pdev, 0x00U, USBD_EP_TYPE_CTRL, USB_MAX_EP0_SIZE);
-  pdev->ep_out[0x00U & 0xFU].is_used = 1U;
+  // Open EP0 OUT
+  USBD_LL_OpenEP(0x00U, USBD_EP_TYPE_CTRL, USB_MAX_EP0_SIZE);
+  USB_Handle.ep_out[0x00U & 0xFU].is_used = 1U;
 
-  pdev->ep_out[0].maxpacket = USB_MAX_EP0_SIZE;
+  USB_Handle.ep_out[0].maxpacket = USB_MAX_EP0_SIZE;
 
-  /* Open EP0 IN */
-  USBD_LL_OpenEP(pdev, 0x80U, USBD_EP_TYPE_CTRL, USB_MAX_EP0_SIZE);
-  pdev->ep_in[0x80U & 0xFU].is_used = 1U;
+  // Open EP0 IN
+  USBD_LL_OpenEP(0x80U, USBD_EP_TYPE_CTRL, USB_MAX_EP0_SIZE);
+  USB_Handle.ep_in[0x80U & 0xFU].is_used = 1U;
 
-  pdev->ep_in[0].maxpacket = USB_MAX_EP0_SIZE;
+  USB_Handle.ep_in[0].maxpacket = USB_MAX_EP0_SIZE;
 
-  /* Upon Reset call user call back */
-  pdev->dev_state = USBD_STATE_DEFAULT;
-  pdev->ep0_state = USBD_EP0_IDLE;
-  pdev->dev_config = 0U;
-  pdev->dev_remote_wakeup = 0U;
+  // Upon Reset call user call back
+  USB_Handle.dev_state = USBD_STATE_DEFAULT;
+  USB_Handle.ep0_state = USBD_EP0_IDLE;
+  USB_Handle.dev_config = 0;
+  USB_Handle.dev_remote_wakeup = 0;
 
-  if (pdev->pClassData) // assigned in USBD_GS_Init(), USBD_CDC_Init()
-      pdev->pClass->DeInit(pdev, (uint8_t)pdev->dev_config);
-
-  return USBD_OK;
+  return USBD_ClassCallbacks.DeInit((uint8_t)USB_Handle.dev_config);
 }
 
-USBD_StatusTypeDef USBD_LL_SetSpeed(USBD_HandleTypeDef *pdev, USBD_SpeedTypeDef speed)
+USBD_StatusTypeDef USBD_LL_SetSpeed(USBD_SpeedTypeDef speed)
 {
-  pdev->dev_speed = speed;
+  USB_Handle.dev_speed = speed;
   return USBD_OK;
 }
 
 // Handle Suspend event
-USBD_StatusTypeDef USBD_LL_Suspend(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_LL_Suspend()
 {
-  pdev->dev_old_state =  pdev->dev_state;
-  pdev->dev_state  = USBD_STATE_SUSPENDED;
+  USB_Handle.dev_old_state =  USB_Handle.dev_state;
+  USB_Handle.dev_state  = USBD_STATE_SUSPENDED;
   return USBD_OK;
 }
 
 // Handle Resume event
-USBD_StatusTypeDef USBD_LL_Resume(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_LL_Resume()
 {
-  if (pdev->dev_state == USBD_STATE_SUSPENDED)
+  if (USB_Handle.dev_state == USBD_STATE_SUSPENDED)
   {
-    pdev->dev_state = pdev->dev_old_state;
+    USB_Handle.dev_state = USB_Handle.dev_old_state;
   }
   return USBD_OK;
 }
 
 // Handle SOF event
-USBD_StatusTypeDef USBD_LL_SOF(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_LL_SOF()
 {
-  if (pdev->dev_state == USBD_STATE_CONFIGURED)
+  if (USB_Handle.dev_state == USBD_STATE_CONFIGURED)
   {
-    if (pdev->pClass->SOF != NULL)
+    if (USBD_ClassCallbacks.SOF != NULL)
     {
-      pdev->pClass->SOF(pdev);
+      USBD_ClassCallbacks.SOF();
     }
   }
   return USBD_OK;
 }
 
 // Handle iso in incomplete event
-USBD_StatusTypeDef USBD_LL_IsoINIncomplete(USBD_HandleTypeDef *pdev, uint8_t epnum)
+USBD_StatusTypeDef USBD_LL_IsoINIncomplete(uint8_t epnum)
 {
-  /* Prevent unused arguments compilation warning */
-  UNUSED(pdev);
   UNUSED(epnum);
   return USBD_OK;
 }
 
 // Handle iso out incomplete event
-USBD_StatusTypeDef USBD_LL_IsoOUTIncomplete(USBD_HandleTypeDef *pdev, uint8_t epnum)
+USBD_StatusTypeDef USBD_LL_IsoOUTIncomplete(uint8_t epnum)
 {
-  /* Prevent unused arguments compilation warning */
-  UNUSED(pdev);
   UNUSED(epnum);
   return USBD_OK;
 }
 
 // Handle device connection event
-USBD_StatusTypeDef USBD_LL_DevConnected(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_LL_DevConnected()
 {
-  /* Prevent unused argument compilation warning */
-  UNUSED(pdev);
   return USBD_OK;
 }
 
 // Handle device disconnection event
-USBD_StatusTypeDef USBD_LL_DevDisconnected(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_LL_DevDisconnected()
 {
-  /* Free Class Resources */
-  pdev->dev_state = USBD_STATE_DEFAULT;
-  pdev->pClass->DeInit(pdev, (uint8_t)pdev->dev_config);
+  // Free Class Resources
+  USB_Handle.dev_state = USBD_STATE_DEFAULT;
+  USBD_ClassCallbacks.DeInit((uint8_t)USB_Handle.dev_config);
   return USBD_OK;
 }

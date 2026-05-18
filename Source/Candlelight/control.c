@@ -35,7 +35,7 @@ uint8_t __aligned(4)  ep0_buf[MAX(USB_MAX_EP0_SIZE, MAX_FLASH_DATA_LEN + 8)];
 
 // SETUP requests with OUT data are executed in two stages,
 // the first stage uses this variable to pass the request to the second stage.
-USBD_SetupReqTypedef  last_setup_request = {0};
+USBD_SetupReqTypedef  last_setup = {0};
 
 // called from the main loop
 void control_init()
@@ -46,6 +46,10 @@ void control_init()
         GLB_UserFlags[C] = USR_CandleDefault;
     }
 
+    uint32_t hal_version = HAL_GetHalVersion();
+    GS_DeviceVersion.hal_ver_high   = hal_version >> 24;
+    GS_DeviceVersion.hal_ver_mid    = hal_version >> 16;
+    GS_DeviceVersion.hal_ver_low    = hal_version >>  8;
     GS_DeviceVersion.sw_version_bcd = FIRMWARE_VERSION_BCD; // BCD version 0x250814 --> display as "25.08.14" (14th august 2025)
     GS_DeviceVersion.hw_version_bcd = 0x200;                // BCD version 0x200    --> display as  "2.00" (hardware = CANable 2.0)
     GS_DeviceVersion.icount         = CHANNEL_COUNT - 1;    // interface count - 1
@@ -67,38 +71,40 @@ void control_init()
     // ------------------------------------------------
 
     // store the REAL limits of the processor, not totally wrong values as in the legacy firmware from Hubert Denkmair
-    bitlimits* limits = utils_get_bit_limits();
+    bitlimits* limits = utils_get_bit_limits(false);
 
     GS_CapabilityClassic.fclk_can      = system_get_can_clock();
     GS_CapabilityClassic.time.seg1_min = 1;
-    GS_CapabilityClassic.time.seg1_max = limits->nom_seg1_max;
+    GS_CapabilityClassic.time.seg1_max = limits->seg1_max;
     GS_CapabilityClassic.time.seg2_min = 1;
-    GS_CapabilityClassic.time.seg2_max = limits->nom_seg2_max;
+    GS_CapabilityClassic.time.seg2_max = limits->seg2_max;
     GS_CapabilityClassic.time.brp_min  = 1;
-    GS_CapabilityClassic.time.brp_max  = limits->nom_brp_max;
+    GS_CapabilityClassic.time.brp_max  = limits->brp_max;
     GS_CapabilityClassic.time.brp_inc  = 1;
-    GS_CapabilityClassic.time.sjw_max  = limits->nom_sjw_max;
+    GS_CapabilityClassic.time.sjw_max  = limits->sjw_max;
 
     // ------------------------------------------------
+    
+    limits = utils_get_bit_limits(true);    
 
     GS_CapabilityFD.fclk_can = GS_CapabilityClassic.fclk_can;
     GS_CapabilityFD.feature  = GS_CapabilityClassic.feature;
     GS_CapabilityFD.time_nom = GS_CapabilityClassic.time;
 
     GS_CapabilityFD.time_data.seg1_min = 1;
-    GS_CapabilityFD.time_data.seg1_max = limits->fd_seg1_max;
+    GS_CapabilityFD.time_data.seg1_max = limits->seg1_max;
     GS_CapabilityFD.time_data.seg2_min = 1;
-    GS_CapabilityFD.time_data.seg2_max = limits->fd_seg2_max;
+    GS_CapabilityFD.time_data.seg2_max = limits->seg2_max;
     GS_CapabilityFD.time_data.brp_min  = 1;
-    GS_CapabilityFD.time_data.brp_max  = limits->fd_brp_max;
+    GS_CapabilityFD.time_data.brp_max  = limits->brp_max;
     GS_CapabilityFD.time_data.brp_inc  = 1;
-    GS_CapabilityFD.time_data.sjw_max  = limits->fd_sjw_max;
+    GS_CapabilityFD.time_data.sjw_max  = limits->sjw_max;
 
     // -------------- Added by ElmüSoft ----------------
 
     ELM_BoardInfo.McuDeviceID = (uint16_t)HAL_GetDEVID();
-    strcpy(ELM_BoardInfo.McuName,   utils_get_MCU_name()); // "STM32G431"  (from makefile)
-    strcpy(ELM_BoardInfo.BoardName, TARGET_BOARD);         // "Multiboard", "OpenlightLabs", "Jhoinrch"  (from makefile)
+    strcpy(ELM_BoardInfo.McuName,   TARGET_MCU);   // "STM32G431"  (from makefile)
+    strcpy(ELM_BoardInfo.BoardName, TARGET_BOARD); // "Multiboard", "OpenlightLabs", "Jhoinrch"  (from makefile)
 
 #if HSE_VALUE > 0
     ELM_BoardInfo.BoardFlags |= BRD_Quartz_In_Use;
@@ -112,13 +118,13 @@ void control_init()
 // This function is called from HAL_PCD_SetupStageCallback() -> USBD_LL_SetupStage() -> USBD_StdDevReq() -> USBD_GS_Setup() -> USBD_GS_Vendor_Request()
 // returns false on error and sets ELM_LastError.
 // IMPORTANT: Read the comment for USBD_GS_Vendor_Request()
-bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
+bool control_setup_request(USBD_SetupReqTypedef *req)
 {
     // GetLastError always sends a valid response even if the ElmüSoft protocol is not enabled or the host sends an invalid channel.
     if (req->bRequest == ELM_ReqGetLastError)
     {
         uint8_t last_err = ELM_LastError;
-        USBD_CtlSendData(pdev, &last_err, 1);
+        USBD_CtlSendData(&last_err, 1);
         return true;
     }
 
@@ -177,7 +183,7 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     // If the channel is closed the Rx LED indicates that a SETUP command was recived.
     // If the channel is open   the Rx LED indicates that a CAN packet was received.
     if (!can_is_open(channel))
-        led_flash_RX(channel); // Flash the blue Rx LED shortly for 15 ms
+        led_flash_RX(channel); // Flash the Rx LED shortly for 15 ms
 
     ELM_LastError = FBK_Success; // reset error from the last command
 
@@ -235,8 +241,8 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
         }
 
         // provide the buffer ep0_buf in which the OUT data from the host is passed to control_setup_OUT_data()
-        last_setup_request = *req;
-        USBD_CtlPrepareRx(pdev, ep0_buf, req->wLength);
+        last_setup = *req;
+        USBD_CtlPrepareRx(ep0_buf, req->wLength);
         return true;
     }
     else  // -------- IN: Device -> Host (error checking here) --------
@@ -290,8 +296,16 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
                 switch (pin_id)
                 {
                     case PINID_BOOT0: // currently the only implemented pin (PINST_High is irrelevant here)
-                        value16 = system_is_option_enabled(OPT_BOOT0_Enable) ? PINST_Enabled : 0;
+                    {
+                        eOptionStatus status = system_is_option_enabled(OPT_BOOT0_Enable);
+                        if (status == Option_Unavailable)
+                        {
+                            ELM_LastError = FBK_UnsupportedFeature;
+                            return false;
+                        }
+                        value16 = (status == Option_Active) ? PINST_Enabled : 0;
                         break;
+                    }
                     default:
                         ELM_LastError = FBK_InvalidParameter;
                         return false;
@@ -320,7 +334,7 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
         len = MIN(len, req->wLength);
 
         // return the requested IN data to the host
-        USBD_CtlSendData(pdev, (uint8_t*)src, len);
+        USBD_CtlSendData((uint8_t*)src, len);
         return true;
     }
 }
@@ -335,11 +349,11 @@ bool control_setup_request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 // So the ONLY way to transmit errors of SETUP requests to the host is with the new ElmüSoft protocol and command ELM_ReqGetLastError.
 // The host must call ELM_ReqGetLastError after each SETUP request to check for errors!
 // See subfolder SampleApplication, this is very easy.
-void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
+void control_setup_OUT_data()
 {
-    int channel = last_setup_request.wValue; // wValue has already been checked to be valid.
+    int channel = last_setup.wValue; // wValue has already been checked to be valid.
 
-    switch (last_setup_request.bRequest)
+    switch (last_setup.bRequest)
     {
         case GS_ReqSetHostFormat:
         {
@@ -352,16 +366,12 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
                 ELM_LastError = FBK_UnsupportedFeature;
             return;
         }
-        case GS_ReqSetBitTiming: // set CAN classic and CAN FD nominal baudrate + samplepoint
-        {
-            kBitTiming* timing = (kBitTiming*)ep0_buf;
-            ELM_LastError = can_set_nom_bit_timing(channel, timing->brp, timing->prop + timing->seg1, timing->seg2, timing->sjw);
-            return;
-        }
+        case GS_ReqSetBitTiming:   // set CAN classic and CAN FD nominal baudrate + samplepoint
         case GS_ReqSetBitTimingFD: // set CAN FD data baudrate + samplepoint
         {
+            bool set_data = (last_setup.bRequest == GS_ReqSetBitTimingFD);
             kBitTiming* timing = (kBitTiming*)ep0_buf;
-            ELM_LastError = can_set_data_bit_timing(channel, timing->brp, timing->prop + timing->seg1, timing->seg2, timing->sjw);
+            ELM_LastError = can_set_bit_timing(channel, set_data, timing->brp, timing->prop + timing->seg1, timing->seg2, timing->sjw);
             return;
         }
         case GS_ReqSetDeviceMode:
@@ -438,7 +448,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
         case GS_ReqIdentify:
         {
             uint32_t* mode = (uint32_t*)ep0_buf; // 1 = blink, 0 = stop
-            led_blink_identify(channel, *mode); // blink blue / green LEDs alternatingly
+            led_blink_identify(channel, *mode); // blink Rx + Tx LEDs alternatingly
             return;
         }
         case GS_ReqSetTermination:
@@ -487,7 +497,7 @@ void control_setup_OUT_data(USBD_HandleTypeDef *pdev)
         }
         case ELM_ReqWriteFlash:
         {
-            ELM_LastError = system_write_flash(last_setup_request.wValue, ep0_buf, last_setup_request.wLength);
+            ELM_LastError = system_write_flash(last_setup.wValue, ep0_buf, last_setup.wLength);
             return;
         }
     }

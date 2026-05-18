@@ -11,25 +11,35 @@
 # The year and month are stored in the device descriptor.
 # The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
 # Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
-FIRMWARE_VERSION = 0x260416
+FIRMWARE_VERSION = 0x260517
 
-# TARGET_BOARD, TARGET_FIRMWARE, TARGET_FILE and TARGET_MCU must be set in the main makefile before including this file
+# TARGET_BOARD, TARGET_FIRMWARE and TARGET_MCU must be set in the main makefile before including this file
+
+# define procesor family
+ifeq ($(TARGET_MCU), STM32G431)
+    MCU_SERIE = STM32G4xx
+    CPU = cortex-m4
+else ifeq ($(TARGET_MCU), STM32G473)
+    MCU_SERIE = STM32G4xx
+    CPU = cortex-m4
+else ifeq ($(TARGET_MCU), STM32G0B1)
+    MCU_SERIE = STM32G0xx
+    CPU = cortex-m0plus
+else
+    $(error TARGET_MCU not implemented in GCC_Rules.mk)
+endif
+
 
 # directory to place output files in
 BUILD_DIR = Build_$(TARGET_MCU)_$(TARGET_FIRMWARE)_$(TARGET_BOARD)
 
 # File trunk (without extension) of build files: *.bin, *.hex, *.elf
 # Example: Trunk = "STM32G431_Slcan2.5_Multiboard_0x250914"
-BUILD_TRUNK = $(BUILD_DIR)/$(TARGET_FILE)_$(FIRMWARE_VERSION)
-
-# directory to place modified template files
-CONFIG_DIR = STM32/$(TARGET_MCU)_Config
-
-# location of the linker script
-LD_SCRIPT = $(CONFIG_DIR)/$(TARGET_MCU).ld
+BUILD_TRUNK = $(BUILD_DIR)/$(TARGET_MCU)_$(TARGET_FIRMWARE)2.5_$(TARGET_BOARD)_$(FIRMWARE_VERSION)
 
 # user C flags (enable warnings, enable debug info)
 # Flag -O3 optimizes for higher speed, Flag -Os optimizes for smaller size
+# Further these flags may be added: -MMD -MP -fstack-usage -std=gnu11
 USER_CFLAGS = -Wall -g -ffunction-sections -fdata-sections -O3
 
 # user LD flags
@@ -58,22 +68,21 @@ endif
 # build configuration
 #######################################
 
-# core and CPU type for Cortex M0
-# ARM core type (CORE_M0, CORE_M3)
-#CORE = CORE_M4F
-
-# ARM CPU type (cortex-m0, cortex-m3)
-CPU = cortex-m4
-
-# where to build STM32Cube
+# output directory to build STM32Cube
 CUBELIB_BUILD_DIR = $(BUILD_DIR)/STM32Cube
 
-# various paths within the STmicro library
-DRIVER_PATH = STM32/STM32G4xx_HAL_Driver
+# select the folder with the HAL files
+DRIVER_PATH = STM32/$(MCU_SERIE)_HAL_Driver
+
+# directory that contains modified template files
+CONFIG_DIR = $(DRIVER_PATH)/Config
+
+# location of the linker script
+LD_SCRIPT = $(CONFIG_DIR)/$(TARGET_MCU).ld
+
 
 # includes for gcc
-INCLUDES  = -ISTM32/CMSIS/Include
-INCLUDES += -ISTM32/CMSIS/Device
+INCLUDES  = -ISTM32/CMSIS
 INCLUDES += -I$(DRIVER_PATH)/Inc
 INCLUDES += -I$(CONFIG_DIR)
 INCLUDES += -ISource
@@ -86,12 +95,15 @@ CFLAGS += -mcpu=$(CPU) -mthumb
 CFLAGS += $(USER_CFLAGS)
 CFLAGS += -D$(TARGET_BOARD)
 CFLAGS += -D$(TARGET_FIRMWARE)
-CFLAGS += -D$(TARGET_MCU)
+CFLAGS += -D$(TARGET_MCU)xx
+CFLAGS += -D$(MCU_SERIE)
 CFLAGS += -DTARGET_BOARD=\"$(TARGET_BOARD)\"
 CFLAGS += -DTARGET_FIRMWARE=\"$(TARGET_FIRMWARE)\"
 CFLAGS += -DTARGET_MCU=\"$(TARGET_MCU)\"
+CFLAGS += -DMCU_SERIE=\"$(MCU_SERIE)\"
 CFLAGS += -DHSE_VALUE=$(QUARTZ_FREQU)
 CFLAGS += -DFIRMWARE_VERSION_BCD=$(FIRMWARE_VERSION)
+CFLAGS += -DUSER_VECT_TAB_ADDRESS
 
 # default action: build the user application
 all: $(BUILD_TRUNK).bin $(BUILD_TRUNK).hex
@@ -149,7 +161,7 @@ $(FIRM_BUILD_DIR):
 #######################################
 
 # list of common source files
-SOURCES = main.c system_stm32g4xx.c system.c interrupts.c can.c error.c led.c dfu.c utils.c usb_ctrlreq.c usb_ioreq.c usb_core.c usb_lowlevel.c 
+SOURCES = main.c system_$(MCU_SERIE).c system.c interrupts.c can.c error.c led.c dfu.c utils.c usb_ctrlreq.c usb_ioreq.c usb_core.c usb_lowlevel.c 
 
 # list of user program objects
 OBJECTS = $(addprefix $(BUILD_DIR)/,$(notdir $(SOURCES:.c=.o)))
@@ -175,10 +187,10 @@ $(BUILD_TRUNK).elf: $(OBJECTS) $(FIRM_OBJECTS) $(CUBELIB)
 $(BUILD_DIR)/%.o: Source/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $^
 
-$(BUILD_DIR)/%.o: $(CONFIG_DIR)/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/system_$(MCU_SERIE).o: $(CONFIG_DIR)/system_$(MCU_SERIE).c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $^
 
-$(BUILD_DIR)/%.o: $(CONFIG_DIR)/%.s | $(BUILD_DIR)
+$(BUILD_DIR)/startup_$(TARGET_MCU).o: $(CONFIG_DIR)/startup_$(TARGET_MCU).s | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(BUILD_DIR):

@@ -85,7 +85,7 @@ typedef struct _USBD_CDC_Itf
 
 typedef struct
 {
-  uint32_t data[CDC_DATA_HS_MAX_PACKET_SIZE / 4U];      // Force 32bits alignment
+  uint32_t data[CDC_DATA_HS_MAX_PACKET_SIZE / 4U];      // Force 32 bit alignment
   uint8_t  CmdOpCode;
   uint8_t  CmdLength;
   uint8_t  *RxBuffer;
@@ -98,13 +98,13 @@ typedef struct
 }
 USBD_CDC_HandleTypeDef;
 
-uint8_t  USBD_CDC_SetTxBuffer(USBD_HandleTypeDef *pdev, uint8_t *pbuff, uint16_t length);
-uint8_t  USBD_CDC_SetRxBuffer(USBD_HandleTypeDef *pdev, uint8_t *pbuff);
-uint8_t  USBD_CDC_ReceivePacket(USBD_HandleTypeDef *pdev);
-uint8_t  USBD_CDC_TransmitPacket(USBD_HandleTypeDef *pdev);
+uint8_t  USBD_CDC_SetTxBuffer(uint8_t *pbuff, uint16_t length);
+uint8_t  USBD_CDC_SetRxBuffer(uint8_t *pbuff);
+uint8_t  USBD_CDC_ReceivePacket();
+uint8_t  USBD_CDC_TransmitPacket();
 
-bool               USBD_SetupStageRequest(PCD_HandleTypeDef *hpcd);
-USBD_StatusTypeDef USBD_ConfigureEndpoints(USBD_HandleTypeDef *pdev);
+bool               USBD_SetupStageRequest();
+USBD_StatusTypeDef USBD_ConfigureEndpoints();
 
 #ifdef __cplusplus
 }

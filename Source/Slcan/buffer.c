@@ -112,7 +112,7 @@ void buf_process(int channel, uint32_t tick_now)
         txbuf->full = false;
     }
     
-    // report buffer full always --> green + blue LED are permanently ON
+    // report buffer full always --> Rx + Tx LED are permanently ON
     if (txbuf->full)
         error_assert(channel, APP_CanTxOverflow, false);
 }

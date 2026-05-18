@@ -68,7 +68,7 @@ public class Candlelight : IDisposable
         GetCapability,     // kCapability    
         GetDeviceVersion,  // kDeviceVersion       
         GetTimestamp,      // UInt32         
-	    Identify,          // UInt32 = 0,1 make the blue LED flash 
+	    Identify,          // UInt32 = 0,1 blink the Rx + Tx LEDs
 	    GetUserID,         // not implemented           
 	    SetUserID,         // not implemented           
 	    SetBitTimingFD,    // kBitTiming                
@@ -102,7 +102,7 @@ public class Candlelight : IDisposable
         TripleSample        = 0x00004, // three samples per bit (mostly used for low baudrates)
         OneShot             = 0x00008, // make only one attempt to send a message, do not repeat until an ACK is received (auto retransmission = Off)
         HwTimestamp         = 0x00010, // add a timestamp to the received packet
-        Identify            = 0x00020, // make the blue LED flash
+        Identify            = 0x00020, // blink the Rx + Tx LEDs
         UserID              = 0x00040, // not implemented
         PadPktsToMaxPktSize = 0x00080, // send USB packets of 32 byte (endpoint MaxPacketSize) seems to be a nonsense workaround, turned off for CAN FD.
         CanFD               = 0x00100, // supports CAN-FD
@@ -260,6 +260,7 @@ public class Candlelight : IDisposable
     public enum eBoardFlags : uint
     {
         Quartz_In_Use  = 0x00000001, // the board has a quartz and the firmware is using it
+        USB_HighSpeed  = 0x00000002, // the board supports ultra fast USB transfer (480 MBit/s)
     }
 
     public enum eFeedback
@@ -327,7 +328,7 @@ public class Candlelight : IDisposable
         Busload,      // the message contains one byte which is the bus load in percent
     } 
 
-    // If any of these flags is set, both LED's (green + blue) are permanently ON
+    // If any of these flags is set, both LED's (Rx + Tx) are permanently ON
     // These flags are reset after sending them once to the host
     [FlagsAttribute]
     enum eErrorAppFlags : byte
@@ -341,7 +342,7 @@ public class Candlelight : IDisposable
         // max 8 bits
     }
 
-    // If bus is off, both LED's (green + blue) are permanently ON
+    // If bus is off, both LED's (Rx + Tx) are permanently ON
     // This status is only controlled by hardware
     public enum eBusStatus : byte
     {
@@ -411,13 +412,17 @@ public class Candlelight : IDisposable
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public struct kDeviceVersion
     {
-        public Byte   mu8_Reserved1;
-        public Byte   mu8_Reserved2;
-        public Byte   mu8_Reserved3;
-        public Byte   mu8_Icount;     // Candlelight interfaces - 1
+        public Byte   mu8_HAL_Version_High;
+        public Byte   mu8_HAL_Version_Mid;
+        public Byte   mu8_HAL_Version_Low;
+        public Byte   mu8_Icount;           // Candlelight interfaces - 1
         public UInt32 mu32_SoftVersionBcd;
         public UInt32 mu32_HardVersionBcd;
 
+        public String HalVersion
+        {
+            get { return String.Format("{0}.{1}.{2}", mu8_HAL_Version_High, mu8_HAL_Version_Mid, mu8_HAL_Version_Low); }
+        }
         public String SoftVersion
         {
             get { return Utils.FormatBcdVersion(mu32_SoftVersionBcd); }
@@ -664,24 +669,41 @@ public class Candlelight : IDisposable
     // This is sent in byte 0 of a DFU_RequGetStatus request
     enum eDfuStatus : byte
     {
-        OK = 0,      // No error condition is present.
-        ErrTarget,   // File is not targeted for use by this device. 
-        ErrFile,     // File is for this device but fails some vendor-specific verification test. 
-        ErrWrite,    // Device is unable to write memory. 
-        ErrErase,    // Memory erase function failed.
-        // and more... (not used here)
+        OK = 0,         // No error condition is present.
+        ErrTarget,      // File is not targeted for use by this device. 
+        ErrFile,        // File is for this device but fails some vendor-specific verification test. 
+        ErrWrite,       // Device is unable to write memory. 
+        ErrErase,       // Memory erase function failed.
+        ErrCheckErased, // Memory erase check failed.
+        ErrProg,        // Program memory function failed.
+        ErrVerify,      // Programmed memory failed verification. 
+        ErrAddress,     // Cannot program memory due to received address that is out of range. 
+        ErrNotDone,     // Received DFU_DNLOAD with wLength = 0, but device does not think it has all of the data yet. 
+        ErrFirmware,    // Device’s firmware is corrupt.  It cannot return to run-time (non-DFU) operations. 
+        ErrVendor,      // StringIdx indicates a vendor-specific error. 
+        ErrUSBR,        // Device detected unexpected USB reset signaling. 
+        ErrPOR,         // Device detected unexpected power on reset.  
+        ErrUnknown,     // Something went wrong, but the device does not know what it was. 
+        ErrStallEP,     // Device stalled an unexpected request. 
     }
 
     // This is sent in byte 4 of a DFU_RequGetStatus request
     enum eDfuState : byte
     {
-        AppIdle = 0,   // Device is running its normal application mode.
-        AppDetach,     // Device is running its normal application, has received the DFU_DETACH request, and is waiting for a USB reset. 
-        DfuIdle,       // Device is operating in the DFU mode and is waiting for requests.
-        DownloadSync,  // Device has received a block and is waiting for the host to solicit the status via DFU_GETSTATUS. 
-        DownloadBusy,  // Device is programming a control-write block into its nonvolatile memories. 
-        DownloadIdle,  // Device is processing a download operation, expecting DFU_DNLOAD requests. 
-        // and more... (not used here)
+        AppIdle = 0,       // Device is running its normal application mode.
+        AppDetach,         // Device is running its normal application, has received the DFU_DETACH request, and is waiting for a USB reset. 
+        DfuIdle,           // Device is operating in the DFU mode and is waiting for requests.
+        DownloadSync,      // Device has received a block and is waiting for the host to solicit the status via DFU_GETSTATUS. 
+        DownloadBusy,      // Device is programming a control-write block into its nonvolatile memories. 
+        DownloadIdle,      // Device is processing a download operation, expecting DFU_DNLOAD requests. 
+        ManifestSync,      // Device has received the final block of firmware and waits for DFU_GETSTATUS to begin Manifestation phase
+        Manifest,          // Device is in the Manifestation phase.  
+        ManifestWaitReset, // Device has programmed its memories and is waiting for a USB reset or a power-on reset
+        UploadIdle,        // Device is processing an upload operation. 
+        Error,             // An error has occurred. Awaiting the DFU_CLRSTATUS request. 
+        // -------------
+        UploadSync  = 0x91,
+        UploadBusy  = 0x92,
     } 
 
     // response to DFU_RequGetStatus request (size = 6 byte)
@@ -779,7 +801,7 @@ public class Candlelight : IDisposable
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251118 = 18.nov.2025)
-    const int MIN_FIRMWARE = 0x260416;
+    const int MIN_FIRMWARE = 0x260517;
 
     // The firmware update interface is always interface 1
     const Byte DFU_INTERFACE = 1;
@@ -955,6 +977,7 @@ public class Candlelight : IDisposable
 
         ms_Details.AppendFormat("Hardware Version:     {0}\n", mk_Info.mk_DeviceVersion.HardVersion);
         ms_Details.AppendFormat("Firmware Version:     {0}\n", mk_Info.mk_DeviceVersion.SoftVersion);
+        ms_Details.AppendFormat("HAL      Version:     {0}\n", mk_Info.mk_DeviceVersion.HalVersion);
         ms_Details.AppendFormat("Firmware Type:        {0}\n", mk_Info.mb_IsElmueSoft ? "CANable 2.5" : "Legacy");
         ms_Details.AppendFormat("Supports CAN FD:      {0}\n", mk_Info.mb_SupportsFD  ? "Yes"         : "No");
 
@@ -973,10 +996,10 @@ public class Candlelight : IDisposable
         bool b_UseQuartz = (mk_Info.mk_BoardInfo.me_BoardFlags & eBoardFlags.Quartz_In_Use) > 0;
 
         ms_Details.AppendFormat("Target Board:         {0}\n", mk_Info.mk_BoardInfo.BoardName);
-        ms_Details.AppendFormat("Processor:            {0}, CAN Clock: {1} MHz, DeviceID: 0x{2:X}\n",
-                                                                mk_Info.mk_BoardInfo.McuName,
-                                                                mk_Info.mk_Capability.ms32_CanClock / 1000000,
-                                                                mk_Info.mk_BoardInfo.mu16_McuDeviceID);
+        ms_Details.AppendFormat("Processor:            {0}, CAN Clock: {1} MHz, MCU DeviceID: 0x{2:X}\n",
+                                                               mk_Info.mk_BoardInfo.McuName,
+                                                               mk_Info.mk_Capability.ms32_CanClock / 1000000,
+                                                               mk_Info.mk_BoardInfo.mu16_McuDeviceID);
         ms_Details.AppendFormat("Quartz in use:        {0}\n", b_UseQuartz ? "Yes" : "No");
         ms_Details.AppendFormat("CAN Channel:          {0} of {1}\n", mu8_Channel + 1, mk_Info.mk_DeviceVersion.mu8_Icount + 1);
         ms_Details.AppendFormat("Pin BOOT0:            {0}\n", b_Enabled ? "Enabled" : "Disabled");
@@ -1065,7 +1088,7 @@ public class Candlelight : IDisposable
 
     /// <summary>
     /// STEP 5)
-    /// Connect to CAN bus, turn off the green LED
+    /// Connect to CAN bus, turn off the Tx LED
     /// </summary>
     public void Start(eDeviceFlags e_Flags)
     {
@@ -1080,7 +1103,7 @@ public class Candlelight : IDisposable
     }
 
     /// <summary>
-    /// Stop CAN bus and reset all variables and user settings in the adapter, turn on green LED
+    /// Stop CAN bus and reset all variables and user settings in the adapter, turn on Tx LED
     /// </summary>
     public void Reset()
     {
@@ -1093,7 +1116,7 @@ public class Candlelight : IDisposable
     }
 
     /// <summary>
-    /// Flashes the green / blue LEDs on the board
+    /// Flashes the Rx + Tx LEDs on the board
     /// </summary>
     public void Identify(bool b_Blink)
     {
@@ -1569,16 +1592,10 @@ public class Candlelight : IDisposable
     /// ATTENTION:
     /// This works only if the device is in Candlelight mode. If the device is already in DFU mode it will fail.
     /// If the device is already in DFU mode you cannot use the WinUSB driver, you need the STtube30 driver from ST Microelectronics.
-    /// If you want to update the firmware use HUD ECU Hacker which comes with a very comfortable STM32 Firmware Updater.
-    ///
-    /// ATTENTION:
-    /// When b_ReconnectRequired is true --> show a message to the user that he must reconnect the USB cable.
-    /// The processor needs a hardware reset after wroting the Option Bytes
+    /// If you want to update the firmware use HUD ECU Hacker which comes with a very comfortable STM32 Firmware Programmer.
     /// </summary>
-    public void EnterDfuMode(out bool b_ReconnectRequired)
+    public void EnterDfuMode()
     {
-        b_ReconnectRequired = false;
-
         if (!mb_InitDone || mi_WinUSB.Interface.Number != DFU_INTERFACE)
             throw new Exception("The device must be opened for the DFU interface.");
 
@@ -1586,19 +1603,10 @@ public class Candlelight : IDisposable
         // But the CANable 2.5 firmware responds correctly to all SETUP requests because it makes a delay of 300 ms before entering DFU mode.
         CtrlTransfer((Byte)eDfuRequest.Detach, eDirection.Out, 0, new Byte[0]);
 
+        kDfuStatus k_Status = new kDfuStatus();
         try
         {
-            kDfuStatus k_Status = CtrlTransfer<kDfuStatus>((Byte)eDfuRequest.GetStatus, eDirection.In, 0);
-
-            // returning AppDetach has been added by ElmüSoft to the firmware and means that the user must reconnect the USB cable.
-            // This happens only if the pin BOOT0 was disabled before calling EnterDfuMode()
-            // k_Status.State is either AppIdle or AppDetach.
-            if (k_Status.me_State == eDfuState.AppDetach)
-            {
-                // The user must reconnect the USB cable now.
-                // This happens only if the pin BOOT0 was disabled before calling this function.
-                b_ReconnectRequired = true;
-            }
+            k_Status = CtrlTransfer<kDfuStatus>((Byte)eDfuRequest.GetStatus, eDirection.In, 0);
         }
         catch
         {
@@ -1608,6 +1616,18 @@ public class Candlelight : IDisposable
 
         // The device will enter DFU mode in 300 ms --> the WinUSB handle is not valid anymore.
         Dispose();
+
+        // Here k_Status.me_State is either AppIdle or AppDetach or Error.
+
+        // returning AppDetach has been added by ElmüSoft to the firmware and means that the user must reconnect the USB cable.
+        // This happens only if the pin BOOT0 was disabled before calling EnterDfuMode()
+        if (k_Status.me_State == eDfuState.AppDetach)
+            throw new Exception("Please reconnect the USB cable");
+
+        // Since firmware 17.May.2026 the feedback code is transferred in mu8_StringIdx.
+        // Feedback = UnsupportedFeature, AdapterMustBeClosed, OptBytesProgrFailed
+        if (k_Status.me_State == eDfuState.Error && k_Status.mu8_StringIdx > 0 && k_Status.mu8_StringIdx < 255)
+            throw new Exception(((eFeedback)k_Status.mu8_StringIdx).ToString().Replace('_', ' '));
     }
 } // class
 } // namespace

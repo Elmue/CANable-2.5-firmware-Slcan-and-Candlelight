@@ -18,8 +18,73 @@
 // The first version was 100.
 // In version 101 support for multi-channel adapters has been added.
 // (Candlelight does not need a version number because it returns the supported features as bit flags)
-#define SLCAN_VERSION          102
+#define SLCAN_VERSION          103
 
+// If this is 1 all baudrates will be printed to verify all CAN_NOM_BITTIMING_xxx and CAN_DATA_BITTIMING_xxx
+#define VERIFY_ALL_BAUDRATES   0
+
+// If any of the following constants is defined as zero --> the processor does not support the baudrate --> FBK_UnsupportedFeature.
+// The samplepoint is calculated as 75% if possible.
+#if defined(STM32G0xx)
+    // Constants for 60 MHz CAN clock
+    // ATTENTION: This processor can not run at the maximum allowed frequency of 64 MHz. 
+    // A clock of 64 MHz would not allow to generate a CAN FD baurate of 5 Mbaud.
+   
+    // Nominal Sample 75%, max BRP = 512, max Seg1 = 256, max Seg2 = 128
+    // Data    Sample 75%, max BRP =  32, max Seg1 =  32, max Seg2 =  16
+    //                                           BRP           Seg1          Seg2
+    #define CAN_NOM_BITTIMING_5K     ((uint64_t)  40 << 32) | (224 << 16) | ( 75)
+    #define CAN_NOM_BITTIMING_10K    ((uint64_t)  20 << 32) | (224 << 16) | ( 75)
+    #define CAN_NOM_BITTIMING_20K    ((uint64_t)  10 << 32) | (224 << 16) | ( 75)
+    #define CAN_NOM_BITTIMING_33_3K  ((uint64_t)   6 << 32) | (224 << 16) | ( 75)
+    #define CAN_NOM_BITTIMING_50K    ((uint64_t)   4 << 32) | (224 << 16) | ( 75)
+    #define CAN_NOM_BITTIMING_62_5K  ((uint64_t)   3 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_75K    ((uint64_t)   4 << 32) | (149 << 16) | ( 50)
+    #define CAN_NOM_BITTIMING_83_3K  ((uint64_t)   3 << 32) | (179 << 16) | ( 60)
+    #define CAN_NOM_BITTIMING_100K   ((uint64_t)   2 << 32) | (224 << 16) | ( 75)
+    #define CAN_NOM_BITTIMING_125K   ((uint64_t)   2 << 32) | (179 << 16) | ( 60)
+    #define CAN_NOM_BITTIMING_250K   ((uint64_t)   1 << 32) | (179 << 16) | ( 60)
+    #define CAN_NOM_BITTIMING_500K   ((uint64_t)   1 << 32) | ( 89 << 16) | ( 30)
+    #define CAN_NOM_BITTIMING_800K   ((uint64_t)   1 << 32) | ( 55 << 16) | ( 19) // A perfect match is not possible --> 800 kBaud, 74.6%
+    #define CAN_NOM_BITTIMING_1M     ((uint64_t)   1 << 32) | ( 44 << 16) | ( 15)
+    // ----------------------------
+    #define CAN_DATA_BITTIMING_500K  ((uint64_t)   3 << 32) | ( 29 << 16) | ( 10)
+    #define CAN_DATA_BITTIMING_1M    ((uint64_t)   3 << 32) | ( 14 << 16) | (  5)
+    #define CAN_DATA_BITTIMING_2M    ((uint64_t)   1 << 32) | ( 17 << 16) | ( 12) // A perfect match is not possible --> 2 MBaud, 60%
+    #define CAN_DATA_BITTIMING_4M    ((uint64_t)   1 << 32) | (  8 << 16) | (  6) // A perfect match is not possible --> 4 MBaud, 60%
+    #define CAN_DATA_BITTIMING_5M    ((uint64_t)   1 << 32) | (  8 << 16) | (  3)
+    #define CAN_DATA_BITTIMING_8M    0
+    
+#elif defined(STM32G4xx)
+
+    // Constants for 160 MHz CAN clock and 
+    // Nominal Sample 75%, max BRP = 512, max Seg1 = 256, max Seg2 = 128
+    // Data    Sample 75%, max BRP =  32, max Seg1 =  32, max Seg2 =  16
+    //                                           BRP           Seg1          Seg2
+    #define CAN_NOM_BITTIMING_5K     ((uint64_t) 100 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_10K    ((uint64_t)  50 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_20K    ((uint64_t)  25 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_33_3K  ((uint64_t)  15 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_50K    ((uint64_t)  10 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_62_5K  ((uint64_t)   8 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_75K    ((uint64_t)   9 << 32) | (176 << 16) | ( 60) // A perfect match is not possible --> 75011 baud, 74.6%
+    #define CAN_NOM_BITTIMING_83_3K  ((uint64_t)   6 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_100K   ((uint64_t)   5 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_125K   ((uint64_t)   4 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_250K   ((uint64_t)   2 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_500K   ((uint64_t)   1 << 32) | (239 << 16) | ( 80)
+    #define CAN_NOM_BITTIMING_800K   ((uint64_t)   1 << 32) | (149 << 16) | ( 50)
+    #define CAN_NOM_BITTIMING_1M     ((uint64_t)   1 << 32) | (119 << 16) | ( 40)
+    // ----------------------------
+    #define CAN_DATA_BITTIMING_500K  ((uint64_t)   8 << 32) | ( 29 << 16) | ( 10)
+    #define CAN_DATA_BITTIMING_1M    ((uint64_t)   4 << 32) | ( 29 << 16) | ( 10)
+    #define CAN_DATA_BITTIMING_2M    ((uint64_t)   2 << 32) | ( 29 << 16) | ( 10)
+    #define CAN_DATA_BITTIMING_4M    ((uint64_t)   2 << 32) | ( 14 << 16) | (  5)
+    #define CAN_DATA_BITTIMING_5M    ((uint64_t)   2 << 32) | ( 11 << 16) | (  4)
+    #define CAN_DATA_BITTIMING_8M    ((uint64_t)   2 << 32) | (  4 << 16) | (  5) // Samplepoint must be 50%, otherwise communication errors.
+#else
+    #error "MCU_SERIE not implemented"
+#endif
 
 // ----- Globals
 extern eUserFlags GLB_UserFlags[CHANNEL_COUNT];
@@ -31,6 +96,7 @@ uint32_t  CanMode[CHANNEL_COUNT];
 eFeedback control_parse_str   (int channel, char buf[], int len);
 eFeedback control_parse_filter(int channel, char buf[]);
 eFeedback control_parse_flash (int channel, char buf[]);
+eFeedback control_set_baudrate(int channel, bool set_data, char baud_chr);
 
 // ==================================================================================================================
 
@@ -84,12 +150,12 @@ void control_parse_command(char* buf, int len)
 // The termination '\r' has already been removed.
 eFeedback control_parse_str(int channel, char buf[], int len)
 {
-    // Flash the blue LED very shortly if bus is closed
-    // ATTENTION: If the bus is closed the green LED is on, so this is not the same as blue flashing with bus open.
+    // Flash the Rx LED very shortly if bus is closed
+    // ATTENTION: If the bus is closed the Tx LED is on, so this is not the same as Rx flashing with bus open.
     if (!can_is_open(channel))
         led_flash_RX(channel); // flash 15 ms
 
-    // Reply Success to an empty command "\r" if the user has hit the Enter key in the terminal.
+    // Reply Success ("#") to an empty command "\r" if the user has hit the Enter key in the terminal.
     if (len == 0)
         return FBK_Success;
 
@@ -185,6 +251,45 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                     default:  return FBK_InvalidParameter;
                 }
             }
+            
+            // Only for debugging 
+            // When CAN is opened -> calculate and print all baudrates + samplepoints for CAN_NOM_BITTIMING_xxx and CAN_DATA_BITTIMING_xxx
+            // "S0: 10k baud, 75%"
+            // "Y4: 4M baud, 75%"
+            #if VERIFY_ALL_BAUDRATES
+                for (int L=0; L<2; L++)
+                {
+                    bool set_data = L > 0;
+                    for (int baud_chr = '0'; baud_chr <= 'Z'; baud_chr ++)
+                    {
+                        eFeedback e_Feedback = control_set_baudrate(channel, set_data, baud_chr);
+                        if (e_Feedback == FBK_InvalidParameter)
+                            continue; // skip undefined characters
+                        
+                        tempbuf[0] = '>'; // debug message
+                        tempbuf[1] = set_data ? 'Y' : 'S';
+                        tempbuf[2] = baud_chr;
+                        switch (e_Feedback)
+                        {
+                            case FBK_Success:
+                                utils_format_bitrate(tempbuf + 3, "", can_getBitrate(channel, set_data));
+                                break;
+                            case FBK_UnsupportedFeature:
+                                strcpy(tempbuf + 3, ": Not supported");
+                                break;
+                            case FBK_ParamOutOfRange:
+                                strcpy(tempbuf + 3, ": Out of range");
+                                break;
+                            default:
+                                sprintf(tempbuf + 3, ": Feedback Error '#%c'", e_Feedback);
+                                break;
+                        }                        
+                        strcat(tempbuf, "\r");
+                        buf_enqueue_cdc(channel, tempbuf, strlen(tempbuf));
+                    }
+                }
+            #endif
+
             return can_open(channel, CanMode[channel]); // returns error if already open
         }
         // Close adapter and reset variables (no error if already closed)
@@ -213,7 +318,9 @@ eFeedback control_parse_str(int channel, char buf[], int len)
             if (len == 1)
             {
                 // The host application needs these limits to calculate the bitrates (commands 's' and 'y')
-                bitlimits* lim = utils_get_bit_limits();
+                bitlimits* lim_nom     = utils_get_bit_limits(false);
+                bitlimits* lim_data    = utils_get_bit_limits(true);
+                uint32_t   hal_version = HAL_GetHalVersion();
 
                 char serial_no[20];
                 USBD_GetSerialNumber(serial_no);
@@ -222,7 +329,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                 // The STM32G0xx serie uses 0x460, 0x465, 0x476, 0x477 and STM32G4xx uses 0x468, 0x469, 0x479.
                 // String responses start with '+', all other command responses start with '#'
                 sprintf(tempbuf, "+Board: "      TARGET_BOARD              // Multiboard  (from MakeFile)
-                                 "\tMCU: %s"                               // STM32G431   (from MakeFile)
+                                 "\tMCU: "       TARGET_MCU                // STM32G431   (from MakeFile)
                                  "\tDevID: %lu"                            // 0x468       (from processor)
                                  "\tFirmware: %u"                          // 2427156     (from settings.h)
                                  "\tSlcan: "     STR(SLCAN_VERSION)        // 101         (from settings.h)
@@ -234,13 +341,14 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                                  "\tQuartz: No"                            // Yes / No    (from make file)
 #endif
                                  "\tLimits: %lu,%lu,%lu,%lu,%lu,%lu,%lu,%lu"
+                                 "\tHAL: %u.%u.%u"
                                  "\tSerial: %s\r",
-                                 utils_get_MCU_name(),
                                  HAL_GetDEVID(),
                                  FIRMWARE_VERSION_BCD, // defined as hex, but sent as decimal for easier parsing in the host software
                                  system_get_can_clock() / 1000000,
-                                 lim->nom_brp_max, lim->nom_seg1_max, lim->nom_seg2_max, lim->nom_sjw_max,
-                                 lim->fd_brp_max,  lim->fd_seg1_max,  lim->fd_seg2_max,  lim->fd_sjw_max,
+                                 lim_nom ->brp_max, lim_nom ->seg1_max, lim_nom ->seg2_max, lim_nom ->sjw_max,
+                                 lim_data->brp_max, lim_data->seg1_max, lim_data->seg2_max, lim_data->sjw_max,
+                                 (uint8_t)(hal_version >> 24), (uint8_t)(hal_version >> 16), (uint8_t)(hal_version >> 8), 
                                  serial_no);
 
                 buf_enqueue_cdc(channel, tempbuf, strlen(tempbuf));
@@ -252,16 +360,14 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 
         // Set baudrate (always samplepoint nominal: 87.5%, data: 75%)
         // ATTENTION: Deprecated! Read the manual.
-        case 'S':
-            if (len == 2) e_Ret = can_set_baudrate(channel, (can_nom_bitrate)(buf[1] - '0')); // "S1"
-            return e_Ret;
-        case 'Y':
-            if (len == 2) e_Ret = can_set_data_baudrate(channel, (can_data_bitrate)(buf[1] - '0')); // "Y2"
+        case 'S': // nominal
+        case 'Y': // data
+            if (len == 2) e_Ret = control_set_baudrate(channel, buf[0] == 'Y', buf[1]);
             return e_Ret;
 
         // Set bitrate (any samplepoint is possible)
-        case 's':
-        case 'y':
+        case 's': // nominal
+        case 'y': // data
         {
             int pos = 1;
             uint32_t BRP, Seg1, Seg2, Sjw;
@@ -271,8 +377,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
                 !utils_parse_next_decimal(buf, &pos,  0,  &Sjw))
                     return FBK_InvalidParameter;
 
-            if (buf[0] == 's') return can_set_nom_bit_timing (channel, BRP, Seg1, Seg2, Sjw); // "s40,16,2,2"
-            else               return can_set_data_bit_timing(channel, BRP, Seg1, Seg2, Sjw);
+            return can_set_bit_timing(channel, buf[0] == 'y', BRP, Seg1, Seg2, Sjw);
         }
 
         // ----------------------------
@@ -322,7 +427,11 @@ eFeedback control_parse_str(int channel, char buf[], int len)
             if (strcmp(buf, "*Boot0:?") == 0)
             {
                 // String responses start with '+', all other command responses start with '#'
-                char* resp = system_is_option_enabled(OPT_BOOT0_Enable) ? "+1\r" : "+0\r";
+                eOptionStatus status = system_is_option_enabled(OPT_BOOT0_Enable);
+                if (status == Option_Unavailable)
+                    return FBK_UnsupportedFeature;
+                
+                char* resp = (status == Option_Active) ? "+1\r" : "+0\r";
                 buf_enqueue_cdc(channel, resp, 3);
                 return FBK_RetString;
             }
@@ -348,7 +457,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
     tx_header->IdType              = FDCAN_STANDARD_ID;
     tx_header->BitRateSwitch       = FDCAN_BRS_OFF;
     tx_header->ErrorStateIndicator = can_is_passive(channel) ? FDCAN_ESI_PASSIVE : FDCAN_ESI_ACTIVE;
-    tx_header->TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the green LED
+    tx_header->TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the Tx LED
 
     switch (buf[0])
     {
@@ -459,6 +568,71 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 }
 
 // ================================================================================================================
+
+// ATTENTION: Deprecated! Read the manual.
+// Set the nominal / data bitrate of the CAN peripheral
+// Always samplepoint 75%. (In previous versions 87.5% was used which may produce Rx/Tx errors)
+// IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
+// set_data = false -> Set the nominal baudrate configuration of the CAN peripheral
+// set_data = true  -> Set the data    baudrate configuration of the CAN peripheral
+eFeedback control_set_baudrate(int channel, bool set_data, char baud_chr)
+{
+    uint64_t timing_values;
+    
+    if (set_data)
+    {
+        switch (baud_chr)
+        {
+            case CAN_DATA_BAUDRATE_500K: timing_values = CAN_DATA_BITTIMING_500K; break;
+            case CAN_DATA_BAUDRATE_1M:   timing_values = CAN_DATA_BITTIMING_1M;   break;
+            case CAN_DATA_BAUDRATE_2M:   timing_values = CAN_DATA_BITTIMING_2M;   break;
+            case CAN_DATA_BAUDRATE_4M:   timing_values = CAN_DATA_BITTIMING_4M;   break;
+            case CAN_DATA_BAUDRATE_5M:   timing_values = CAN_DATA_BITTIMING_5M;   break;
+            case CAN_DATA_BAUDRATE_8M:   timing_values = CAN_DATA_BITTIMING_8M;   break;
+            default: return FBK_InvalidParameter;
+        }
+    }
+    else
+    {
+        switch (baud_chr)
+        {
+            case CAN_NOM_BAUDRATE_5K:    timing_values = CAN_NOM_BITTIMING_5K;    break;
+            case CAN_NOM_BAUDRATE_10K:   timing_values = CAN_NOM_BITTIMING_10K;   break;
+            case CAN_NOM_BAUDRATE_20K:   timing_values = CAN_NOM_BITTIMING_20K;   break;
+            case CAN_NOM_BAUDRATE_33_3K: timing_values = CAN_NOM_BITTIMING_33_3K; break;
+            case CAN_NOM_BAUDRATE_50K:   timing_values = CAN_NOM_BITTIMING_50K;   break;
+            case CAN_NOM_BAUDRATE_62_5K: timing_values = CAN_NOM_BITTIMING_62_5K; break;
+            case CAN_NOM_BAUDRATE_75K:   timing_values = CAN_NOM_BITTIMING_75K;   break;
+            case CAN_NOM_BAUDRATE_83_3K: timing_values = CAN_NOM_BITTIMING_83_3K; break;
+            case CAN_NOM_BAUDRATE_100K:  timing_values = CAN_NOM_BITTIMING_100K;  break;
+            case CAN_NOM_BAUDRATE_125K:  timing_values = CAN_NOM_BITTIMING_125K;  break;
+            case CAN_NOM_BAUDRATE_250K:  timing_values = CAN_NOM_BITTIMING_250K;  break;
+            case CAN_NOM_BAUDRATE_500K:  timing_values = CAN_NOM_BITTIMING_500K;  break;
+            case CAN_NOM_BAUDRATE_800K:  timing_values = CAN_NOM_BITTIMING_800K;  break;
+            case CAN_NOM_BAUDRATE_1M:    timing_values = CAN_NOM_BITTIMING_1M;    break;
+            default: return FBK_InvalidParameter;
+        }
+    }
+    
+    // If CAN_NOM_BITTIMING_xxx is defined as zero --> the processor does not support the baudrate
+    if (timing_values == 0)
+        return FBK_UnsupportedFeature;
+    
+    uint16_t brp  = (timing_values >> 32);
+    uint16_t seg1 = (timing_values >> 16);
+    uint16_t seg2 = (timing_values);
+
+    // See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
+    // Set SJW to the same length as the shortest segment - 1
+    bitlimits* limits = utils_get_bit_limits(set_data);
+    uint32_t   sjw    = MIN(MIN(seg1, seg2), limits->sjw_max);
+    if (sjw > 1) 
+        sjw --;
+    
+    return can_set_bit_timing(channel, set_data, brp, seg1, seg2, sjw);
+}
+
+// -------------------------
 
 // Command: "F7E0,7FF;1F005000,1FFFFFFF\r" --> set 11 bit filter: 0x7E0, mask: 0x7FF and 29 bit filter 0x1F005000.
 // see comment for can_set_mask_filter()

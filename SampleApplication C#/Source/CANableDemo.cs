@@ -134,8 +134,14 @@ class Program
             s_Action = "Error setting nominal bitrate.";
 
             String s_Display;
-            // Supposed the clock is 160 MHz this will set 500 kBaud and samplepoint 75%
-            mi_Candle.SetBitrate(false, 2, 119, 40, out s_Display);
+
+            // Set 500 kBaud and samplepoint 60%
+            switch (mk_Info.mk_Capability.ms32_CanClock / 1000000)
+            {
+                case  60: mi_Candle.SetBitrate(false, 1, 71, 48, out s_Display); break; // STM32G0B1
+                case 160: mi_Candle.SetBitrate(false, 2, 95, 64, out s_Display); break; // STM32G431
+                default: throw new Exception("CAN Clock not implemented!");
+            }
 
             Print(ConsoleColor.DarkYellow, "\nSet {0}\n", s_Display);
 
@@ -154,8 +160,14 @@ class Program
             {
                 s_Action = "Error setting data bitrate.";
 
-                // Supposed the clock is 160 MHz this will set 2 MBaud and samplepoint 75.0%
-                mi_Candle.SetBitrate(true, 2, 29, 10, out s_Display);
+                // Set 2 MBaud and samplepoint 60%
+                switch (mk_Info.mk_Capability.ms32_CanClock / 1000000)
+                {
+                    case  60: mi_Candle.SetBitrate(true, 1, 17, 12, out s_Display); break; // STM32G0B1
+                    case 160: mi_Candle.SetBitrate(true, 2, 23, 16, out s_Display); break; // STM32G431
+                    default: throw new Exception("CAN Clock not implemented!");
+                }
+
                 Print(ConsoleColor.DarkYellow, "Set {0}\n", s_Display);
             }
 
@@ -380,13 +392,8 @@ class Program
 
         try
         {
-            bool b_ReconnectRequired;
-            mi_Candle.EnterDfuMode(out b_ReconnectRequired);
-
-            if (b_ReconnectRequired)
-                Print(ConsoleColor.Red, "\nPlease reconnect the USB cable\n");
-            else
-                Print(ConsoleColor.Green, "\nDevice has been switched successfully into DFU mode.\n");
+            mi_Candle.EnterDfuMode();
+            Print(ConsoleColor.Green, "\nDevice has been switched successfully into DFU mode.\n");
         }
         catch (Exception Ex)
         {

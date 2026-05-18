@@ -11,6 +11,7 @@ This is the first Candlelight firmware for the STM32Gxxx processor family that s
 However the new firmware is still 100% backward compatible with the legacy Slcan / Candlelight firmware.
 The firmware has been tested on the STM32G431 on the isolated adapters from MKS Makerbase and Jhoinrch up to 10 Mbaud.
 It works also on the STM32G473 dual CAN channel board from Oleksii.
+The WeActStudio v1 firmware is compiled for the older STM32G0B1 processor.
 The firmware has been designed to be easily expandable for future processors and boards.
 Precompiled binary firmware files can be uploaded to the CANable with the new Firmware Updater.
 

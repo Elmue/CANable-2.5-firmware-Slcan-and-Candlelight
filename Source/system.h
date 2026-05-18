@@ -24,20 +24,27 @@ typedef enum
 
 typedef enum 
 {
-    SERIE_Unknown,
-    SERIE_G0,      // STM32G0XX
-    SERIE_G4,      // STM32G4XX
+    SERIE_Invalid,
+    SERIE_G0,      // STM32G0xx
+    SERIE_G4,      // STM32G4xx
 } eMcuSerie;
 
-bool      system_init();
-bool      system_is_option_enabled(eOptionBytes e_Option);
-eFeedback system_set_option_bytes (eOptionBytes e_Option);
-uint32_t  system_get_can_clock();
-eMcuSerie system_get_mcu_serie();
-uint32_t  system_get_timestamp();
-uint32_t  system_get_timewrap();
-uint32_t  system_get_flash_addr(uint32_t segment);
-eFeedback system_write_flash(uint32_t segment, uint8_t* buffer, uint16_t data_len);
+typedef enum
+{
+    Option_Unavailable,  // The feature is not implemented for the processor serie
+    Option_Inactive,     // The Option is disabled in the Option Bytes
+    Option_Active,       // The Option is enabled  in the Option Bytes    
+} eOptionStatus;
+
+bool          system_init();
+eOptionStatus system_is_option_enabled(eOptionBytes e_Option);
+eFeedback     system_set_option_bytes (eOptionBytes e_Option);
+uint32_t      system_get_can_clock();
+eMcuSerie     system_get_mcu_serie();
+uint32_t      system_get_timestamp();
+uint32_t      system_get_timewrap();
+uint32_t      system_get_flash_addr(uint32_t segment);
+eFeedback     system_write_flash(uint32_t segment, uint8_t* buffer, uint16_t data_len);
 
 // ARM's
 // "Application Note 321 ARM Cortex-M Programming Guide to Memory Barrier Instructions"

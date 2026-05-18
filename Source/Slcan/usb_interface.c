@@ -19,9 +19,9 @@
 #include "error.h"
 #include "system.h"
 
-extern USBD_HandleTypeDef GLB_UsbDevice;
-extern cdc_tx_buf         buf_cdc_tx;
-extern cdc_rx_buf         buf_cdc_rx;
+extern USBD_CDC_HandleTypeDef CDC_Handle;
+extern cdc_tx_buf             buf_cdc_tx;
+extern cdc_rx_buf             buf_cdc_rx;
 
 static int8_t CDC_Init_FS(void);
 static int8_t CDC_DeInit_FS(void);
@@ -39,8 +39,8 @@ USBD_CDC_ItfTypeDef USBD_InterfaceCallbacks =
 // Initializes the CDC media low layer over the FS USB IP
 static int8_t CDC_Init_FS(void)
 {
-    USBD_CDC_SetTxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_tx.data[buf_cdc_tx.tail], 0);
-    USBD_CDC_SetRxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
+    USBD_CDC_SetTxBuffer((uint8_t *)buf_cdc_tx.data[buf_cdc_tx.tail], 0);
+    USBD_CDC_SetRxBuffer((uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
     return (USBD_OK);
 }
 
@@ -144,8 +144,8 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         }
 
         // Listen again on the same buffer. Old data will be overwritten.
-        USBD_CDC_SetRxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
-        USBD_CDC_ReceivePacket(&GLB_UsbDevice);
+        USBD_CDC_SetRxBuffer((uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
+        USBD_CDC_ReceivePacket();
         return HAL_ERROR;
     }
     else
@@ -155,23 +155,18 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
         buf_cdc_rx.head = new_head;
 
         // Start listening on next buffer. Previous buffer will be processed in main loop.
-        USBD_CDC_SetRxBuffer(&GLB_UsbDevice, (uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
-        USBD_CDC_ReceivePacket(&GLB_UsbDevice);
+        USBD_CDC_SetRxBuffer((uint8_t *)buf_cdc_rx.data[buf_cdc_rx.head]);
+        USBD_CDC_ReceivePacket();
         return USBD_OK;
     }
 }
 
 uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 {
-    uint8_t result = USBD_OK;
-
-    USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef*)GLB_UsbDevice.pClassData;
-    if (hcdc->TxState != 0)
+    if (CDC_Handle.TxState != 0)
         return USBD_BUSY;
 
-    USBD_CDC_SetTxBuffer(&GLB_UsbDevice, Buf, Len);
-    result = USBD_CDC_TransmitPacket(&GLB_UsbDevice);
-
-    return result;
+    USBD_CDC_SetTxBuffer(Buf, Len);
+    return USBD_CDC_TransmitPacket();
 }
 

@@ -47,7 +47,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251118 = 18.nov.2025)
-const DWORD MIN_FIRMWARE = 0x260416;
+const DWORD MIN_FIRMWARE = 0x260517;
 
 // The firmware update interface is always interface 1
 const BYTE DFU_INTERFACE = 1;
@@ -461,6 +461,9 @@ DWORD Candlelight::Open(CString s_DevicePath)
 
     s_Line.Format(L"Hardware Version:     %s\n", FormatBcdVersion(mk_Info.mk_DeviceVersion.hw_version_bcd));  ms_Details += s_Line;
     s_Line.Format(L"Firmware Version:     %s\n", FormatBcdVersion(mk_Info.mk_DeviceVersion.sw_version_bcd));  ms_Details += s_Line;
+    s_Line.Format(L"HAL Version:          %u.%u.%u\n", mk_Info.mk_DeviceVersion.hal_ver_high,
+                                                       mk_Info.mk_DeviceVersion.hal_ver_mid,
+                                                       mk_Info.mk_DeviceVersion.hal_ver_low);                 ms_Details += s_Line;
     s_Line.Format(L"Firmware Type:        %s\n", mk_Info.mb_IsElmueSoft ? L"CANable 2.5" : L"Legacy");        ms_Details += s_Line;
     s_Line.Format(L"Supports CAN FD:      %s\n", mk_Info.mb_SupportsFD  ? L"Yes"         : L"No");            ms_Details += s_Line;
 
@@ -482,7 +485,7 @@ DWORD Candlelight::Open(CString s_DevicePath)
     bool b_UseQuartz = (mk_Info.mk_BoardInfo.BoardFlags & BRD_Quartz_In_Use) > 0;
 
     s_Line.Format(L"Target Board:         %hs\n", mk_Info.mk_BoardInfo.BoardName);           ms_Details += s_Line;
-    s_Line.Format(L"Processor:            %hs, CAN Clock: %u MHz, DeviceID: 0x%X\n",
+    s_Line.Format(L"Processor:            %hs, CAN Clock: %u MHz, MCU DeviceID: 0x%X\n",
                                                   mk_Info.mk_BoardInfo.McuName,
                                                   mk_Info.mk_Capability.fclk_can / 1000000,
                                                   mk_Info.mk_BoardInfo.McuDeviceID);         ms_Details += s_Line;
@@ -599,7 +602,7 @@ DWORD Candlelight::AddMaskFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
 // --------------------------------------------------------------------
 
 // STEP 5)
-// Connect to CAN bus, turn off the green LED
+// Connect to CAN bus, turn off the Tx LED
 DWORD Candlelight::Start(eDeviceFlags e_Flags)
 {
     if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
@@ -608,7 +611,7 @@ DWORD Candlelight::Start(eDeviceFlags e_Flags)
     kDeviceMode k_Mode;
     k_Mode.flags = e_Flags | ELM_DevFlagProtocolElmue; // required for this demo!
     k_Mode.mode  = GS_ModeStart;
-    DWORD u32_Error = CtrlTransfer(DIR_Out, GS_ReqSetDeviceMode, mu8_Channel, &k_Mode, sizeof(k_Mode)); // turn off green LED
+    DWORD u32_Error = CtrlTransfer(DIR_Out, GS_ReqSetDeviceMode, mu8_Channel, &k_Mode, sizeof(k_Mode)); // turn off Tx LED
     if (u32_Error)
         return u32_Error;
 
@@ -617,7 +620,7 @@ DWORD Candlelight::Start(eDeviceFlags e_Flags)
     return u32_Error;
 }
 
-// Stop CAN bus and reset all variables and user settings in the adapter, turn on green LED
+// Stop CAN bus and reset all variables and user settings in the adapter, turn on Tx LED
 DWORD Candlelight::Reset()
 {
     mb_Started = false;
@@ -936,7 +939,7 @@ kCanPacket Candlelight::GetTxEchoPacket(kTxEchoElmue* pk_TxEcho)
 
 // ==========================================================================================
 
-// Flashes the green / blue LEDs on the board
+// Flashes the Rx + Tx LEDs on the board
 DWORD Candlelight::Identify(bool b_Blink)
 {
     if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
@@ -1405,7 +1408,7 @@ CString Candlelight::FormatLastError(DWORD u32_Error)
 // ATTENTION:
 // This works only if the device is in Candlelight mode. If the device is already in DFU mode it will fail.
 // If the device is already in DFU mode you cannot use the WinUSB driver, you need the STtube30 driver from ST Microelectronics.
-// If you want to update the firmware use HUD ECU Hacker which comes with a very comfortable STM32 Firmware Updater.
+// If you want to update the firmware use HUD ECU Hacker which comes with a very comfortable STM32 Firmware Programmer.
 DWORD Candlelight::EnterDfuMode()
 {
     if (!mb_InitDone || mu8_Interface != DFU_INTERFACE)
@@ -1421,14 +1424,21 @@ DWORD Candlelight::EnterDfuMode()
     // returned Error must be ignored here because legacy devices enter boot mode immediately and CtrlTransfer will return error 31.
     if (CtrlTransfer(DIR_In, DFU_RequGetStatus, 0, &k_Status, sizeof(k_Status)) == ERROR_SUCCESS)
     {
+        // Here k_Status.State is either DfuSte_AppIdle or DfuSte_AppDetach or DfuSte_Error.
+
         // returning AppDetach has been added by ElmüSoft to the firmware and means that the user must reconnect the USB cable.
         // This happens only if the pin BOOT0 was disabled before calling EnterDfuMode()
-        // k_Status.State is either DfuSte_AppIdle or DfuSte_AppDetach.
         if (k_Status.State == DfuState_AppDetach)
         {
-            // The user must reconnect the USB cable now.
-            // This happens only if the pin BOOT0 was disabled before calling this function.
-            me_LastError = FBK_ResetRequired;
+            me_LastError = FBK_ResetRequired; // The user must reconnect the USB cable now.
+            return ERROR_CODE_IN_FEEDBACK;
+        }
+
+        // Since firmware 17.May.2026 the feedback code is transferred in StringIdx.
+        // Feedback = UnsupportedFeature, AdapterMustBeClosed, OptBytesProgrFailed
+        if (k_Status.State == DfuState_Error && k_Status.StringIdx > 0 && k_Status.StringIdx < 255)
+        {
+            me_LastError = (eFeedback)k_Status.StringIdx;
             return ERROR_CODE_IN_FEEDBACK;
         }
     }

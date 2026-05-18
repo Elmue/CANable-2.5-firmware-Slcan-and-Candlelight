@@ -160,10 +160,18 @@ void CandlelightDemo()
         FlashMemoryTest();
 
     // -----------------------------------------
-
+    
+    DWORD u32_Error = 0;
     CString s_Display;
-    // Supposed the clock is 160 MHz this will set 500 kBaud and samplepoint 75%
-    DWORD u32_Error = gi_Candle.SetBitrate(false, 2, 119, 40, &s_Display);
+
+    // Set 500 kBaud and samplepoint 60%
+    switch (gk_Info.mk_Capability.fclk_can / 1000000)
+    {
+        case  60: u32_Error = gi_Candle.SetBitrate(false, 1, 71, 48, &s_Display); break; // STM32G0B1
+        case 160: u32_Error = gi_Candle.SetBitrate(false, 2, 95, 64, &s_Display); break; // STM32G431
+        default:  PrintConsole(RED, L"CAN Clock not implemented.\n"); return;
+    }
+
     if (u32_Error)
     {
         PrintConsole(RED, L"Error setting nominal bitrate. %s\n", gi_Candle.FormatLastError(u32_Error));
@@ -184,8 +192,14 @@ void CandlelightDemo()
     // This will automatically enable CAN FD mode. GS_DevFlagCAN_FD is not required.
     if (true)
     {
-        // Supposed the clock is 160 MHz this will set 2 MBaud and samplepoint 75.0%
-        u32_Error = gi_Candle.SetBitrate(true, 2, 29, 10, &s_Display);
+        // Set 2 MBaud and samplepoint 60%
+        switch (gk_Info.mk_Capability.fclk_can / 1000000)
+        {
+            case  60: u32_Error = gi_Candle.SetBitrate(true, 1, 17, 12, &s_Display); break; // STM32G0B1
+            case 160: u32_Error = gi_Candle.SetBitrate(true, 2, 23, 16, &s_Display); break; // STM32G431
+            default:  PrintConsole(RED, L"CAN Clock not implemented.\n"); return;
+        }
+
         if (u32_Error)
         {
             PrintConsole(RED, L"Error setting data bitrate. %s\n", gi_Candle.FormatLastError(u32_Error));

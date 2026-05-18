@@ -350,16 +350,38 @@
 <div><a href="https://jhoinrch.net" target="_blank">Jhoinrch</a> in China is the first company that uses my CANable 2.5 as stock firmware for their <a href="https://www.amazon.com/stores/Jhoinrch/page/BEC6FB30-6DA6-421E-80B6-1904FA0C0783" target="_blank">RH02 adapters</a>.</div>
 <div>The <b>Plus</b> and the <b>Elite</b> adapters ($18 US) have a STM32G431 processor and since 2026 also a 25 MHz quartz.</div>
 <div>The Jhoinrch Elite adapter supports CAN traffic up to <b>10 Mega baud</b>.</div>
-<div>Here you can download the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram of the RH02 Elite</a> (PDF).</div>
+<div>Here you can download the <a href="Images/Diagram CANable Jhoinrch RH02 Elite.pdf" target="_blank">diagram</a> of the RH02 Elite (PDF).</div>
+
+<a name="WeActStudioV1"></a>
+<h3>WeActStudio USB2CANFD v1</h3>
+<table class="TblImage">
+    <tr><td><img src="Images/Adapter WeActStudioV1.jpg" alt="CANable - Jhoinrch RH02" width="155" height="90"></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter WeActStudioV1.jpg')">Show Full Size</span></td></tr>
+</table>
+<div>The <a href="https://weactstudio.aliexpress.com" target="_blank">WeActStudio</a> USB2CANFD v1 is a cheap ($8 US) and small (4 x 2 cm) adapter with STM32G0B1 processor.</div>
+<div>They have published the <a href="Images/Diagram WeActStudio USB2CANFD v1.pdf" target="_blank">diagram</a> (PDF).</div>
+<div>The hardware is OK, but the CAN clock is only 60 MHz, which limits the available <a href="#Sample_Baud">samplepoints</a> for CAN FD.</div>
+<div class="Error">I do not recommend to buy this adapter if you plan to use CAN FD.</div>
+<p>
+<div>WeActStudio installs a fix 'firmware updater' in the flash memory although the processor has a factory bootloader.</div>
+<div>They force you to use their <b>proprietary software</b> for flashing, which is only for Windows.</div>
+<div>You can only upload a firmware after using another proprietary software that converts it into an <b>FPK file</b>.</div>
+<div>Additionally your firmware must be <b>compiled</b> to work with their proprietary 'firmware updater'.</div>
+<div>They even prohibt to remove their 'firmware updater' because they have disabled the <b>bootloader pin</b>.</div>
+<div>And on top of this they put a useless <b>write protection</b> and a <b>read protection</b> on this 'firmware updater'.</div>
+<div>They programmed the processor to <b>erase</b> the entire flash memory when the read protection is turned off.</div>
+<div>WeActStudio sells you a <span class="Error">crippled adapter</span>. They do not allow you to chose which firmware you want to use.</div>
+<p>
+<div>There is no easy way to remove their 'firmware updater' and the several protections and to enable pin BOOT0.</div>
+<div>You must buy a <b>ST-Link adapter</b>, install the huge <b>Cube Programmer</b> of 1.5 GB and manipulate the <b>option bytes</b>.</div>
+<p>
+<div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer v5.0</a> removes all this WeAct stuff with one click.</div>
+<div>To achieve this I had to write a firmware that I upload with the <b>Y-Modem</b> protocol through their firmware updater.<//div>
+<div>My <b>ElmüSoft Restore Adapter</b> fimware removes all this crap and leaves a clean and unprotected flash memory.</div>
+<div>Just click the button <b>Enter DFU Mode</b> and you can upload the CANable 2.5 firmware via DFU protocol.</div>
+<p>
 
 <!--
-<a name="WeActStudioV1"></a>
-<h3>USB2CANFD v1</h3>
-<div>The <a href="https://weactstudio.aliexpress.com" target="_blank">WeActStudio</a> USB2CANFD v1 is a cheap ($8 US) and small (4 x 2 cm) adapter with STM32G0B1 processor.</div>
-<div>WeActStudio has published the <a href="Images/Diagram WeActStudio USB2CANFD v1.pdf" target="_blank">diagram of the USB2CANFD v1</a> (PDF).</div>
-<div>The hardware is good quality, however the processor with 64 MHz clock is slower than the STM32G431 with 160 MHz clock.</div>
-
-
 <a name="WeActStudioV2"></a>
 <h3>USB2CANFD v2</h3>
 <div>The newer WeActStudio version 2 comes with the STM32G431 processor.</div>
@@ -371,7 +393,7 @@
 
 
 <a name="Oleksii"></a>
-<h3>CAN-Module Dual</h3>
+<h3>Oleksii CAN-Module Dual</h3>
 <table class="TblImage">
     <tr><td><img src="Images/Adapter Oleksii Dual.jpg" alt="CANable - Jhoinrch RH02" width="200" height="90"></td></tr>
     <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Oleksii Dual.jpg')">Show Full Size</span></td></tr>
@@ -392,7 +414,7 @@
 <img src="Images/STM Device in DFU Mode.png" width="208" height="38" class="Img">
 <p>
 <div>'ST Microelectronics Device in DFU (Device Firmware Upgrade) Mode' is also called <b>Bootloader Mode</b>.</div>
-<div>In Boot Mode the processor runs it's internal bootloader and is ready to receive a <b>firmware update</b>.</div>
+<div>In Boot Mode the processor runs it's internal factory bootloader and is ready to receive a <b>firmware update</b>.</div>
 <div>In Boot Mode only the power LED is on.</div>
 <p>
 <div>To switch your adapter to <b>operation mode</b> try to disconnect the USB cable, wait 5 seconds and reconnect.</div>
@@ -425,6 +447,7 @@
 <div>To avoid this the hardware must assure that the CAN Rx pin is Low when the processor is reset.</div>
 <div>Therefore some adapters use 2 transistors to delay the power supply for the CAN transceiver.</div>
 <p>
+<div>In the adapters from MKS Makerbase this delay is far to long.</div>
 <div>The consequence is that short interruptions of the 5V USB power will immediately enter Boot Mode.</div>
 <div>This happens when you merely move the USB plug a little bit or when you <b>reboot</b> the computer.</div>
 <div>During a reboot the mainboard interrupts the USB power supply for a short time.</div>
@@ -432,7 +455,7 @@
 <div>This misdesign <b>really sucks</b>. Therefore my CANable 2.5 firmware offers a solution: You can <b>disable</b> the pin BOOT0.</div>
 <p>
 <div>The adapters from <b>Oleksii</b> are the worst: If you don't disable pin BOOT0 you cannot use them at all.</div>
-<div>The adapters from <b>Jhoinrch</b> have a more intelligent hardware design, they don't have this problem.</div>
+<div>The adapters from <b>Jhoinrch</b> and <b>WeActStudio</b> have a more intelligent hardware design, they don't have this problem.</div>
 
 <a name="WebUpdater"></a>
 <h3>Official Firmware for STM32G431</h3>
@@ -553,7 +576,7 @@
 <div>In internet people were told to use Zadig as a workaround to force a driver installation for this buggy firmware.</div>
 <div>But Zadig is <b>garbage</b> software, that installs the driver with a totally wrong random GUID into the registry.</div>
 <div>If the adapter is not installed with the correct Candlelight GUID <code>c15b4308-04d3-11e6-b3ea-6057189e6443</code> it will not be found.</div>
-<div>CAN software searches for devices with this specific GUID. The adapter is not found if it is installed with a wrong GUID.</div>
+<div>Any CAN software will tell you that no adapter is connected if it is installed with a wrong GUID.</div>
 <p>
 <div>If you have corrupted your registry by using Zadig, HUD ECU Hacker can help you: Start the <b>Firmware Programmer</b>.</div>
 <div>It will check all registry entries of connected Candlelight devices and it will <b>fix registry errors</b> automatically.</div>
@@ -655,6 +678,19 @@
 </tr>
 <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-WeActSudioV2.dfu</td></tr>
 -->
+
+<tr>
+    <td>STM32G<span class="Red">0B1</span>-Slcan2.5-WeActSudioV1.dfu</td>
+    <td rowspan="2">WeActSudio<br>USB2CANFD v1</td>
+    <td rowspan="2">16 MHz</td>
+    <td rowspan="2" align="right">60 MHz</td>
+    <td rowspan="2">Single</td>
+    <td rowspan="2">A1,A0</td>
+    <td rowspan="2">Full Speed<br>12 MBit</td>
+    <td rowspan="2">OK</td>
+</tr>
+<tr><td>STM32G<span class="Red">0B1</span>-Candlelight2.5-WeActSudioV1.dfu</td></tr>
+
 <tr>
     <td>STM32G<span class="Blue">473</span>-Slcan2.5-OleksiiDual.dfu</td>
     <td rowspan="2">Oleksii Dual</td>
@@ -675,7 +711,7 @@
 <div><span class="Error">IMPORTANT:</span> Only one Slcan firmware and only one Candlelight firmware matches your adapter.</div>
 <div>If you upload the <b>wrong firmware</b> you must not be surprised that the adapter does not work.</div>
 <p>
-<div>The firmware is ready for the STM32G4xx serie. It can be extended for other processors.</div>
+<div>The firmware is ready for the STM32G4xx serie and the STM32G0xx serie. It can be extended for other processors.</div>
 <p>
 <table class="Warning" cellpadding=0 cellspacing=0><tr><td>
 <div>The HUD ECU Hacker Firmware Programmer can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
@@ -874,7 +910,8 @@
 <p>
 <div>One bit of a CAN packet is sub-divided into multiple <b>Time Quantums</b>, in this example sixteen.</div>
 <div>The samplepoint is the exact moment when the processor measures the state of the CAN bus: High or Low.</div>
-<div>The samplepoint must be a fraction of 2 integers: 1/2 = <b>50%</b>, 3/4 = <b>75%</b>, 5/8 = <b>62.5%</b>, 4/5 = <b>80%</b>, 7/8 = <b>87.5%</b></div>
+<div>The samplepoint must be a fraction of 2 integers:</div>
+<div>1/2 = <b>50%</b>, 3/5 = <b>60%</b>, 5/8 = <b>62.5%</b>, 3/4 = <b>75%</b>, 4/5 = <b>80%</b>, 7/8 = <b>87.5%</b></div>
 <div>A later samplepoint has the advantage that it allows longer cables, to compensate for the delay of distant controllers.</div>
 <div>An earlier samplepoint has the advantage that it is more robust against cheap, unprecise oscillators and jitter.</div>
 <p>
@@ -1325,9 +1362,13 @@
 <tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 75%</td></tr>
 <tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 75%</td></tr>
 <tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 75% (may not be precise)</td></tr>
 <tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 75%</td></tr>
 <tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"SA\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 75 kbaud</td><td>Samplepoint 75% (may not be precise)</td></tr>
+<tr><td>"SB\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 62.5 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"SC\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 33.333 kbaud</td><td>Samplepoint 75%</td></tr>
+<tr><td>"SD\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 5 kbaud</td><td>Samplepoint 75%</td></tr>
 <tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
 <tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
 <tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
@@ -1426,12 +1467,13 @@
 <div>MCU: STM32G431\t</div>
 <div>DevID: 1128\t</div>
 <div>Firmware: 2427156\t</div>
-<div>Slcan: 102\t</div>
+<div>Slcan: 103\t</div>
 <div>Clock: 160\t</div>
-<div>Limits: 512,256,128,128,32,32,16,16\r</div>
 <div>Channels: 1\t</div>
 <div>Quartz: No\t</div>
-<div>Serial: 206249E3946306550\t</div>
+<div>Limits: 512,256,128,128,32,32,16,16\t</div>
+<div>HAL: 1.2.5\t</div>
+<div>Serial: 206249E3946306550\r</div>
 </td></tr>
 </table>
 <p>
@@ -1458,22 +1500,24 @@
     <div>The legacy firmware has returned completely meaningless version numbers like "ba6b1dd".</div>
     <div>Here you get a <b>version</b> number that indicates <b>the date</b> when the firmware was created.</div>
     <div>Convert to hex and you get the BCD version 0x250914, which means 14th september of 2025.</div></td></tr>
-<tr><td>Slcan</td><td>102</td><td>100</td><td>
+<tr><td>Slcan</td><td>103</td><td>100</td><td>
     <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
     <div>Use the <a href="#Slcan_Versions">Slcan Version</a> to detect which features are available in the firmware.</div></td></tr>
 <tr><td>Clock</td><td>160</td><td>100</td><td>The CAN clock is 160 MHz</td></tr>
-<tr><td>Limits</td><td>512,256,128,128,<br>32,32,16,16</td><td>100</td><td>
-    <div>These 8 values are the <b>upper limits</b> for the bitrate commands 's' and 'y'.</div>
-    <div>Each processor has different limits for Prescaler, Segment1, Segment2 and Synchr. Jump Width.</div>
-    <div>Nominal baudrate: max Prescaler= 512, max Seg1 = 256, max Seg2= 128, max SJW = 128</div>
-    <div>FD Data baudrate: max Prescaler= 32, max Seg1 = 32, max Seg2= 16, max SJW = 16</div>
-    <div>See <a href="#Sample_Baud">Samplepoint</a></div></td></tr>
 <tr><td>Channels</td><td>1</td><td>101</td><td>
     <div>The count of CAN channels (always 1, if not a multi-channel board).</div></td></tr>
 <tr><td>Quartz</td><td>No</td><td>101</td><td>
     <div>'Yes' if the board has a quartz and the correct firmware has been uploaded.</div>
     <div>'No' if the board has no quartz or the wrong firmware has been uploaded.</div>
     <div>If the board has no quartz, the processor's RC oscillator with only 1% precision is used.</div></td></tr>
+<tr><td>Limits</td><td>512,256,128,128,<br>32,32,16,16</td><td>100</td><td>
+    <div>These 8 values are the <b>upper limits</b> for the bitrate commands 's' and 'y'.</div>
+    <div>Each processor has different limits for Prescaler, Segment1, Segment2 and Synchr. Jump Width.</div>
+    <div>Nominal baudrate: max Prescaler= 512, max Seg1 = 256, max Seg2= 128, max SJW = 128</div>
+    <div>FD Data baudrate: max Prescaler= 32, max Seg1 = 32, max Seg2= 16, max SJW = 16</div>
+    <div>See <a href="#Sample_Baud">Samplepoint</a></div></td></tr>
+<tr><td>HAL</td><td>1.2.5</td><td>103</td><td>
+    <div>The version of the HAL (Hardware Abstraction Layer) that the firmware uses.</div></td></tr>
 <tr><td>Serial</td><td>206249E3946306550</td><td>102</td><td>
     <div>The serial number of the processor. STM guarantees that this is unique.</div></td></tr>
 </table>
@@ -1668,7 +1712,7 @@
 <div>When you set the flag <code>GS_DevFlagTimestamp</code> the demo switches to <b>firmware timestamps</b> generated in the adapter.</div>
 <div>They have no advantage at all. They produce more USB traffic and you will see several lines with <b>"No Timestamp"</b>.</div>
 <div>The reason is that firmware timestamps are only available for events <b>received from</b> the firmware.</div>
-<div>But when you <b>send a packert to</b> the firmware you don't get a timestamp.</div>
+<div>But when you <b>send a packet to</b> the firmware you don't get a timestamp.</div>
 
 <a name="Candle_DFU"></a>
 <h3>Enter DFU mode</h3>
@@ -1678,7 +1722,7 @@
 <div>If the state is <code>DfuState_AppDetach</code> you must show a message to the user to reconnect the USB cable.</div>
 <div>The USB reconnection is only required if the pin BOOT0 was disabled before.</div>
 <div>The demo application shows the entire procedure.</div>
-<div>See pages 17 and 22 in <b>DFU Functional Descriptor 1.1.pdf</b> in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
+<div>See <b>DFU Functional Descriptor 1.1.pdf</b> and <b>ST - AN3156 - DFU Bootloader Requests.pdf</b> in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
 
 
 <a name="Firmware_Manual"></a>
@@ -1732,21 +1776,21 @@
 <div>If you think that you can install the <b>STM32 Cube Programmer</b> from ST Microelectronics</div>
 <div>and you will get a comfortable developer environment, you are completely wrong!</div>
 <div>After installing this monster of 2 Gigabyte you will find a <b>very badly designed</b> user interface,</div>
-<div>an <b>eternally slow</b> software and you notice that it is not able to compile a Make file.</div>
+<div>an <b>eternally slow</b> Java software and you notice that it is not able to compile a Make file.</div>
 <div>Several menu items are greyed out without an understandable reason and the help file is no help.</div>
-<div>So don't <b>waste your time</b> with this.</div>
+<div>So don't <b>waste your time</b> with this low quality software.</div>
 <div>ST Microelectronics has only hardware engineers, they are not able to write user friendly desktop software.</div>
 <p>
 <div><b><u>Intallation</u></b></div>
 <div>So we use the Cube CLT (Command Line Tools) instead.</div>
-<div>Normally you would have to download the <b>STM32 Cube CLT</b> and <b>MinGW</b> which would occupy 2 Gigabyte on your disk.</div>
+<div>Normally you would have to download the <b>STM32 Cube CLT</b> and <b>MinGW</b> which would occupy 1 Gigabyte on your disk.</div>
 <div>Then you would have to rename mkdir.exe into mmkdir.exe and add 2 folders to your PATH variable.</div>
 <p>
 <div>But you are lucky. I made it much simpler for you:</div>
 <ol>
 <li><div><b>Download</b> the file <a href="https://netcult.ch/elmue/CANable Firmware Update/STM32_Compiler_with_MingW.zip">STM32_Compiler_with_MingW.zip</a> from my homepage.</div>
     <div>This ZIP file contains the STM32 Command Line Compiler and the MingW files <code>make.exe</code> and <code>mmkdir.exe</code></div>
-    <div>This ZIP file has only <b>32 MegaByte</b> instead of GigaBytes because I removed folders full of stuff that is not needed.</div>
+    <div>This ZIP file has only <b>40 MegaByte</b> instead of 1 GigaByte because I removed folders full of stuff that is not needed.</div>
 <li><div><span class="Error">IMPORTANT:</span> Right click the ZIP file <big>&rarr;</big> menu 'Properties' and click the button <b>Unblock</b>.</div>
 <li><div><b>Extract</b> the ZIP file into it's destination folder on your disk.</div>
 <li><div>I merged the executables from the compiler with MingW so you have to add only one path to the environment variable.</div>
@@ -1776,6 +1820,7 @@
 <li><div><b>13.Jan.2026</b>: Hardware <a href="#Timestamps">timestamps</a> use precise 16 bit time from processor.</div>
 <li><div><b>04.Mar.2026</b>: Support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>. Candlelight: Added <code>eBoardFlags</code>.</div>
 <li><div><b>16.Apr.2026</b>: User data can be stored in <a href="#RW_Flash">flash memory</a>.</div>
+<li><div><b>17.May.2026</b>: Support for STM32G0B1 processor and new firmware for <a href="#WeActStudioV1">WeActStudioV1</a> adapter.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
@@ -1787,6 +1832,7 @@
 <div>The first version created by ElmüSoft was Slcan 100.</div>
 <div>Slcan 101 (since 04.Mar.2026) adds support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>.</div>
 <div>Slcan 102 (since 16.Apr.2026) allows to read/write user data from/to the <a href="#RW_Flash">flash memory</a> and returns the serial number.</div>
+<div>Slcan 103 (since 17.May.2026) adds more Slcan baudrates, reports HAL version.</div>
 
 
 <div>&nbsp;</div>

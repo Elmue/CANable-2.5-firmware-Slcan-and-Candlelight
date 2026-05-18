@@ -3,8 +3,8 @@
 
 ######################################
 #
-# This makefile compiles for the CANable board from 
-# Jhoinrch which has a 25 MHz quartz
+# This makefile compiles for the CANable board 
+# from Jhoinrch which has a 25 MHz quartz
 #
 # Compile this by typing:
 # make -s -f Make_G431_Candle_Jhoinrch
@@ -15,12 +15,9 @@
 
 TARGET_FIRMWARE = Candlelight
 TARGET_BOARD    = Jhoinrch
-TARGET_MCU      = STM32G431xx
+TARGET_MCU      = STM32G431
 
 # This board has a 25 MHz quartz.
 QUARTZ_FREQU    = 25000000
-
-# name of the compiled files (*.bin, *.hex, *.elf)
-TARGET_FILE = STM32G431_Candlelight2.5_Jhoinrch
 
 include GCC_Rules.mk

@@ -13,6 +13,6 @@ void control_init();
 void control_process(int channel, uint32_t tick_now);
 void control_report_busload(int channel, uint8_t busload_percent);
 bool control_send_debug_mesg(int channel, const char* message);
-bool control_setup_request (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-void control_setup_OUT_data(USBD_HandleTypeDef *pdev);
+bool control_setup_request (USBD_SetupReqTypedef *req);
+void control_setup_OUT_data();
 

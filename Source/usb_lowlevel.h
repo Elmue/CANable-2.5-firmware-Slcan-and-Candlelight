@@ -8,7 +8,7 @@
 #include "settings.h"
 
 bool HAL_PCD_Is_Suspended();
-bool USBD_LL_ConfigurePMA(PCD_HandleTypeDef *hpcd, uint8_t endpoint, bool doublebuf, uint32_t* pmaadress, uint32_t bufsize);
+bool USBD_LL_ConfigurePMA(uint8_t endpoint, bool doublebuf, uint32_t* pmaadress, uint32_t bufsize);
 
 #define USBD_DEBUG_LEVEL    0
 

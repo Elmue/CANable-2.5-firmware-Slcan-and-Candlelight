@@ -1,0 +1,23 @@
+
+# CANable Slcan Makefile
+
+######################################
+#
+# This makefile compiles for the CANable board USB2CANFD v1
+# from WeActStudio which has a 16 MHz quartz
+#
+# Compile this by typing:
+# make -s -f Make_G0B1_Slcan_WeActStudioV1
+#
+#######################################
+
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
+
+TARGET_FIRMWARE = Slcan
+TARGET_BOARD    = WeActStudioV1
+TARGET_MCU      = STM32G0B1
+
+# This board has a 16 MHz quartz.
+QUARTZ_FREQU    = 16000000
+
+include GCC_Rules.mk

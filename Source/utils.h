@@ -28,19 +28,14 @@ typedef enum // 32 bit
 
 typedef struct
 {
-    uint32_t nom_brp_max;
-    uint32_t nom_seg1_max;
-    uint32_t nom_seg2_max;
-    uint32_t nom_sjw_max;
-    
-    uint32_t fd_brp_max;
-    uint32_t fd_seg1_max;
-    uint32_t fd_seg2_max;
-    uint32_t fd_sjw_max;
+    uint32_t brp_max;
+    uint32_t seg1_max;
+    uint32_t seg2_max;
+    uint32_t sjw_max;
 } bitlimits;
 
 void        utils_init();
-bitlimits*  utils_get_bit_limits();
+bitlimits*  utils_get_bit_limits(bool get_data);
 void        utils_format_bitrate(char buf[], char* prefix, can_bitrate_cfg* bit_rate);
 bool        utils_mem_is_empty(void* ptr, int size);
 int8_t      utils_dlc_to_byte_count(uint32_t hal_dlc_code);
@@ -50,6 +45,3 @@ bool        utils_parse_hex_value(char buf[], int* pos, int digits, uint32_t* va
 bool        utils_parse_hex_delimiter(char buf[], int* pos, char separator, int* digits, uint32_t* value);
 bool        utils_to_hex_value(char buf[], int pos);
 char        utils_nibble_to_ascii(uint8_t nibble);
-const char* utils_get_MCU_name();
-
-

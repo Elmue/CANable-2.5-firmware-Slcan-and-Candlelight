@@ -16,19 +16,21 @@
 
 #include "usb_ioreq.h"
 
+extern USBD_HandleTypeDef  USB_Handle;
+
 // @brief  send data on the ctl pipe
 // @param  buff: pointer to data buffer
 // @param  len: length of data to be sent
 // @retval status
-USBD_StatusTypeDef USBD_CtlSendData(USBD_HandleTypeDef *pdev, uint8_t *pbuf, uint16_t len)
+USBD_StatusTypeDef USBD_CtlSendData(uint8_t *pbuf, uint16_t len)
 {
   /* Set EP0 State */
-  pdev->ep0_state = USBD_EP0_DATA_IN;
-  pdev->ep_in[0].total_length = len;
-  pdev->ep_in[0].rem_length   = len;
+  USB_Handle.ep0_state = USBD_EP0_DATA_IN;
+  USB_Handle.ep_in[0].total_length = len;
+  USB_Handle.ep_in[0].rem_length   = len;
 
   /* Start the transfer */
-  USBD_LL_Transmit(pdev, 0x00U, pbuf, len);
+  USBD_LL_Transmit(0, pbuf, len);
   return USBD_OK;
 }
 
@@ -36,10 +38,10 @@ USBD_StatusTypeDef USBD_CtlSendData(USBD_HandleTypeDef *pdev, uint8_t *pbuf, uin
 // @param  buff: pointer to data buffer
 // @param  len: length of data to be sent
 // @retval status
-USBD_StatusTypeDef USBD_CtlContinueSendData(USBD_HandleTypeDef *pdev, uint8_t *pbuf, uint16_t len)
+USBD_StatusTypeDef USBD_CtlContinueSendData(uint8_t *pbuf, uint16_t len)
 {
   /* Start the next transfer */
-  USBD_LL_Transmit(pdev, 0x00U, pbuf, len);
+  USBD_LL_Transmit(0, pbuf, len);
   return USBD_OK;
 }
 
@@ -47,15 +49,15 @@ USBD_StatusTypeDef USBD_CtlContinueSendData(USBD_HandleTypeDef *pdev, uint8_t *p
 // @param  buff: pointer to data buffer
 // @param  len: length of data to be received
 // @retval status
-USBD_StatusTypeDef USBD_CtlPrepareRx(USBD_HandleTypeDef *pdev, uint8_t *pbuf, uint16_t len)
+USBD_StatusTypeDef USBD_CtlPrepareRx(uint8_t *pbuf, uint16_t len)
 {
   /* Set EP0 State */
-  pdev->ep0_state = USBD_EP0_DATA_OUT;
-  pdev->ep_out[0].total_length = len;
-  pdev->ep_out[0].rem_length   = len;
+  USB_Handle.ep0_state = USBD_EP0_DATA_OUT;
+  USB_Handle.ep_out[0].total_length = len;
+  USB_Handle.ep_out[0].rem_length   = len;
 
   /* Start the transfer */
-  USBD_LL_PrepareReceive(pdev, 0U, pbuf, len);
+  USBD_LL_PrepareReceive(0, pbuf, len);
   return USBD_OK;
 }
 
@@ -63,40 +65,40 @@ USBD_StatusTypeDef USBD_CtlPrepareRx(USBD_HandleTypeDef *pdev, uint8_t *pbuf, ui
 // @param  buff: pointer to data buffer
 // @param  len: length of data to be received
 // @retval status
-USBD_StatusTypeDef USBD_CtlContinueRx(USBD_HandleTypeDef *pdev, uint8_t *pbuf, uint16_t len)
+USBD_StatusTypeDef USBD_CtlContinueRx(uint8_t *pbuf, uint16_t len)
 {
-  USBD_LL_PrepareReceive(pdev, 0U, pbuf, len);
+  USBD_LL_PrepareReceive(0, pbuf, len);
   return USBD_OK;
 }
 
 // @brief  send zero length packet on the ctl pipe
 // @retval status
-USBD_StatusTypeDef USBD_CtlSendStatus(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_CtlSendStatus()
 {
   /* Set EP0 State */
-  pdev->ep0_state = USBD_EP0_STATUS_IN;
+  USB_Handle.ep0_state = USBD_EP0_STATUS_IN;
 
   /* Start the transfer */
-  USBD_LL_Transmit(pdev, 0x00U, NULL, 0U);
+  USBD_LL_Transmit(0, NULL, 0);
   return USBD_OK;
 }
 
 // @brief  receive zero length packet on the ctl pipe
 // @retval status
-USBD_StatusTypeDef USBD_CtlReceiveStatus(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_CtlReceiveStatus()
 {
   /* Set EP0 State */
-  pdev->ep0_state = USBD_EP0_STATUS_OUT;
+  USB_Handle.ep0_state = USBD_EP0_STATUS_OUT;
 
   /* Start the transfer */
-  USBD_LL_PrepareReceive(pdev, 0U, NULL, 0U);
+  USBD_LL_PrepareReceive(0, NULL, 0);
   return USBD_OK;
 }
 
 // @brief  returns the received data length
 // @param  ep_addr: endpoint address
 // @retval Rx Data blength
-uint32_t USBD_GetRxCount(USBD_HandleTypeDef *pdev, uint8_t ep_addr)
+uint32_t USBD_GetRxCount(uint8_t ep_addr)
 {
-  return USBD_LL_GetRxDataSize(pdev, ep_addr);
+  return USBD_LL_GetRxDataSize(ep_addr);
 }

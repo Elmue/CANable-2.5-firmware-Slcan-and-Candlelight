@@ -41,9 +41,6 @@ uint32_t  can_calc_bit_count_in_frame(can_class* inst, FDCAN_RxHeaderTypeDef *he
 void can_init()
 {
     __HAL_RCC_FDCAN_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOA_CLK_ENABLE();
 
     GPIO_InitTypeDef GPIO_InitStruct;
     for (int C=0; C<CHANNEL_COUNT; C++)
@@ -61,14 +58,26 @@ void can_init()
         }
 
         GPIO_InitStruct.Pin       = SET_CanPins[C];
-        GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;   // AF = alternate function
-        GPIO_InitStruct.Alternate = SET_CanAlternates[C];  // switch pin multiplexer to CAN instance
+        GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;      // AF = alternate function
+        GPIO_InitStruct.Alternate = SET_CanAlternates[C]; // switch pin multiplexer to CAN module
         GPIO_InitStruct.Pull      = GPIO_NOPULL;
         GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_VERY_HIGH;
         HAL_GPIO_Init(SET_CanPorts[C], &GPIO_InitStruct);
 
         can_inst[C].handle.Instance = SET_CanInterfaces[C];
     }
+    
+#if defined(CAN_TRX_ENABLE_PIN)
+    // Enable the CAN transceiver chip, if required by the board (WeActStudio v2)
+    GPIO_InitStruct.Pin       = CAN_TRX_ENABLE_PIN;
+    GPIO_InitStruct.Mode      = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Alternate = 0;
+    GPIO_InitStruct.Pull      = GPIO_NOPULL;
+    GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(CAN_TRX_ENABLE_PORT, &GPIO_InitStruct);
+    
+    HAL_GPIO_WritePin(CAN_TRX_ENABLE_PORT, CAN_TRX_ENABLE_PIN, CAN_TRX_ENABLE_ON);
+#endif       
 }
 
 // called from init() and close() --> reset variable for the next can_open().
@@ -102,7 +111,7 @@ eFeedback can_open(int channel, uint32_t mode)
     // Nominal baudrate is mandatory
     if (inst->bitrate_nominal.Brp == 0)
         return FBK_BaudrateNotSet;
-
+    
     if (!can_is_any_open())
     {
         // Reset all CAN instances FDCAN1, FDCAN2, FDCAN3 only if no channel is open
@@ -152,7 +161,10 @@ eFeedback can_open(int channel, uint32_t mode)
 
     // Calculate the length of 1 nominal CAN bus bit in nanoseconds (500 kBaud --> nom_bit_len_ns = 2000)
 
-    uint32_t clock_MHz = system_get_can_clock() / 1000000; // 160
+    uint32_t clock_MHz = system_get_can_clock() / 1000000; // 160 or 64
+    if (clock_MHz == 0)
+        return FBK_ErrorFromHAL; 
+    
     inst->nom_bit_len_ns  = 1 + inst->bitrate_nominal.Seg1 + inst->bitrate_nominal.Seg2; // time quantums
     inst->nom_bit_len_ns *= inst->bitrate_nominal.Brp;     // clock prescaler
     inst->nom_bit_len_ns *= 1000;                          // µs -> ns
@@ -228,7 +240,7 @@ eFeedback can_open(int channel, uint32_t mode)
     bool has_filters = (inst->std_filter_count + inst->ext_filter_count) > 0;
 
     // If no user filters are defined --> accept all packets in FIFO 0 where they are sent over USB to the host.
-    // Otherwise all packets that do not pass the user filters go to FIFO 1 where they only flash the blue LED.
+    // Otherwise all packets that do not pass the user filters go to FIFO 1 where they only flash the Rx LED.
     uint32_t non_matching = has_filters ? FDCAN_ACCEPT_IN_RX_FIFO1 : FDCAN_ACCEPT_IN_RX_FIFO0;
 
     HAL_FDCAN_ConfigGlobalFilter(&inst->handle, non_matching, non_matching, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
@@ -238,7 +250,7 @@ eFeedback can_open(int channel, uint32_t mode)
     // sets inst->handle.State == HAL_FDCAN_STATE_BUSY
     if (HAL_FDCAN_Start(&inst->handle) != HAL_OK) return FBK_ErrorFromHAL; // error detail in inst->handle.ErrorCode
 
-    led_turn_TX(channel, false); // green off
+    led_turn_TX(channel, false);
     inst->is_open = true;
     return FBK_Success;
 }
@@ -265,7 +277,7 @@ void can_close(int channel)
 
     // reset all class variables, also is_open
     can_reset(channel);
-    led_turn_TX(channel, true); // green on
+    led_turn_TX(channel, true); 
 }
 
 // Called from Buffer. Stores a packet in the Tx FIFO
@@ -299,7 +311,7 @@ void can_send_packet(int channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_
 }
 
 // Process data from CAN tx/rx circular buffers
-// This function is called approx 100 times in one millisecond
+// This function is called approx 100 times in one millisecond (on STM32G431)
 void can_process(int channel, uint32_t tick_now)
 {
     can_class* inst = &can_inst[channel];
@@ -344,7 +356,7 @@ void can_process(int channel, uint32_t tick_now)
             inst->last_tx_tick = tick_now;
             inst->tx_pending --;
         }
-        led_flash_TX(channel); // flash green 15 ms
+        led_flash_TX(channel); // flash 15 ms
     }
 
     // -------------------------- Rx Packet ------------------------------------
@@ -364,7 +376,7 @@ void can_process(int channel, uint32_t tick_now)
         led_flash_RX(channel); // flash 15 ms
     }
 
-    // Rx FIFO 1 receives all packets that have been rejected by the filters -> only flash the blue LED
+    // Rx FIFO 1 receives all packets that have been rejected by the filters -> only flash the Rx LED
     // Rx FIFO 0 and Rx FIFO 1 can store up to three packets each.
     if (HAL_FDCAN_GetRxMessage(&inst->handle, FDCAN_RX_FIFO1, &rx_header, can_data_buf) == HAL_OK)
     {
@@ -439,13 +451,16 @@ void can_process(int channel, uint32_t tick_now)
     // The ADM3050E supports up to 12 Mbit and works well even with 10 Mbit.
     if (!inst->delay_printed_once && inst->tdc_offset > 0 && inst->cur_status.TDCvalue > inst->tdc_offset && inst->cur_status.TDCvalue < 127)
     {
-        inst->delay_printed_once  = true;
-        uint32_t clock_MHz  = system_get_can_clock() / 1000000; // 160
-        uint32_t chip_delay = inst->cur_status.TDCvalue - inst->tdc_offset;
+        inst->delay_printed_once = true;
+        uint32_t clock_MHz = system_get_can_clock() / 1000000; // 160 or 64
+        if (clock_MHz > 0)
+        {
+            uint32_t chip_delay = inst->cur_status.TDCvalue - inst->tdc_offset;
 
-        // chip_delay = 21 mtq --> 21 * 1000 / 160 = 131 ns
-        sprintf(dbg_msg_buf, "Measured transceiver chip delay: %lu ns", chip_delay * 1000 / clock_MHz);
-        control_send_debug_mesg(channel, dbg_msg_buf);
+            // chip_delay = 21 mtq --> 21 * 1000 / 160 = 131 ns
+            sprintf(dbg_msg_buf, "Measured transceiver chip delay: %lu ns", chip_delay * 1000 / clock_MHz);
+            control_send_debug_mesg(channel, dbg_msg_buf);
+        }
     }
 }
 
@@ -529,176 +544,43 @@ void can_timer_100ms()
 
 // ----------------------------------------------------------------------------------------------
 
-// ATTENTION: Deprecated! Read the manual.
-// Set the nominal bitrate of the CAN peripheral
-// Always samplepoint 75%. (In previous versions 87.5% was used which may produce Rx/Tx errors)
+// set_data = false -> Set the nominal bitrate configuration of the CAN peripheral
+// set_data = true  -> Set the data    bitrate configuration of the CAN peripheral
+// If all 4 nominal values are identical to the data values, CAN FD is enabled and packets up to 64 byte can be sent without BRS.
 // See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
-// IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
-eFeedback can_set_baudrate(int channel, can_nom_bitrate bitrate)
+eFeedback can_set_bit_timing(int channel, bool set_data, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw)
 {
     can_class* inst = &can_inst[channel];
     if (inst->is_open)
         return FBK_AdapterMustBeClosed; // cannot set bitrate while on bus
 
-    inst->bitrate_nominal.Seg1 = 239;
-    inst->bitrate_nominal.Seg2 =  80;
-
-    switch (bitrate)
+    if (set_data)
     {
-        case CAN_BITRATE_10K:
-            inst->bitrate_nominal.Brp  = 50;
-            break;
-        case CAN_BITRATE_20K:
-            inst->bitrate_nominal.Brp  = 25;
-            break;
-        case CAN_BITRATE_50K:
-            inst->bitrate_nominal.Brp  = 10;
-            break;
-        case CAN_BITRATE_83K:
-            inst->bitrate_nominal.Brp  = 6;
-            break;
-        case CAN_BITRATE_100K:
-            inst->bitrate_nominal.Brp  = 5;
-            break;
-        case CAN_BITRATE_125K:
-            inst->bitrate_nominal.Brp  = 4;   // 160 MHz / 4 / (1 + 239 + 80) = 125 kBaud
-            break;                            // (1 + 239)   / (1 + 239 + 80) = 75%
-        case CAN_BITRATE_250K:
-            inst->bitrate_nominal.Brp  = 2;
-            break;
-        case CAN_BITRATE_500K:
-            inst->bitrate_nominal.Brp  = 1;
-            break;
-        case CAN_BITRATE_800K:
-            inst->bitrate_nominal.Brp  = 1;
-            inst->bitrate_nominal.Seg1 = 149;
-            inst->bitrate_nominal.Seg2 = 50;
-            break;
-        case CAN_BITRATE_1000K:
-            inst->bitrate_nominal.Brp  = 1;
-            inst->bitrate_nominal.Seg1 = 119;
-            inst->bitrate_nominal.Seg2 = 40;
-            break;
-        default:
-            return FBK_InvalidParameter;
+        if (!IS_FDCAN_DATA_PRESCALER(BRP)  ||
+            !IS_FDCAN_DATA_TSEG1    (Seg1) ||
+            !IS_FDCAN_DATA_TSEG2    (Seg2) ||
+            !IS_FDCAN_DATA_SJW      (Sjw))
+                return FBK_ParamOutOfRange;
     }
-
-    bitlimits* limits = utils_get_bit_limits();
-    inst->bitrate_nominal.Sjw = MIN(inst->bitrate_nominal.Seg2, limits->nom_sjw_max);
-
-    // Check if the settings are supported by the processor.
-    // If not the user must call can_set_nom_bit_timing() instead.
-    if (!IS_FDCAN_NOMINAL_PRESCALER(inst->bitrate_nominal.Brp)  ||
-        !IS_FDCAN_NOMINAL_TSEG1    (inst->bitrate_nominal.Seg1) ||
-        !IS_FDCAN_NOMINAL_TSEG2    (inst->bitrate_nominal.Seg2))
+    else // nominal
     {
-        inst->bitrate_nominal.Brp = 0; // baudrate not valid
+        if (!IS_FDCAN_NOMINAL_PRESCALER(BRP)  ||
+            !IS_FDCAN_NOMINAL_TSEG1    (Seg1) ||
+            !IS_FDCAN_NOMINAL_TSEG2    (Seg2) ||
+            !IS_FDCAN_NOMINAL_SJW      (Sjw))
+                return FBK_ParamOutOfRange;
+    }
+            
+    can_bitrate_cfg* bitrate = set_data ? &inst->bitrate_data : &inst->bitrate_nominal;
+
+    bitrate->Brp  = BRP;
+    bitrate->Seg1 = Seg1;
+    bitrate->Seg2 = Seg2;
+    bitrate->Sjw  = Sjw;
+    
+    if (can_calc_baud(bitrate) > MAX_CAN_BAUDRATE * 1000000)
         return FBK_ParamOutOfRange;
-    }
-    return FBK_Success;
-}
-
-// ATTENTION: Deprecated! Read the manual.
-// Set the data bitrate of the CAN peripheral
-// Samplepoint = 75%, except for 8 MBaud it must be 50% because 75% does not work.
-// See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
-// IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
-eFeedback can_set_data_baudrate(int channel, can_data_bitrate bitrate)
-{
-    can_class* inst = &can_inst[channel];
-    if (inst->is_open)
-        return FBK_AdapterMustBeClosed; // cannot set bitrate while on bus
-
-    inst->bitrate_data.Seg1 = 29;
-    inst->bitrate_data.Seg2 = 10;
-
-    switch (bitrate)
-    {
-        case CAN_DATA_BITRATE_500K:
-            inst->bitrate_data.Brp  = 8;
-            break;
-        case CAN_DATA_BITRATE_1M:
-            inst->bitrate_data.Brp  = 4;
-            break;
-        case CAN_DATA_BITRATE_2M:
-            inst->bitrate_data.Brp  = 2;
-            break;
-        case CAN_DATA_BITRATE_4M:
-            inst->bitrate_data.Brp  = 2;  // 160 MHz / 2 / (1 + 14 + 5) = 4 MBaud
-            inst->bitrate_data.Seg1 = 14; // (1 + 14)    / (1 + 14 + 5) = 75%
-            inst->bitrate_data.Seg2 = 5;
-            break;
-        case CAN_DATA_BITRATE_5M:
-            inst->bitrate_data.Brp  = 2;
-            inst->bitrate_data.Seg1 = 11;
-            inst->bitrate_data.Seg2 = 4;
-            break;
-        // For any strange reason the STM32G431 works at 8 Mbaud only if the samplepoint is 50%.
-        // But at 10 Mbaud it works with 75%. Very weird!
-        case CAN_DATA_BITRATE_8M:
-            inst->bitrate_data.Brp  = 2; // 160 MHz / 2 / (1 + 4 + 5) = 8 MBaud
-            inst->bitrate_data.Seg1 = 4; // (1 + 4)     / (1 + 4 + 5) = 50%
-            inst->bitrate_data.Seg2 = 5;
-            break;
-        default:
-            return FBK_InvalidParameter;
-    }
-
-    bitlimits* limits = utils_get_bit_limits();
-    inst->bitrate_data.Sjw = MIN(inst->bitrate_data.Seg2, limits->fd_sjw_max);
-
-    // Check if the settings are supported by the processor.
-    // If not the user must call can_set_data_bit_timing() instead.
-    if (!IS_FDCAN_DATA_PRESCALER(inst->bitrate_data.Brp)  ||
-        !IS_FDCAN_DATA_TSEG1    (inst->bitrate_data.Seg1) ||
-        !IS_FDCAN_DATA_TSEG2    (inst->bitrate_data.Seg2))
-    {
-        inst->bitrate_data.Brp = 0; // baudrate not valid
-        return FBK_ParamOutOfRange;
-    }
-    return FBK_Success;
-}
-
-// Set the nominal bitrate configuration of the CAN peripheral
-// See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
-eFeedback can_set_nom_bit_timing(int channel, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw)
-{
-    can_class* inst = &can_inst[channel];
-    if (inst->is_open)
-        return FBK_AdapterMustBeClosed; // cannot set bitrate while on bus
-
-    if (!IS_FDCAN_NOMINAL_PRESCALER(BRP)  ||
-        !IS_FDCAN_NOMINAL_TSEG1    (Seg1) ||
-        !IS_FDCAN_NOMINAL_TSEG2    (Seg2) ||
-        !IS_FDCAN_NOMINAL_SJW      (Sjw))
-            return FBK_ParamOutOfRange;
-
-    inst->bitrate_nominal.Brp  = BRP;
-    inst->bitrate_nominal.Seg1 = Seg1;
-    inst->bitrate_nominal.Seg2 = Seg2;
-    inst->bitrate_nominal.Sjw  = Sjw;
-    return FBK_Success;
-}
-
-// Set the data bitrate configuration of the CAN peripheral
-// If all 4 values are identical to the nominal settings, CAN FD is enabled and packets up to 64 byte can be sent without BRS.
-// See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
-eFeedback can_set_data_bit_timing(int channel, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw)
-{
-    can_class* inst = &can_inst[channel];
-    if (inst->is_open)
-        return FBK_AdapterMustBeClosed; // cannot set bitrate while on bus
-
-    if (!IS_FDCAN_DATA_PRESCALER(BRP)  ||
-        !IS_FDCAN_DATA_TSEG1    (Seg1) ||
-        !IS_FDCAN_DATA_TSEG2    (Seg2) ||
-        !IS_FDCAN_DATA_SJW      (Sjw))
-            return FBK_ParamOutOfRange;
-
-    inst->bitrate_data.Brp  = BRP;
-    inst->bitrate_data.Seg1 = Seg1;
-    inst->bitrate_data.Seg2 = Seg2;
-    inst->bitrate_data.Sjw  = Sjw;
+    
     return FBK_Success;
 }
 
@@ -741,22 +623,31 @@ void can_print_info(int channel)
         strcat(buf, inst->bitrate_nominal.Brp == inst->bitrate_data.Brp ? "Yes" : "No");
     }
     control_send_debug_mesg(channel, buf);
+    
+    // ------------------- Debugging --------------------
+    // Optional additional information: pin BOOT0 and TDC offset
+    
+#if 0
+    // Print Transceiver Delay Compensation
+    if (inst->tdc_offset > 0)
+        sprintf(buf, "TDC offset: %lu mtq", inst->tdc_offset);
+    else
+        strcpy(buf, "TDC: not used");
 
-    // optional additional information: pin BOOT0 and TDC offset
-    if (false)
+    // Print enable status of pin BOOT0
+    const char* pin_status;
+    switch (system_is_option_enabled(OPT_BOOT0_Enable))
     {
-        // Print Transceiver Delay Compensation
-        if (inst->tdc_offset > 0)
-            sprintf(buf, "TDC offset: %lu mtq", inst->tdc_offset);
-        else
-            strcpy(buf, "TDC: not used");
-
-        // Print enable status of pin BOOT0
-        strcat(buf, ", Pin BOOT0: ");
-        strcat(buf, (system_is_option_enabled(OPT_BOOT0_Enable)) ? "enabled" : "disabled");
-
-        control_send_debug_mesg(channel, buf);
+        case Option_Active:   pin_status = "enabled";       break;
+        case Option_Inactive: pin_status = "disabled";      break;
+        default:              pin_status = "not supported"; break;
     }
+    
+    strcat(buf, ", Pin BOOT0: ");        
+    strcat(buf, pin_status);
+
+    control_send_debug_mesg(channel, buf);
+#endif
 }
 
 // ----------------------------------------------------------------------------------------------
@@ -764,7 +655,7 @@ void can_print_info(int channel)
 // The processor allows up to 28 standard filters and up to 8 extended filters.
 // Nobody needs so many filters -> allow 8 user filters.
 // Rx FIFO 0 receives all packets that pass. They are sent to the host application over USB.
-// Rx FIFO 1 receives all packets that are rejected, they only flash the blue LED.
+// Rx FIFO 1 receives all packets that are rejected, they only flash the Rx LED.
 // Each FIFO can store 3 Rx packets before it is full.
 // ---------------------------------------------------------
 // While all industry CAN bus adapters allow to set filters after opening the adapter, the STM32 processor is very restricted.
@@ -942,6 +833,14 @@ bool can_is_tx_fifo_free(int channel)
 FDCAN_HandleTypeDef *can_get_handle(int channel)
 {
     return &can_inst[channel].handle;
+}
+
+// get the nominal or data bitrate
+can_bitrate_cfg* can_getBitrate(int channel, bool get_data)
+{
+    can_class* inst = &can_inst[channel];
+    if (get_data) return &inst->bitrate_data;
+    else          return &inst->bitrate_nominal;
 }
 
 // ---------------------------------------------------------------------------------------------------

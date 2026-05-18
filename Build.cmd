@@ -22,14 +22,16 @@ echo C: Build Slcan Jhoinrch
 echo D: Build Slcan Openlightlabs
 echo E: Build Slcan OleksiiSolo
 echo F: Build Slcan OleksiiDual
-echo G: Build Candlelight Multiboard
-echo H: Build Candlelight Jhoinrch
-echo I: Build Candlelight Openlightlabs
-echo K: Build Candlelight OleksiiSolo
-echo L: Build Candlelight OleksiiDual
+echo G: Build Slcan WeActStudioV1
+echo H: Build Candlelight Multiboard
+echo I: Build Candlelight Jhoinrch
+echo K: Build Candlelight Openlightlabs
+echo L: Build Candlelight OleksiiSolo
+echo M: Build Candlelight OleksiiDual
+echo N: Build Candlelight WeActStudioV1
 echo X: Exit
 echo ----------------------------------
-choice /C XABCDEFGHIKL /N /M "Press a key: "
+choice /C XABCDEFGHIKLMN /N /M "Press a key: "
 
 cls
 
@@ -56,11 +58,13 @@ if %errorlevel% ==  4 call :Compile  Make_G431_Slcan_Jhoinrch
 if %errorlevel% ==  5 call :Compile  Make_G431_Slcan_Openlightlabs
 if %errorlevel% ==  6 call :Compile  Make_G431_Slcan_OleksiiSolo
 if %errorlevel% ==  7 call :Compile  Make_G473_Slcan_OleksiiDual
-if %errorlevel% ==  8 call :Compile  Make_G431_Candle_Multiboard
-if %errorlevel% ==  9 call :Compile  Make_G431_Candle_Jhoinrch
-if %errorlevel% == 10 call :Compile  Make_G431_Candle_Openlightlabs
-if %errorlevel% == 11 call :Compile  Make_G431_Candle_OleksiiSolo
-if %errorlevel% == 12 call :Compile  Make_G473_Candle_OleksiiDual
+if %errorlevel% ==  8 call :Compile  Make_G0B1_Slcan_WeActStudioV1
+if %errorlevel% ==  9 call :Compile  Make_G431_Candle_Multiboard
+if %errorlevel% == 10 call :Compile  Make_G431_Candle_Jhoinrch
+if %errorlevel% == 11 call :Compile  Make_G431_Candle_Openlightlabs
+if %errorlevel% == 12 call :Compile  Make_G431_Candle_OleksiiSolo
+if %errorlevel% == 13 call :Compile  Make_G473_Candle_OleksiiDual
+if %errorlevel% == 14 call :Compile  Make_G0B1_Candle_WeActStudioV1
 
 rem Copy all BIN files to HUD ECU Hacker
 for /D %%i in ("Build_STM*") do (

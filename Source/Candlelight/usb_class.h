@@ -20,7 +20,7 @@
 #define USBD_INTERFACES_COUNT    (CANDLE_INRERFACE_COUNT + 1)  // total count of USB interfaces
 
 void               USBD_SendFrameToHost(int channel, void *frame);
-USBD_StatusTypeDef USBD_ConfigureEndpoints(USBD_HandleTypeDef *pdev);
-bool               USBD_SetupStageRequest(PCD_HandleTypeDef *hpcd);
-uint8_t*           USBD_GetUserStringDescr(USBD_HandleTypeDef *pdev, uint8_t index, uint16_t *length);
+USBD_StatusTypeDef USBD_ConfigureEndpoints();
+bool               USBD_SetupStageRequest();
+uint8_t*           USBD_GetUserStringDescr(uint8_t index, uint16_t *length);
 

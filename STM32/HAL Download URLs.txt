@@ -1,0 +1,20 @@
+
+Hardware Abstraction Layer (HAL) from ST Microelectronics
+
+Currently the version 1.2.5 of the STM32G4xx HAL is used.
+https://github.com/STMicroelectronics/stm32g4xx-hal-driver/tree/v1.2.5
+
+Currently the version 1.4.6 of the STM32G0xx HAL is used.
+https://github.com/STMicroelectronics/stm32g0xx-hal-driver/tree/v1.4.6
+
+You also get the HAL files when you install the STM32 Cube CLT
+https://www.st.com/en/development-tools/stm32cubeclt.html
+
+
+
+Read here how to compile the firmware:
+https://netcult.ch/elmue/CANable%20Firmware%20Update/#Compiling
+
+
+
+

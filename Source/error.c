@@ -55,7 +55,7 @@ bool error_is_report_due(int channel, uint32_t tick_now)
     HAL_FDCAN_GetProtocolStatus(can_get_handle(channel), &status);
     HAL_FDCAN_GetErrorCounters (can_get_handle(channel), &counters);
 
-    // error passive or bus off --> turn green + blue LED on permanently
+    // error passive or bus off --> turn Rx + Tx LED on permanently
     if (status.Warning)      inst->cur_state.bus_status = BUS_StatusWarning; // MCU register FDCAN_PSR, flag EW (>  96 errors)
     if (status.ErrorPassive) inst->cur_state.bus_status = BUS_StatusPassive; // MCU register FDCAN_PSR, flag EP (> 128 errors)
     if (status.BusOff)       inst->cur_state.bus_status = BUS_StatusOff;     // MCU register FDCAN_PSR, flag BO (> 248 errors)

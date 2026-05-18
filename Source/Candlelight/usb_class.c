@@ -51,9 +51,10 @@
 #define MAX_BTABLE_SIZE        56
 
 // ----- Globals
-extern USBD_HandleTypeDef    GLB_UsbDevice;
 extern eUserFlags            GLB_UserFlags[CHANNEL_COUNT];
 extern bool                  GLB_ProtoElmue;
+extern USBD_HandleTypeDef    USB_Handle;
+extern PCD_HandleTypeDef     PCD_Handle;
 
 // ----- Constants
 // ATTENTION: Using the same endpoint number for IN and OUT (IN = 0x81 + OUT = 0x01) is not possible with double buffering.
@@ -62,22 +63,26 @@ uint8_t EndpointsOUT[] = { 0x02, 0x04, 0x06 };
 
 // ----- Variables
 // reverse lookup table endpoint --> channel
-uint8_t EpToChannel[16] = {0};
-kDfuStatus DFU_Status   = {0};
+uint8_t    EpToChannel[16] = {0};
+kDfuStatus DFU_Status      = {0};
+bool       Class_InitDone  = false;
 
-uint8_t  USBD_GS_Init       (USBD_HandleTypeDef *pdev, uint8_t cfgidx);
-uint8_t  USBD_GS_DeInit     (USBD_HandleTypeDef *pdev, uint8_t cfgidx);
-uint8_t  USBD_GS_Setup      (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-uint8_t  USBD_GS_EP0_RxReady(USBD_HandleTypeDef *pdev);
-uint8_t  USBD_GS_DataIn     (USBD_HandleTypeDef *pdev, uint8_t epnum);
-uint8_t  USBD_GS_DataOut    (USBD_HandleTypeDef *pdev, uint8_t epnum);
+// ----- Private Functions
+// These functions are all called over usb_core and usb_lowlevel from PCD_EP_ISR_Handler() interrupts
+uint8_t  USBD_GS_Init       (uint8_t cfgidx);
+uint8_t  USBD_GS_DeInit     (uint8_t cfgidx);
+uint8_t  USBD_GS_Setup      (USBD_SetupReqTypedef *req);
+uint8_t  USBD_GS_EP0_RxReady();
+uint8_t  USBD_GS_DataIn     (uint8_t epnum);
+uint8_t  USBD_GS_DataOut    (uint8_t epnum);
 // -------------
-void     USBD_GS_Vendor_Request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-bool     USBD_GS_DFU_Request   (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
-bool     USBD_GS_CustomRequest (USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req);
+void     USBD_GS_Vendor_Request(USBD_SetupReqTypedef *req);
+bool     USBD_GS_DFU_Request   (USBD_SetupReqTypedef *req);
+bool     USBD_GS_CustomRequest (USBD_SetupReqTypedef *req);
+// -------------
+void     ResetDfuStatus();
 
 // WinUSB class callbacks structure
-// These functions are all called over usb_core and usb_lowlevel from PCD_EP_ISR_Handler() interrupts
 USBD_ClassTypeDef USBD_ClassCallbacks =
 {
     .Init              = USBD_GS_Init,
@@ -366,19 +371,18 @@ __ALIGN_BEGIN uint8_t USBD_MicrosoftExtPropertyDescr[] __ALIGN_END =
 
 // Configue Packet Memory Area (PMA) for all endpoints
 // Called from USBD_LL_Init() during initialization
-USBD_StatusTypeDef USBD_ConfigureEndpoints(USBD_HandleTypeDef *pdev)
+USBD_StatusTypeDef USBD_ConfigureEndpoints()
 {
-    PCD_HandleTypeDef* hpcd = (PCD_HandleTypeDef*)pdev->pData;
     uint32_t addr = MAX_BTABLE_SIZE;
 
-    if (!USBD_LL_ConfigurePMA(hpcd, 0x00, false, &addr, USB_MAX_EP0_SIZE) || // EP 0 OUT
-        !USBD_LL_ConfigurePMA(hpcd, 0x80, false, &addr, USB_MAX_EP0_SIZE))   // EP 0 IN
+    if (!USBD_LL_ConfigurePMA(0x00, false, &addr, USB_MAX_EP0_SIZE) || // EP 0 OUT
+        !USBD_LL_ConfigurePMA(0x80, false, &addr, USB_MAX_EP0_SIZE))   // EP 0 IN
         return USBD_FAIL; // PMA buffer overflow
 
     for (uint8_t C=0; C<CANDLE_INRERFACE_COUNT; C++)
     {
-        if (!USBD_LL_ConfigurePMA(hpcd, EndpointsIN [C], false, &addr, EP_DATA_PACKET_SIZE) || // EP 1,3,5 IN
-            !USBD_LL_ConfigurePMA(hpcd, EndpointsOUT[C], true,  &addr, EP_DATA_PACKET_SIZE))   // EP 2,4,6 OUT, double buffered
+        if (!USBD_LL_ConfigurePMA(EndpointsIN [C], false, &addr, EP_DATA_PACKET_SIZE) || // EP 1,3,5 IN
+            !USBD_LL_ConfigurePMA(EndpointsOUT[C], true,  &addr, EP_DATA_PACKET_SIZE))   // EP 2,4,6 OUT, double buffered
             return USBD_FAIL; // PMA buffer overflow
     }
     return USBD_OK;
@@ -387,14 +391,10 @@ USBD_StatusTypeDef USBD_ConfigureEndpoints(USBD_HandleTypeDef *pdev)
 // =========================================================================================================
 
 // interrupt callback
-uint8_t USBD_GS_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
+uint8_t USBD_GS_Init(uint8_t cfgidx)
 {
-    pdev->pClassData = &GLB_UsbDevice; // dummy, not used here, but required for usb_core.c
-
-    // Initialize the default response to DFU_RequGetStatus request
-    DFU_Status.Status    = DfuStatus_OK;     // no error
-    DFU_Status.State     = DfuState_AppIdle; // in application mode and idle
-    DFU_Status.StringIdx = 0xFF;             // no string descriptor available
+    Class_InitDone = true;
+    ResetDfuStatus();
 
     for (uint8_t C=0; C<CANDLE_INRERFACE_COUNT; C++)
     {
@@ -405,24 +405,29 @@ uint8_t USBD_GS_Init(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
         EpToChannel[EndpointsIN [C] & 0xF] = C; // 0x81 --> 0, 0x83 --> 1, 0x85 --> 2
         EpToChannel[EndpointsOUT[C] & 0xF] = C; // 0x02 --> 0, 0x04 --> 1, 0x06 --> 2
 
-        USBD_LL_OpenEP(pdev, EndpointsIN [C], USBD_EP_TYPE_BULK, EP_DATA_PACKET_SIZE);
-        USBD_LL_OpenEP(pdev, EndpointsOUT[C], USBD_EP_TYPE_BULK, EP_DATA_PACKET_SIZE);
+        USBD_LL_OpenEP(EndpointsIN [C], USBD_EP_TYPE_BULK, EP_DATA_PACKET_SIZE);
+        USBD_LL_OpenEP(EndpointsOUT[C], USBD_EP_TYPE_BULK, EP_DATA_PACKET_SIZE);
 
         // pass the buffer from_host_buf to the HAL to store USB OUT data
-        USBD_StatusTypeDef status = USBD_LL_PrepareReceive(pdev, EndpointsOUT[C], inst->from_host_buf, sizeof(inst->from_host_buf));
+        USBD_StatusTypeDef status = USBD_LL_PrepareReceive(EndpointsOUT[C], inst->from_host_buf, sizeof(inst->from_host_buf));
         if (status != USBD_OK)
             return status;
     }
+    
     return USBD_OK;
 }
 
 // interrupt callback
-uint8_t USBD_GS_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
+uint8_t USBD_GS_DeInit(uint8_t cfgidx)
 {
-    for (uint8_t C=0; C<CANDLE_INRERFACE_COUNT; C++)
+    if (Class_InitDone)
     {
-        USBD_LL_CloseEP(pdev, EndpointsIN [C]);
-        USBD_LL_CloseEP(pdev, EndpointsOUT[C]);
+        for (uint8_t C=0; C<CANDLE_INRERFACE_COUNT; C++)
+        {
+            USBD_LL_CloseEP(EndpointsIN [C]);
+            USBD_LL_CloseEP(EndpointsOUT[C]);
+        }
+        Class_InitDone = false;
     }
     return USBD_OK;
 }
@@ -430,7 +435,7 @@ uint8_t USBD_GS_DeInit(USBD_HandleTypeDef *pdev, uint8_t cfgidx)
 // interrupt callback
 // A SETUP request has been received
 // This callback is called from USBD_StdDevReq() in usb_ctrlreq.c and the return value is ignored.
-uint8_t USBD_GS_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
+uint8_t USBD_GS_Setup(USBD_SetupReqTypedef *req)
 {
     // ATTENTION: USBD_CtlSendData() does not work with a local buffer on the stack --> define as static!
     static uint8_t ifalt = 0;
@@ -439,14 +444,14 @@ uint8_t USBD_GS_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     {
         case USB_REQ_TYPE_CLASS:
         case USB_REQ_TYPE_VENDOR:
-            USBD_GS_Vendor_Request(pdev, req);
+            USBD_GS_Vendor_Request(req);
             break;
 
         case USB_REQ_TYPE_STANDARD:
             switch (req->bRequest)
             {
                 case USB_REQ_GET_INTERFACE:
-                    USBD_CtlSendData(pdev, &ifalt, 1);
+                    USBD_CtlSendData(&ifalt, 1);
                     break;
             }
             break;
@@ -457,35 +462,35 @@ uint8_t USBD_GS_Setup(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
 // called from inside an interrupt callback
 // First stage of vendor SETUP requests
 // See "USB Tutorial.chm" in subfolder "Documentation"
-void USBD_GS_Vendor_Request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
+void USBD_GS_Vendor_Request(USBD_SetupReqTypedef *req)
 {
     // wIndex = interface number
     if (req->wIndex == DFU_INTERFACE_NUMBER)
     {
-        if (USBD_GS_DFU_Request(pdev, req))
+        if (USBD_GS_DFU_Request(req))
             return; // success
     }
     else
     {
-        if (control_setup_request(pdev, req))
+        if (control_setup_request(req))
             return; // success
     }
-    USBD_CtlError(pdev, 0); // stall endpoint 0
+    USBD_CtlError(0); // stall endpoint 0
 }
 
 // interrupt callback
 // Second stage of SETUP requests with OUT data
 // This callback is called from USBD_LL_DataOutStage() in usb_core.c and the return value is ignored.
 // IMPORTANT: Read comment of control_setup_OUT_data() !!!
-uint8_t USBD_GS_EP0_RxReady(USBD_HandleTypeDef *pdev)
+uint8_t USBD_GS_EP0_RxReady()
 {
-    control_setup_OUT_data(pdev);
+    control_setup_OUT_data();
     return USBD_OK; // ignored
 }
 
 // called from inside an interrupt callback
 // request has destination to interface 1 (firmware update)
-bool USBD_GS_DFU_Request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
+bool USBD_GS_DFU_Request(USBD_SetupReqTypedef *req)
 {
     if ((req->bRequestType & USB_REQ_RECIPIENT_MASK) != USB_REQ_RECIPIENT_INTERFACE ||
         (req->bRequestType & USB_REQ_TYPE_MASK)      != USB_REQ_TYPE_CLASS)
@@ -494,15 +499,33 @@ bool USBD_GS_DFU_Request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     switch (req->bRequest)
     {
         case DFU_RequDetach:
+            ResetDfuStatus();
+            
             // Enter DFU mode with a delay of 300 ms
             // If the pin BOOT0 was disabled the user must reconnect the USB cable to generate a hardware reset.
             // Inform the firmware updater that the device cannot enter DFU mode by returning state DfuSte_AppDetach
-            if (dfu_switch_to_bootloader() == FBK_ResetRequired)
-                DFU_Status.State = DfuState_AppDetach; // hardware reset required
+            // Added by ElmüSoft: In case of State = DfuState_Error, eFeedback is sent in StringIdx.
+            eFeedback e_Feedback = dfu_switch_to_bootloader();
+            switch (e_Feedback)
+            {
+                case FBK_Success: 
+                    break;
+                case FBK_ResetRequired: 
+                    DFU_Status.State = DfuState_AppDetach; // hardware reset required --> user must disconnect USB cable
+                    break;
+                default: // FBK_UnsupportedFeature, FBK_AdapterMustBeClosed, FBK_OptBytesProgrFailed
+                    DFU_Status.State     = DfuState_Error;
+                    DFU_Status.StringIdx = e_Feedback; // use the byte StringIdx to transfer the feedback code.
+                    break;
+            }
             return true;
 
         case DFU_RequGetStatus:
-            USBD_CtlSendData(pdev, (uint8_t*)&DFU_Status, sizeof(DFU_Status));
+            USBD_CtlSendData((uint8_t*)&DFU_Status, sizeof(DFU_Status));
+            return true;
+            
+        case DFU_RequClearStatus:
+            ResetDfuStatus();
             return true;
 
         default:
@@ -510,9 +533,17 @@ bool USBD_GS_DFU_Request(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     }
 }
 
+// Initialize the default response to DFU_RequGetStatus
+void ResetDfuStatus()
+{
+    DFU_Status.Status    = DfuStatus_OK;     // no error
+    DFU_Status.State     = DfuState_AppIdle; // in application mode and idle
+    DFU_Status.StringIdx = 0xFF;             // invalid value -> no string or feedback code available
+}
+
 // interrupt callback
 // host data has arrived on the USB OUT endpoint (0x02, 0x04, 0x06)
-uint8_t USBD_GS_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
+uint8_t USBD_GS_DataOut(uint8_t epnum)
 {
     int channel = EpToChannel[epnum & 0xF]; // epnum = 0x02 --> channel 0, 0x04 --> 1, 0x06 --> 2
     buf_class* usb_buf = buf_get_instance(channel);
@@ -548,13 +579,13 @@ uint8_t USBD_GS_DataOut(USBD_HandleTypeDef *pdev, uint8_t epnum)
     }
 
     // pass the buffer from_host_buf to the HAL for the next frame to receive
-    USBD_LL_PrepareReceive(pdev, epnum, usb_buf->from_host_buf, sizeof(usb_buf->from_host_buf));
+    USBD_LL_PrepareReceive(epnum, usb_buf->from_host_buf, sizeof(usb_buf->from_host_buf));
     return USBD_OK; // ignored
 }
 
 // interrupt callback
 // get a Unicode string for the given string index that comes from the descriptors
-uint8_t* USBD_GetUserStringDescr(USBD_HandleTypeDef *pdev, uint8_t index, uint16_t *length)
+uint8_t* USBD_GetUserStringDescr(uint8_t index, uint16_t *length)
 {
     switch (index)
     {
@@ -591,16 +622,15 @@ uint8_t* USBD_GetUserStringDescr(USBD_HandleTypeDef *pdev, uint8_t index, uint16
 
 // Called from interrupt handler PCD_EP_ISR_Handler --> HAL_PCD_SetupStageCallback
 // return true if request was handled
-bool USBD_SetupStageRequest(PCD_HandleTypeDef *hpcd)
+bool USBD_SetupStageRequest()
 {
-    USBD_HandleTypeDef *pdev = (USBD_HandleTypeDef*)hpcd->pData;
-    USBD_ParseSetupRequest((USBD_SetupReqTypedef*)&pdev->request, (uint8_t*)hpcd->Setup);
+ todo   USBD_ParseSetupRequest((USBD_SetupReqTypedef*)&USB_Handle.request, (uint8_t*)PCD_Handle.Setup);
 
-    switch (pdev->request.bRequestType & USB_REQ_RECIPIENT_MASK)
+    switch (USB_Handle.request.bRequestType & USB_REQ_RECIPIENT_MASK)
     {
         case USB_REQ_RECIPIENT_DEVICE:    // device request
         case USB_REQ_RECIPIENT_INTERFACE: // interface request
-            return USBD_GS_CustomRequest(pdev, &pdev->request);
+            return USBD_GS_CustomRequest(&USB_Handle.request);
         default:
             return false;
     }
@@ -611,7 +641,7 @@ bool USBD_SetupStageRequest(PCD_HandleTypeDef *hpcd)
 // Windows sends an interface request, but for testing with WinUSB it is required that also a device request is answered the same way.
 // For details read: https://netcult.ch/elmue/CANable Firmware Update
 // return true if request was handled
-bool USBD_GS_CustomRequest(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
+bool USBD_GS_CustomRequest(USBD_SetupReqTypedef *req)
 {
     if (req->bRequest != USBD_MS_OS_VENDOR_CODE || req->wValue >= USBD_INTERFACES_COUNT)
         return false;
@@ -619,7 +649,7 @@ bool USBD_GS_CustomRequest(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
     switch (req->wIndex) // wIndex = requested descriptor type
     {
         case 4: // Microsoft OS Feature Request
-            USBD_CtlSendData(pdev, USBD_MicrosoftFeatureDescr, MIN(sizeof(USBD_MicrosoftFeatureDescr), req->wLength));
+            USBD_CtlSendData(USBD_MicrosoftFeatureDescr, MIN(sizeof(USBD_MicrosoftFeatureDescr), req->wLength));
             return true;
 
         case 5: // Microsoft OS Extended Properties Request
@@ -636,7 +666,7 @@ bool USBD_GS_CustomRequest(USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef *req)
             if (req->wValue == DFU_INTERFACE_NUMBER)
                 buf[70] = '2';
 
-            USBD_CtlSendData(pdev, buf, MIN(sizeof(USBD_MicrosoftExtPropertyDescr), req->wLength));
+            USBD_CtlSendData(buf, MIN(sizeof(USBD_MicrosoftExtPropertyDescr), req->wLength));
             return true;
         }
     }
@@ -683,17 +713,17 @@ void USBD_SendFrameToHost(int channel, void* frame)
     memcpy(usb_buf->to_host_buf, frame, len);
 
     // always returns HAL_OK
-    USBD_LL_Transmit(&GLB_UsbDevice, EndpointsIN[channel], usb_buf->to_host_buf, len);
+    USBD_LL_Transmit(EndpointsIN[channel], usb_buf->to_host_buf, len);
 }
 
 // interrupt callback
 // The data from USBD_SendFrameToHost() has been sent to the host on IN endpoint (0x81, 0x83, 0x85)
-uint8_t USBD_GS_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
+uint8_t USBD_GS_DataIn(uint8_t epnum)
 {
     int channel = EpToChannel[epnum & 0xF]; // epnum = 0x81 --> channel 0, 0x83 --> 1, 0x85 --> 2
     buf_class* usb_buf = buf_get_instance(channel);
 
-    // This important code was missing in the legacy firmware. (fixed by ElmSüoft)
+    // This important code was missing in the legacy firmware. (fixed by ElmüSoft)
     // After sending exactly 64 bytes a zero length packet (ZLP) must follow.
     // Read "Excellent USB Tutorial.chm" in subfolder "Documentation"
     if (usb_buf->SendZLP)
@@ -706,7 +736,7 @@ uint8_t USBD_GS_DataIn(USBD_HandleTypeDef *pdev, uint8_t epnum)
         // is exactly the maximum packet size (EP_DATA_PACKET_SIZE).
         // Otherwise, if the last packet in a transfer is exactly wMaxPacketSize, the host could not know if more data will follow.
         // If the ZLP is missing the host will expect another packet to come. To test this send a debug message with 62 characters.
-        USBD_LL_Transmit(&GLB_UsbDevice, epnum, NULL, 0);
+        USBD_LL_Transmit(epnum, NULL, 0);
     }
     else
     {

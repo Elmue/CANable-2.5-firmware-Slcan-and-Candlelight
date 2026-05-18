@@ -149,18 +149,18 @@ struct _USBD_HandleTypeDef;
 
 typedef struct 
 {
-  uint8_t (*Init)  (struct _USBD_HandleTypeDef *pdev, uint8_t cfgidx);
-  uint8_t (*DeInit)(struct _USBD_HandleTypeDef *pdev, uint8_t cfgidx);
+  uint8_t (*Init)  (uint8_t cfgidx);
+  uint8_t (*DeInit)(uint8_t cfgidx);
   /* Control Endpoints*/
-  uint8_t (*Setup)(struct _USBD_HandleTypeDef *pdev, USBD_SetupReqTypedef  *req);
-  uint8_t (*EP0_TxSent) (struct _USBD_HandleTypeDef *pdev);
-  uint8_t (*EP0_RxReady)(struct _USBD_HandleTypeDef *pdev);
+  uint8_t (*Setup)(USBD_SetupReqTypedef  *req);
+  uint8_t (*EP0_TxSent) ();
+  uint8_t (*EP0_RxReady)();
   /* Class Specific Endpoints*/
-  uint8_t (*DataIn) (struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
-  uint8_t (*DataOut)(struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
-  uint8_t (*SOF)(struct _USBD_HandleTypeDef *pdev);
-  uint8_t (*IsoINIncomplete) (struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
-  uint8_t (*IsoOUTIncomplete)(struct _USBD_HandleTypeDef *pdev, uint8_t epnum);
+  uint8_t (*DataIn) (uint8_t epnum);
+  uint8_t (*DataOut)(uint8_t epnum);
+  uint8_t (*SOF)();
+  uint8_t (*IsoINIncomplete) (uint8_t epnum);
+  uint8_t (*IsoOUTIncomplete)(uint8_t epnum);
 
 } USBD_ClassTypeDef;
 
@@ -207,11 +207,7 @@ typedef struct _USBD_HandleTypeDef
   uint8_t                 dev_address;           // address on USB bus (assigned by host computer)
   uint8_t                 dev_test_mode;
   uint32_t                dev_remote_wakeup;
-  
   USBD_SetupReqTypedef    request;
-  USBD_ClassTypeDef       *pClass;
-  void                    *pClassData;
-  void                    *pData;
 } USBD_HandleTypeDef;
 
 

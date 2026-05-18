@@ -84,7 +84,7 @@ void buf_process(int channel, uint32_t tick_now)
     buf_process_can (channel, usb_buf, can_buf);
 
     // The APP_xxx errors are deleted after sending them to the host.
-    // They must be refreshed here, so the green + blue LED stay ON permanently and show that there is a problem.
+    // They must be refreshed here, so the Rx + Tx LED stay ON permanently and show that there is a problem.
     if (list_is_empty(&can_buf->list_can_pool))  error_assert(channel, APP_CanTxOverflow, false);
     if (list_is_empty(&usb_buf->list_host_pool)) error_assert(channel, APP_UsbInOverflow, false);
 }
@@ -174,7 +174,7 @@ void buf_process_can(int channel, buf_class* usb_buf, buf_class* can_buf)
     tx_header.FDFormat            = FDCAN_CLASSIC_CAN;
     tx_header.IdType              = FDCAN_STANDARD_ID;
     tx_header.BitRateSwitch       = FDCAN_BRS_OFF;
-    tx_header.TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the green LED
+    tx_header.TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the Tx LED
     tx_header.ErrorStateIndicator = can_is_passive(channel) ? FDCAN_ESI_PASSIVE : FDCAN_ESI_ACTIVE;
     tx_header.MessageMarker       = marker;
 

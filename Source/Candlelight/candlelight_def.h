@@ -101,9 +101,9 @@ typedef enum // transferred as 32 bit
 // GS_ReqGetDeviceVersion
 typedef struct  
 {
-    uint8_t  reserved1;
-    uint8_t  reserved2;
-    uint8_t  reserved3;
+    uint8_t  hal_ver_high;   // The HAL version
+    uint8_t  hal_ver_mid;
+    uint8_t  hal_ver_low;
     uint8_t  icount;         // Candlelight interface count - 1
     uint32_t sw_version_bcd; // software (firmware) version in BCD format
     uint32_t hw_version_bcd; // hardware version in BCD format
@@ -421,6 +421,7 @@ typedef struct  // Legacy (size = 80 byte)
 typedef enum // 32 bit
 {
     BRD_Quartz_In_Use  = 0x00000001, // the board has a quartz and the firmware is using it
+    BRD_USB_HighSpeed  = 0x00000002, // the board supports ultra fast USB transfer (480 MBit/s)
 } eBoardFlags;
 
 // ELM_ReqGetBoardInfo
