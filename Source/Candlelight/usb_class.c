@@ -624,7 +624,7 @@ uint8_t* USBD_GetUserStringDescr(uint8_t index, uint16_t *length)
 // return true if request was handled
 bool USBD_SetupStageRequest()
 {
- todo   USBD_ParseSetupRequest((USBD_SetupReqTypedef*)&USB_Handle.request, (uint8_t*)PCD_Handle.Setup);
+    USBD_ParseSetupRequest(&USB_Handle.request, (uint8_t*)PCD_Handle.Setup);
 
     switch (USB_Handle.request.bRequestType & USB_REQ_RECIPIENT_MASK)
     {
