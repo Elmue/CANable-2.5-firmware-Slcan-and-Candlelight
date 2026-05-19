@@ -367,20 +367,20 @@
 <div>They force you to use their <b>proprietary software</b> for flashing, which is only for Windows.</div>
 <div>You can only upload a firmware after using another proprietary software that converts it into an <b>FPK file</b>.</div>
 <div>Additionally your firmware must be <b>compiled</b> to work with their proprietary 'firmware updater'.</div>
-<div>They even prohibt to remove their 'firmware updater' because they have disabled the <b>bootloader pin</b>.</div>
+<div>They even prohibit to remove their 'firmware updater' because they have disabled the <b>bootloader pin</b>.</div>
 <div>And on top of this they put a useless <b>write protection</b> and a <b>read protection</b> on this 'firmware updater'.</div>
 <div>They programmed the processor to <b>erase</b> the entire flash memory when the read protection is turned off.</div>
 <div>WeActStudio sells you a <span class="Error">crippled adapter</span>. They do not allow you to chose which firmware you want to use.</div>
 <p>
 <div>There is <b>no easy way</b> to remove their 'firmware updater' and the several protections and to enable pin BOOT0.</div>
 <div>They force you to buy a <b>ST-Link adapter</b>, solder 4 pins to the board, install the STM <b>Cube Programmer</b>,</div>
-<div>which is a monster of of 1.5 GB and manually manipulate the <b>option bytes</b> which is critical.</div>
+<div>which is a monster of of 1.5 GB and manually manipulate the <b>option bytes</b> which is risky.</div>
 <div>Cube Programmer is a garbage that mostly does not connect to the adapter without any error message.</div>
 <p>
 <div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer v5.0</a> removes all this WeAct stuff with <b>one click</b>.</div>
 <div>To achieve this I had to write a firmware that I upload with the <b>Y-Modem</b> protocol through their firmware updater.<//div>
-<div>My <b>ElmüSoft Restore Adapter</b> fimware removes all this <b>crap</b> and leaves a clean and unprotected flash memory.</div>
-<div>Just click the button <b>Enter DFU Mode</b> and you can upload the CANable 2.5 firmware via DFU protocol.</div>
+<div>My 'ElmüSoft Restore Adapter' firmware removes all this crap and leaves a clean and unprotected flash memory.</div>
+<div>Just click the button <b>Enter DFU Mode</b>, then you can upload the CANable 2.5 firmware via DFU protocol.</div>
 <p>
 
 <!--
@@ -1767,8 +1767,11 @@
 
 <a name="Compiling"></a>
 <h3>Compiling STM32 code on Linux</h3>
-<div>Just type: <code>make -s -f Make_G431_Candle_Multiboard</code></div>
-<div>The make file contains a command (dfu-util) that automatically uploads the compiled BIN file to the CANable.</div>
+<div>Install the ARM compiler: <code>sudo apt install build-essential gcc-arm-none-eabi</code><div>
+<div>You can use GNU tools for STM32 version 10.3.1 or higher.</div>
+<div>Compile the firmware: <code>make -s -f Make_G431_Candle_Multiboard</code></div>
+<div>The compiler generates a BIN, HEX and ELF file.</div>
+<div>The make file contains a command (dfu-util) that automatically uploads the compiled firmware to the CANable.</div>
 
 <h3>Compiling STM32 code on Windows</h3>
 <div>You find a lot of instructions in internet how to compile the firmware on Linux.</div>

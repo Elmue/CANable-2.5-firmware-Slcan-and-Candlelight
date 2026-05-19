@@ -8,7 +8,7 @@ rem The firmware updater will convert them automatically into DFU files.
 rem -------------------------------------------------------------------------------------------------
 
 echo You must have MingW and the STM32 Cube CLT installed.
-echo Find a detailed description on https://netcult.ch/elmue/CANable Firmware Update
+echo Find a detailed description on https://netcult.ch/elmue/CANable Firmware Update#Compiling
 echo:
 
 :Loop
