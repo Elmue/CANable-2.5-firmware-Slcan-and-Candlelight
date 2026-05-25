@@ -47,7 +47,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251118 = 18.nov.2025)
-const DWORD MIN_FIRMWARE = 0x260517;
+const DWORD MIN_FIRMWARE = 0x260525;
 
 // The firmware update interface is always interface 1
 const BYTE DFU_INTERFACE = 1;
@@ -286,7 +286,7 @@ DWORD Candlelight::Open(CString s_DevicePath)
     if (mh_Device)
         return ERROR_INVALID_OPERATION; // Already open
 
-    mu8_EchoMarker      =  0;
+    mu8_EchoMarker      =  1; // counter 1...255
     ms32_FifoCount      =  0;
     ms32_FifoReadIdx    =  0;
     ms64_McuRollOver    =  0;
@@ -391,6 +391,8 @@ DWORD Candlelight::Open(CString s_DevicePath)
     if (mu8_Channel > 0)
         mu8_Channel --;
 
+    mk_Info.mu8_Channel = mu8_Channel;
+
     // There must be exactly 2 endpoints: IN (81) and OUT (02)
     if (k_InterfDescr.bNumEndpoints != 2)
         return ERROR_INVALID_DEVICE;
@@ -484,16 +486,16 @@ DWORD Candlelight::Open(CString s_DevicePath)
 
     bool b_UseQuartz = (mk_Info.mk_BoardInfo.BoardFlags & BRD_Quartz_In_Use) > 0;
 
-    s_Line.Format(L"Target Board:         %hs\n", mk_Info.mk_BoardInfo.BoardName);           ms_Details += s_Line;
+    s_Line.Format(L"Target Board:         %hs\n",      mk_Info.mk_BoardInfo.BoardName);          ms_Details += s_Line;
     s_Line.Format(L"Processor:            %hs, CAN Clock: %u MHz, MCU DeviceID: 0x%X\n",
-                                                  mk_Info.mk_BoardInfo.McuName,
-                                                  mk_Info.mk_Capability.fclk_can / 1000000,
-                                                  mk_Info.mk_BoardInfo.McuDeviceID);         ms_Details += s_Line;
-    s_Line.Format(L"Quartz in use:        %s\n",  b_UseQuartz ? L"Yes": L"No");              ms_Details += s_Line;
+                                                       mk_Info.mk_BoardInfo.McuName,
+                                                       mk_Info.mk_Capability.fclk_can / 1000000,
+                                                       mk_Info.mk_BoardInfo.McuDeviceID);        ms_Details += s_Line;
+    s_Line.Format(L"Quartz in use:        %s\n",       b_UseQuartz ? L"Yes": L"No");             ms_Details += s_Line;
     s_Line.Format(L"CAN Channel:          %d of %d\n", mu8_Channel + 1, 
-                                                       mk_Info.mk_DeviceVersion.icount + 1); ms_Details += s_Line;
-    s_Line.Format(L"Pin BOOT0:            %s\n",  (u16_PinStatus & PINST_Enabled) ? 
-                                                  L"Enabled" : L"Disabled");                 ms_Details += s_Line;
+                                                       mk_Info.mk_DeviceVersion.icount + 1);     ms_Details += s_Line;
+    s_Line.Format(L"Pin BOOT0:            %s\n",       (u16_PinStatus & PINST_Enabled) ? 
+                                                       L"Enabled" : L"Disabled");                ms_Details += s_Line;
 
     if (mk_Info.mk_DeviceVersion.sw_version_bcd < MIN_FIRMWARE)
         return ERROR_UPDATE_FIRMWARE;
@@ -583,18 +585,50 @@ DWORD Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2
     return ERROR_SUCCESS;
 }
 
-// STEP 4)  (optional)
-// Add one to eight filters
+// STEP 4a)  (optional)
+// Add one to eight host filters
 // ATTENTION: If you set only an 11 bit filter, no 29 bit ID's will pass and vice versa.
-DWORD Candlelight::AddMaskFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
+DWORD Candlelight::AddHostFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
 {
     if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERROR_INVALID_OPERATION;
 
-    kFilter k_Filter;
+    kFilter k_Filter = {0};
+    k_Filter.Operation = b_29bit ? FIL_HostPass_29 : FIL_HostPass_11;
     k_Filter.Filter    = u32_Filter;
     k_Filter.Mask      = u32_Mask;
-    k_Filter.Operation = b_29bit ? FIL_AcceptMask29bit : FIL_AcceptMask11bit;
+
+    return CtrlTransfer(DIR_Out, ELM_ReqSetFilter, mu8_Channel, &k_Filter, sizeof(k_Filter));
+}
+
+// STEP 4b)  (optional)
+// set / clear one of 20 bridge filters
+// b_Enable = false and Index == 0x13  --> clear only bridge filter Nº 0x13
+// b_Enable = false and Index == 0xFF  --> clear all bridge filters
+// b_Enable = true and b_Block = true  --> set block filter
+// b_Enable = true and b_Block = false --> set pass filter
+DWORD Candlelight::SetBridgeFilter(BYTE u8_FilterIndex, BYTE u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
+{
+    kFilter k_Filter = {0};
+    k_Filter.Operation   = FIL_BridgeClear;
+    k_Filter.Filter      = u32_Filter;
+    k_Filter.Mask        = u32_Mask;
+    k_Filter.DestChannel = u8_DestChannel;
+    k_Filter.Index       = u8_FilterIndex;
+
+    if (b_Enable)
+    {
+        if (b_Block)
+        {
+            if (b_29bit) k_Filter.Operation = FIL_BridgeBlock_29;
+            else         k_Filter.Operation = FIL_BridgeBlock_11;
+        }
+        else
+        {
+            if (b_29bit) k_Filter.Operation = FIL_BridgePass_29;
+            else         k_Filter.Operation = FIL_BridgePass_11;
+        }
+    }
 
     return CtrlTransfer(DIR_Out, ELM_ReqSetFilter, mu8_Channel, &k_Filter, sizeof(k_Filter));
 }
@@ -637,8 +671,7 @@ DWORD Candlelight::Reset()
 
 // CAN FD packets (b_FDF) can only be sent if a data baudrate has been set before.
 // Remote frames (b_RTR = true): s32_DataLen = 0 --> DLC = 0 will be sent, or s32_DataLen = 1 and u8_Data[0] contains the DLC to send.
-// pu8_EchoMarker returns the echo marker that you will get in a kTxEchoElmue struct back if ELM_DevFlagDisableTxEcho is not set.
-DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp, BYTE* pu8_EchoMarker)
+DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp)
 {
     const BYTE PADDING = 0;
     *ps64_WinTimestamp = -1;
@@ -700,6 +733,8 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp,
     // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.
     // 256 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
     // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
+    if (mu8_EchoMarker == 0) 
+        mu8_EchoMarker = 1;  // a marker value of zero would not send an echo
     memcpy(&mk_EchoPackets[mu8_EchoMarker], pk_Packet, sizeof(kCanPacket));
 
     kTxFrameElmue k_TxFrame   = {0};
@@ -710,6 +745,8 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp,
     k_TxFrame.marker          = mu8_EchoMarker;
     if (pk_Packet->mb_FDF) k_TxFrame.flags |= FRM_FDF;
     if (pk_Packet->mb_BRS) k_TxFrame.flags |= FRM_BRS;
+
+    mu8_EchoMarker ++;
 
     BYTE u8_Transmit[sizeof(kTxFrameElmue) + 64];
     memcpy(u8_Transmit, &k_TxFrame, sizeof(k_TxFrame));
@@ -726,8 +763,6 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp,
     }
 
     mu32_TxPipeErrors = 0;
-    *pu8_EchoMarker = mu8_EchoMarker;
-    mu8_EchoMarker ++;
     return ERROR_SUCCESS;
 }
 

@@ -18,7 +18,7 @@
 // The first version was 100.
 // In version 101 support for multi-channel adapters has been added.
 // (Candlelight does not need a version number because it returns the supported features as bit flags)
-#define SLCAN_VERSION          103
+#define SLCAN_VERSION          104
 
 // If this is 1 all baudrates will be printed to verify all CAN_NOM_BITTIMING_xxx and CAN_DATA_BITTIMING_xxx
 #define VERIFY_ALL_BAUDRATES   0
@@ -93,10 +93,11 @@ extern eUserFlags GLB_UserFlags[CHANNEL_COUNT];
 uint32_t  CanMode[CHANNEL_COUNT];
 
 // ----- Private Methods
-eFeedback control_parse_str   (int channel, char buf[], int len);
-eFeedback control_parse_filter(int channel, char buf[]);
-eFeedback control_parse_flash (int channel, char buf[]);
-eFeedback control_set_baudrate(int channel, bool set_data, char baud_chr);
+eFeedback control_parse_str    (uint8_t channel, char buf[], int len);
+eFeedback control_host_filter  (uint8_t channel, char buf[]);
+eFeedback control_bridge_filter(uint8_t channel, char buf[], bool enable);
+eFeedback control_parse_flash  (uint8_t channel, char buf[]);
+eFeedback control_set_baudrate (uint8_t channel, bool set_data, char baud_chr);
 
 // ==================================================================================================================
 
@@ -115,7 +116,7 @@ void control_parse_command(char* buf, int len)
     // IMPORTANT: Terminate the command string with zero
     buf[len] = 0;
 
-    int channel = 0;
+    uint8_t channel = 0;
     switch (buf[0])
     {
 #if CHANNEL_COUNT > 1
@@ -148,7 +149,7 @@ void control_parse_command(char* buf, int len)
 
 // Parse an incoming slcan command from the USB CDC port.
 // The termination '\r' has already been removed.
-eFeedback control_parse_str(int channel, char buf[], int len)
+eFeedback control_parse_str(uint8_t channel, char buf[], int len)
 {
     // Flash the Rx LED very shortly if bus is closed
     // ATTENTION: If the bus is closed the Tx LED is on, so this is not the same as Rx flashing with bus open.
@@ -384,10 +385,17 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 
         // Set CAN filter:
         case 'F':
-            return control_parse_filter(channel, buf); // "F7E0,7FF"
-        // Clear all CAN filters:
+            if (buf[1] == ':')
+                return control_bridge_filter(channel, buf, true); 
+            else
+                return control_host_filter  (channel, buf); // "F7E0,7FF"
+
+        // Clear CAN filter:
         case 'f':
-            if (len == 1) return can_clear_filters(channel); // "f"
+            if (buf[1] == ':')
+                return control_bridge_filter(channel, buf, false); // "f:07"
+            if (len == 1) 
+                return can_clear_host_filters(channel); // "f"
             return e_Ret;
 
         // ----------------------------
@@ -446,55 +454,53 @@ eFeedback control_parse_str(int channel, char buf[], int len)
     // ================ Transmit Packet =================
     // "t600801020304050607083A\r"
 
-    FDCAN_TxHeaderTypeDef* tx_header;
-    uint8_t*               tx_data;
-    if (!buf_get_can_dest(channel, &tx_header, &tx_data))
-        return FBK_TxBufferFull;
+    FDCAN_TxHeaderTypeDef tx_header;
+    uint8_t               tx_data[CAN_MAX_DATALEN];
 
     // Set default header. All values overridden below as needed.
-    tx_header->TxFrameType         = FDCAN_DATA_FRAME;
-    tx_header->FDFormat            = FDCAN_CLASSIC_CAN;
-    tx_header->IdType              = FDCAN_STANDARD_ID;
-    tx_header->BitRateSwitch       = FDCAN_BRS_OFF;
-    tx_header->ErrorStateIndicator = can_is_passive(channel) ? FDCAN_ESI_PASSIVE : FDCAN_ESI_ACTIVE;
-    tx_header->TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the Tx LED
+    tx_header.TxFrameType         = FDCAN_DATA_FRAME;
+    tx_header.FDFormat            = FDCAN_CLASSIC_CAN;
+    tx_header.IdType              = FDCAN_STANDARD_ID;
+    tx_header.BitRateSwitch       = FDCAN_BRS_OFF;
+    tx_header.ErrorStateIndicator = can_is_passive(channel) ? FDCAN_ESI_PASSIVE : FDCAN_ESI_ACTIVE;
+    tx_header.TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the Tx LED
 
     switch (buf[0])
     {
         // Transmit remote frame command
         case 'r':
-            tx_header->TxFrameType   = FDCAN_REMOTE_FRAME;
+            tx_header.TxFrameType   = FDCAN_REMOTE_FRAME;
             break;
         case 'R':
-            tx_header->IdType        = FDCAN_EXTENDED_ID;
-            tx_header->TxFrameType   = FDCAN_REMOTE_FRAME;
+            tx_header.IdType        = FDCAN_EXTENDED_ID;
+            tx_header.TxFrameType   = FDCAN_REMOTE_FRAME;
             break;
 
         // Transmit data frame command
         case 'T':
-            tx_header->IdType        = FDCAN_EXTENDED_ID;
+            tx_header.IdType        = FDCAN_EXTENDED_ID;
             break;
         case 't':
             break;
 
         // CANFD transmit - no BRS
         case 'd':
-            tx_header->FDFormat      = FDCAN_FD_CAN;
+            tx_header.FDFormat      = FDCAN_FD_CAN;
             break;
         case 'D':
-            tx_header->FDFormat      = FDCAN_FD_CAN;
-            tx_header->IdType        = FDCAN_EXTENDED_ID;
+            tx_header.FDFormat      = FDCAN_FD_CAN;
+            tx_header.IdType        = FDCAN_EXTENDED_ID;
             break;
 
         // CANFD transmit - with BRS
         case 'b':
-            tx_header->FDFormat      = FDCAN_FD_CAN;
-            tx_header->BitRateSwitch = FDCAN_BRS_ON;
+            tx_header.FDFormat      = FDCAN_FD_CAN;
+            tx_header.BitRateSwitch = FDCAN_BRS_ON;
             break;
         case 'B':
-            tx_header->FDFormat      = FDCAN_FD_CAN;
-            tx_header->BitRateSwitch = FDCAN_BRS_ON;
-            tx_header->IdType        = FDCAN_EXTENDED_ID;
+            tx_header.FDFormat      = FDCAN_FD_CAN;
+            tx_header.BitRateSwitch = FDCAN_BRS_ON;
+            tx_header.IdType        = FDCAN_EXTENDED_ID;
             break;
 
         // Invalid command
@@ -504,24 +510,24 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 
     // Sending a message with FDF flag requires a data baudrate to be set.
     // It is allowed that the data baudrate is the same as the nominal baudrate to send messages up to 64 bytes without BRS.
-    if (tx_header->FDFormat == FDCAN_FD_CAN && !can_using_FD(channel))
+    if (tx_header.FDFormat == FDCAN_FD_CAN && !can_using_FD(channel))
         return FBK_BaudrateNotSet;
 
     // Start parsing at second byte (skip command byte)
     int parse_loc = 1;
 
     // standard ID / extended ID
-    uint8_t id_len = (tx_header->IdType == FDCAN_EXTENDED_ID) ? 8 : 3;
+    uint8_t id_len = (tx_header.IdType == FDCAN_EXTENDED_ID) ? 8 : 3;
 
     // parse CAN ID
-    if (!utils_parse_hex_value(buf, &parse_loc, id_len, &tx_header->Identifier))
+    if (!utils_parse_hex_value(buf, &parse_loc, id_len, &tx_header.Identifier))
         return FBK_InvalidParameter;
 
     // check CAN ID
-    if (tx_header->IdType == FDCAN_STANDARD_ID && tx_header->Identifier > 0x7FF)
+    if (tx_header.IdType == FDCAN_STANDARD_ID && tx_header.Identifier > 0x7FF)
         return FBK_ParamOutOfRange;
 
-    if (tx_header->IdType == FDCAN_EXTENDED_ID && tx_header->Identifier > 0x1FFFFFFF)
+    if (tx_header.IdType == FDCAN_EXTENDED_ID && tx_header.Identifier > 0x1FFFFFFF)
         return FBK_ParamOutOfRange;
 
     // parse DLC
@@ -530,13 +536,13 @@ eFeedback control_parse_str(int channel, char buf[], int len)
         return FBK_InvalidParameter;
 
     // classic frames allow a DLC of 0...8
-    if (tx_header->FDFormat == FDCAN_CLASSIC_CAN && dlc_code > 8)
+    if (tx_header.FDFormat == FDCAN_CLASSIC_CAN && dlc_code > 8)
         return FBK_InvalidParameter;
 
-    tx_header->DataLength = dlc_code;
+    tx_header.DataLength = dlc_code;
 
     // remote frames may have DLC > 0 but never send data bytes
-    if (tx_header->TxFrameType != FDCAN_REMOTE_FRAME)
+    if (tx_header.TxFrameType != FDCAN_REMOTE_FRAME)
     {
         int8_t byte_count = utils_dlc_to_byte_count(dlc_code);
         // Parse data bytes
@@ -555,7 +561,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
     // So 3 + 64 different values are sufficient that each message that is waiting for an ACK has it's own unique marker.
     if (GLB_UserFlags[channel] & USR_ReportTX)
     {
-        if (!utils_parse_hex_value(buf, &parse_loc, 2, &tx_header->MessageMarker))
+        if (!utils_parse_hex_value(buf, &parse_loc, 2, &tx_header.MessageMarker))
             return FBK_InvalidParameter;
     }
 
@@ -563,8 +569,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
     if (parse_loc != len)
         return FBK_InvalidParameter;
 
-    // Store the message in the buffer
-    return buf_commit_can_dest(channel);
+    return buf_store_tx_packet(channel, &tx_header, tx_data);
 }
 
 // ================================================================================================================
@@ -575,7 +580,7 @@ eFeedback control_parse_str(int channel, char buf[], int len)
 // IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
 // set_data = false -> Set the nominal baudrate configuration of the CAN peripheral
 // set_data = true  -> Set the data    baudrate configuration of the CAN peripheral
-eFeedback control_set_baudrate(int channel, bool set_data, char baud_chr)
+eFeedback control_set_baudrate(uint8_t channel, bool set_data, char baud_chr)
 {
     uint64_t timing_values;
     
@@ -635,10 +640,10 @@ eFeedback control_set_baudrate(int channel, bool set_data, char baud_chr)
 // -------------------------
 
 // Command: "F7E0,7FF;1F005000,1FFFFFFF\r" --> set 11 bit filter: 0x7E0, mask: 0x7FF and 29 bit filter 0x1F005000.
-// see comment for can_set_mask_filter()
-eFeedback control_parse_filter(int channel, char buf[])
+// see comment for can_add_host_filter()
+eFeedback control_host_filter(uint8_t channel, char buf[])
 {
-    int  pos = 1;
+    int pos = 1;
     bool abort = false;
     while (!abort)
     {
@@ -656,24 +661,71 @@ eFeedback control_parse_filter(int channel, char buf[])
             else return FBK_InvalidParameter; // invalid character
         }
 
-        if (digitsF != digitsM)
-            return FBK_InvalidParameter;
-
         bool extended;
-             if (digitsF == 3) extended = false;
-        else if (digitsF == 8) extended = true;
+             if (digitsF == 3 && digitsM == 3) extended = false;
+        else if (digitsF == 8 && digitsM == 8) extended = true;
         else return FBK_InvalidParameter;
 
-        eFeedback error = can_set_mask_filter(channel, extended, filter, mask);
+        eFeedback error = can_add_host_filter(channel, extended, filter, mask);
         if (error != FBK_Success)
             return error;
     }
     return FBK_Success;
 }
 
+// "F:P0A=7E0,7F0>2\r"  set Pass  filter Nº 0x0A for CAN ID 7E0...7EF to CAN channel 2
+// "F:B11=7E5,7FF>2\r"  set Block filter Nº 0x11 for CAN ID 7E5       to CAN channel 2
+// "f:07\r"             clear bridge filter Nº 0x07
+// "f:FF\r"             clear all bridge filters
+eFeedback control_bridge_filter(uint8_t channel, char buf[], bool enable)
+{
+    bool block    = false;   
+    bool extended = false;
+    uint32_t dest_channel = 0;
+    uint32_t filter = 0;
+    uint32_t mask   = 0;
+    int pos = 2;    
+
+    if (enable)
+    {
+        switch (buf[pos++])
+        { 
+            case 'B': block  = true;  break;
+            case 'P': block  = false; break;
+            default: return FBK_InvalidParameter;
+        }
+    }
+    
+    uint32_t filter_index;
+    if (!utils_parse_hex_value(buf, &pos, 2, &filter_index))
+        return FBK_InvalidParameter;
+
+    if (enable)
+    {
+        if (buf[pos++] != '=')
+            return FBK_InvalidParameter;
+        
+        int digitsF, digitsM;
+        if (!utils_parse_hex_delimiter(buf, &pos, ',', &digitsF, &filter))
+            return FBK_InvalidParameter;
+
+        if (!utils_parse_hex_delimiter(buf, &pos, '>', &digitsM, &mask))
+            return FBK_InvalidParameter; // invalid character
+
+             if (digitsF == 3 && digitsM == 3) extended = false;
+        else if (digitsF == 8 && digitsM == 8) extended = true;
+        else return FBK_InvalidParameter;
+        
+        if (!utils_parse_hex_value(buf, &pos, 1, &dest_channel))
+            return FBK_InvalidParameter;   
+    }
+
+    return can_set_bridge_filter(channel, dest_channel, filter_index, enable, extended, block, filter, mask);
+}
+
 // "*Flash:1A=48656C6C6F\r" writes "Hello" to   flash segment 1A
 // "*Flash:1A?\r"           reads  "Hello" from flash segment 1A --> return "+48656C6C6F\r"
-eFeedback control_parse_flash(int channel, char buf[])
+eFeedback control_parse_flash(uint8_t channel, char buf[])
 {
     // Read the segment (00 ... FF)
     int pos = 7;
@@ -735,7 +787,7 @@ eFeedback control_parse_flash(int channel, char buf[])
 // This function is called approx 100 times in one millisecond from the main loop
 // if the error state has changed, report it every 100 ms
 // if the error state did not change, report the same state only every 3000 ms.
-void control_process(int channel, uint32_t tick_now)
+void control_process(uint8_t channel, uint32_t tick_now)
 {
     if (!error_is_report_due(channel, tick_now))
         return;
@@ -757,7 +809,7 @@ void control_process(int channel, uint32_t tick_now)
 }
 
 // send the busload in percet to the host in the user defined interval
-void control_report_busload(int channel, uint8_t busload_percent)
+void control_report_busload(uint8_t channel, uint8_t busload_percent)
 {
     char buf[10];
     sprintf(buf, "L%u\r", busload_percent);
@@ -767,7 +819,7 @@ void control_report_busload(int channel, uint8_t busload_percent)
 // Send a debug message. Maximum length is 80 characters.
 // The message may contain "\n" for multi-line output
 // You will see this message in the Trace pane of HUD ECU Hacker if USR_DebugReport is enabled.
-bool control_send_debug_mesg(int channel, const char* message)
+bool control_send_debug_mesg(uint8_t channel, const char* message)
 {
     if ((GLB_UserFlags[channel] & USR_DebugReport) == 0)
         return false;

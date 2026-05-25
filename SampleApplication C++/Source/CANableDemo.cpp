@@ -41,9 +41,13 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // false --> run DFU demo (switch a device in Candlelight mode into DFU mode, fails if already in DFU mode)
 bool CANDLELIGHT_DEMO = true; 
 
-// true  --> only packets with 11 bit CAN ID 0x7E8 will be received.
-// false --> all packets are received
-bool SET_FILTERS = false;
+// true  --> only packets with 11 bit CAN ID 0x7E8 are sent to the host.
+// false --> all packets are sent to the host
+bool SET_HOST_FILTERS = false;
+
+// true  --> Received packets with CAN ID 0x7E5 will be forwarded from channel 0 to channel 1 (only multi-channel adapters)
+// false --> Do not use brdige mode
+bool SET_BRIDGE_FILTERS = false;
 
 // true  --> enable transfer of timestamps from the firmware (deprecated!)
 // false --> create performance counter timestamps 
@@ -210,13 +214,30 @@ void CandlelightDemo()
 
     // -----------------------------------------
 
-    // optionally you can set filters here.
-    if (SET_FILTERS)
+    // optionally you can set host filters here.
+    if (SET_HOST_FILTERS)
     {
         // Only the 11 bit CAN ID 0x7E8 will pass through the filter.
-        u32_Error = gi_Candle.AddMaskFilter(false, 0x7E8, 0x7FF);
+        u32_Error = gi_Candle.AddHostFilter(false, 0x7E8, 0x7FF);
         if (u32_Error)
-            PrintConsole(RED, L"Error setting mask filter: %s\n", gi_Candle.FormatLastError(u32_Error));
+            PrintConsole(RED, L"Error setting host filter: %s\n", gi_Candle.FormatLastError(u32_Error));
+        else
+            PrintConsole(BROWN, L"Set host filter 7E8\n");
+    }
+
+    // -----------------------------------------
+
+    // The adapter must have at least 2 channels
+    if (SET_BRIDGE_FILTERS && 
+        gk_Info.mk_DeviceVersion.icount + 1 >= 2 && 
+        gk_Info.mu8_Channel == 0)
+    {
+        // Set filter Nº 08 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
+        u32_Error = gi_Candle.SetBridgeFilter(8, 1, true, false, false, 0x7E5, 0x7FF);
+        if (u32_Error)
+            PrintConsole(RED, L"Error setting bridge filter: %s\n", gi_Candle.FormatLastError(u32_Error));
+        else
+            PrintConsole(BROWN, L"Set bridge filter 7E5\n");
     }
 
     // -----------------------------------------
@@ -270,7 +291,6 @@ void CandlelightDemo()
 
     __int64 s64_LastStamp = 0;
     BYTE u8_RxData[RX_FIFO_BUF_SIZE]; // 128 byte
-    BYTE u8_LastEchoMarker;
 
     while (true)
     {
@@ -283,7 +303,7 @@ void CandlelightDemo()
             s64_LastStamp = s64_Now;
 
             __int64 s64_TxStamp; // only valid if no error returned
-            u32_Error = gi_Candle.SendPacket(&k_TxPacket, &s64_TxStamp, &u8_LastEchoMarker);
+            u32_Error = gi_Candle.SendPacket(&k_TxPacket, &s64_TxStamp);
             if (u32_Error)
             {
                 PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, gi_Candle.GetWinTimestamp()));

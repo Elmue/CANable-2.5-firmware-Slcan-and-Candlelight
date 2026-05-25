@@ -19,7 +19,7 @@
 #define DFU_INTERFACE_NUMBER      1                            // interface 1 is always DFU for backward compatibiliy
 #define USBD_INTERFACES_COUNT    (CANDLE_INRERFACE_COUNT + 1)  // total count of USB interfaces
 
-void               USBD_SendFrameToHost(int channel, void *frame);
+void               USBD_SendFrameToHost(uint8_t channel, void *frame);
 USBD_StatusTypeDef USBD_ConfigureEndpoints();
 bool               USBD_SetupStageRequest();
 uint8_t*           USBD_GetUserStringDescr(uint8_t index, uint16_t *length);

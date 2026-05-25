@@ -30,8 +30,8 @@ int           SET_LedRxPins [CHANNEL_COUNT] = { LED_RX_PINS  };
 led_class  led_inst[CHANNEL_COUNT] = {0};
 
 // ----- Private Methods
-void led_set_Rx(int channel, bool status);
-void led_set_Tx(int channel, bool status);
+void led_set_Rx(uint8_t channel, bool status);
+void led_set_Tx(uint8_t channel, bool status);
 
 // Initialize LED GPIOs
 bool led_init()
@@ -106,7 +106,7 @@ void led_blink_power_on()
 
 // Blink Rx + Tx alternatingly to identify a device if multiple devices are connected at the same time.
 // This is a non-blocking function. Blinking is enabled by USB command.
-void led_blink_identify(int channel, bool blink_on)
+void led_blink_identify(uint8_t channel, bool blink_on)
 {
     led_class* inst = &led_inst[channel];
 
@@ -121,7 +121,7 @@ void led_blink_identify(int channel, bool blink_on)
 }
 
 // Turn Tx LED on/off
-void led_turn_TX(int channel, bool state)
+void led_turn_TX(uint8_t channel, bool state)
 {
     led_class* inst = &led_inst[channel];
     if (inst->identify)
@@ -132,7 +132,7 @@ void led_turn_TX(int channel, bool state)
 
 // Turn Tx LED on for a short duration
 // Called when CAN frame has been transmitted
-void led_flash_TX(int channel)
+void led_flash_TX(uint8_t channel)
 {
     led_class* inst = &led_inst[channel];
     if (inst->identify)
@@ -149,7 +149,7 @@ void led_flash_TX(int channel)
 
 // Turn Rx LED on for a short duration
 // Called when CAN frame was received
-void led_flash_RX(int channel)
+void led_flash_RX(uint8_t channel)
 {
     led_class* inst = &led_inst[channel];
     if (inst->identify)
@@ -165,7 +165,7 @@ void led_flash_RX(int channel)
 }
 
 // called approx 100 times per millisecond from main.c
-void led_process(int channel, uint32_t tick_now)
+void led_process(uint8_t channel, uint32_t tick_now)
 {
     led_class* inst = &led_inst[channel];
     
@@ -224,12 +224,12 @@ void led_process(int channel, uint32_t tick_now)
         led_turn_TX(channel, true);
 }
 
-void led_set_Rx(int channel, bool status)
+void led_set_Rx(uint8_t channel, bool status)
 {
     HAL_GPIO_WritePin(SET_LedRxPorts[channel], SET_LedRxPins[channel], status ? LED_ON : LED_OFF);
 }
 
-void led_set_Tx(int channel, bool status)
+void led_set_Tx(uint8_t channel, bool status)
 {
     HAL_GPIO_WritePin(SET_LedTxPorts[channel], SET_LedTxPins[channel], status ? LED_ON : LED_OFF);
 }

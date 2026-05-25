@@ -351,7 +351,7 @@ bool control_setup_request(USBD_SetupReqTypedef *req)
 // See subfolder SampleApplication, this is very easy.
 void control_setup_OUT_data()
 {
-    int channel = last_setup.wValue; // wValue has already been checked to be valid.
+    uint8_t channel = last_setup.wValue; // wValue has already been checked to be valid.
 
     switch (last_setup.bRequest)
     {
@@ -463,12 +463,30 @@ void control_setup_OUT_data()
             kFilter* filter = (kFilter*)ep0_buf;
             switch (filter->Operation)
             {
-                case FIL_ClearAll:
-                    ELM_LastError = can_clear_filters(channel);
+                case FIL_HostClear:
+                    ELM_LastError = can_clear_host_filters(channel);
                     return;
-                case FIL_AcceptMask11bit:
-                case FIL_AcceptMask29bit:
-                    ELM_LastError = can_set_mask_filter(channel, filter->Operation == FIL_AcceptMask29bit, filter->Filter, filter->Mask);
+                case FIL_HostPass_11:
+                    ELM_LastError = can_add_host_filter(channel, false, filter->Filter, filter->Mask);
+                    return;
+                case FIL_HostPass_29:
+                    ELM_LastError = can_add_host_filter(channel, true,  filter->Filter, filter->Mask);
+                    return;
+                // ---------------------
+                case FIL_BridgeClear:
+                    ELM_LastError = can_set_bridge_filter(channel, filter->DestChannel, filter->Index, false, false, false, filter->Filter, filter->Mask);
+                    return;
+                case FIL_BridgePass_11:
+                    ELM_LastError = can_set_bridge_filter(channel, filter->DestChannel, filter->Index, true,  false, false, filter->Filter, filter->Mask);
+                    return;
+                case FIL_BridgePass_29:
+                    ELM_LastError = can_set_bridge_filter(channel, filter->DestChannel, filter->Index, true,  true,  false, filter->Filter, filter->Mask);
+                    return;
+                case FIL_BridgeBlock_11:
+                    ELM_LastError = can_set_bridge_filter(channel, filter->DestChannel, filter->Index, true,  false, true,  filter->Filter, filter->Mask);
+                    return;
+                case FIL_BridgeBlock_29:
+                    ELM_LastError = can_set_bridge_filter(channel, filter->DestChannel, filter->Index, true,  true,  true,  filter->Filter, filter->Mask);
                     return;
                 default:
                     ELM_LastError = FBK_InvalidParameter;
@@ -508,7 +526,7 @@ void control_setup_OUT_data()
 // This function is called approx 100 times in one millisecond from the main loop
 // if the error state has changed, report it every 100 ms
 // if the error state did not change, report the same state only every 3000 ms.
-void control_process(int channel, uint32_t tick_now)
+void control_process(uint8_t channel, uint32_t tick_now)
 {
     if (error_is_report_due(channel, tick_now))
         buf_store_error(channel);
@@ -517,12 +535,12 @@ void control_process(int channel, uint32_t tick_now)
     can_recover_bus_off(channel);
 }
 
-void control_report_busload(int channel, uint8_t busload_percent)
+void control_report_busload(uint8_t channel, uint8_t busload_percent)
 {
     // only called for ElmüSoft protocol
     buf_class* usb_buf = buf_get_instance(channel);
 
-    kHostFrameObject* obj_to_host = buf_get_frame_locked(&usb_buf->list_host_pool);
+    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
     if (!obj_to_host)
         return; // buffer overflow! buf_process() will report this error to the host
 
@@ -541,7 +559,7 @@ void control_report_busload(int channel, uint8_t busload_percent)
 // This closes the device if still open and enables debug output.
 // If the device has a legacy firmware it will ignore any flags that are passed with GS_ModeReset.
 // Only the new ElmüSoft firmware allows to set flags when closing the device.
-bool control_send_debug_mesg(int channel, const char* message)
+bool control_send_debug_mesg(uint8_t channel, const char* message)
 {
     // USR_DebugReport is only set if GLB_ProtoElmue == true
     if ((GLB_UserFlags[channel] & USR_DebugReport) == 0)
@@ -550,7 +568,7 @@ bool control_send_debug_mesg(int channel, const char* message)
     // only called for ElmüSoft protocol
     buf_class* usb_buf = buf_get_instance(channel);
 
-    kHostFrameObject* obj_to_host = buf_get_frame_locked(&usb_buf->list_host_pool);
+    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
     if (!obj_to_host)
         return false; // buffer overflow! buf_process() will report this error to the host
 

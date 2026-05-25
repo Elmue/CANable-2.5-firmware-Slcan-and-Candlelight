@@ -285,9 +285,16 @@ public class Candlelight : IDisposable
 
     enum eFilterOperation : byte
     {
-        ClearAll = 0,    // remove all filters
-        AcceptMask11bit, // add a new acceptance mask filter for 11 bit CAN IDs
-        AcceptMask29bit, // add a new acceptance mask filter for 29 bit CAN IDs
+        HostClear = 0,    // remove all host filters (adapter must be closed)
+        HostPass_11,      // add a new host pass mask filter for 11 bit CAN IDs to be sent to the host over USB
+        HostPass_29,      // add a new host pass mask filter for 29 bit CAN IDs to be sent to the host over USB
+        // ------------------
+        // Bridge Mode (only for multi-channel adapters):
+        BridgeClear = 10, // remove one of the bridge filters. If kFilter.Index = 0xFF --> clear all bridge filters.
+        BridgePass_11,    // set a bridge pass  mask filter for 11 bit CAN IDs to be forwarded to kFilter.DestChannel
+        BridgePass_29,    // set a bridge pass  mask filter for 29 bit CAN IDs to be forwarded to kFilter.DestChannel 
+        BridgeBlock_11,   // set a bridge block mask filter for 11 bit CAN IDs to be blocked (not forwarded to kFilter.DestChannel)
+        BridgeBlock_29,   // set a bridge block mask filter for 29 bit CAN IDs to be blocked (not forwarded to kFilter.DestChannel)
     } 
 
     enum ePinOperation : ushort
@@ -431,6 +438,10 @@ public class Candlelight : IDisposable
         {
             get { return Utils.FormatBcdVersion(mu32_HardVersionBcd); }
         }
+        public int ChannelCount
+        {
+            get { return mu8_Icount + 1; }
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -475,11 +486,15 @@ public class Candlelight : IDisposable
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     struct kFilter
     {
+        // all filters:
         public eFilterOperation me_Operation;
-        public int   ms32_Filter;
-        public int   ms32_Mask;
-        public int   ms32_Reserved1;
-        public int   ms32_Reserved2;
+        public int              ms32_Filter;
+        public int              ms32_Mask;
+        // only for bridge filters:
+        public Byte             mu8_Index;       // filter index
+        public Byte             mu8_DestChannel; // destination channel
+        [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
+        public Byte[]           mu8_Reserved;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -733,6 +748,7 @@ public class Candlelight : IDisposable
         public UInt16               mu16_MaxPackSizeOUT;
         public bool                 mb_IsElmueSoft;
         public bool                 mb_SupportsFD;
+        public Byte                 mu8_Channel;
         public kDeviceDescriptor    mk_DeviceDescr;
         public kCapabilityClassic   mk_Capability;
         public kCapabilityFD        mk_CapabilityFD;
@@ -801,7 +817,7 @@ public class Candlelight : IDisposable
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251118 = 18.nov.2025)
-    const int MIN_FIRMWARE = 0x260517;
+    const int MIN_FIRMWARE = 0x260525;
 
     // The firmware update interface is always interface 1
     const Byte DFU_INTERFACE = 1;
@@ -817,7 +833,7 @@ public class Candlelight : IDisposable
     bool           mb_BaudFDSet;
     Stopwatch      mi_TxOverflow;  // firmware Tx buffer is full (64 + 3 packets sent)
     bool           mb_McuTimestamp;
-    Byte           mu8_EchoMarker; // counter 0...255
+    Byte           mu8_EchoMarker; // counter 1...255
     CanPacket[]    mi_TxEcho;      // the last 256 Tx packets
     Int64          ms64_LastMcuStamp;
     Int64          ms64_McuRollOver;
@@ -928,6 +944,8 @@ public class Candlelight : IDisposable
         if (mu8_Channel > 0)
             mu8_Channel --;
 
+        mk_Info.mu8_Channel = mu8_Channel;
+
         // --------------- Pipes ------------------
 
         // Interface 0 (Candlelight) must have exactly 2 endpoints: IN (81) and OUT (02)
@@ -1001,7 +1019,7 @@ public class Candlelight : IDisposable
                                                                mk_Info.mk_Capability.ms32_CanClock / 1000000,
                                                                mk_Info.mk_BoardInfo.mu16_McuDeviceID);
         ms_Details.AppendFormat("Quartz in use:        {0}\n", b_UseQuartz ? "Yes" : "No");
-        ms_Details.AppendFormat("CAN Channel:          {0} of {1}\n", mu8_Channel + 1, mk_Info.mk_DeviceVersion.mu8_Icount + 1);
+        ms_Details.AppendFormat("CAN Channel:          {0} of {1}\n", mu8_Channel + 1, mk_Info.mk_DeviceVersion.ChannelCount);
         ms_Details.AppendFormat("Pin BOOT0:            {0}\n", b_Enabled ? "Enabled" : "Disabled");
 
         if (mk_Info.mk_DeviceVersion.mu32_SoftVersionBcd < MIN_FIRMWARE)
@@ -1065,21 +1083,57 @@ public class Candlelight : IDisposable
     // -------------------------------------------------------------------------------------
 
     /// <summary>
-    /// STEP 4)  (optional)
-    /// Add one to eight filters
+    /// STEP 4a)  (optional)
+    /// Add one to eight host filters
     /// ATTENTION: If you set only an 11 bit filter, no 29 bit ID's will pass and vice versa.
     /// </summary>
-    public void AddMaskFilter(bool b_29bit, int s32_Filter, int s32_Mask)
+    public void AddHostFilter(bool b_29bit, int s32_Filter, int s32_Mask)
     {
         if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         kFilter k_Filter;
-        k_Filter.ms32_Filter    = s32_Filter;
-        k_Filter.ms32_Mask      = s32_Mask;
-        k_Filter.me_Operation   = b_29bit ? eFilterOperation.AcceptMask29bit : eFilterOperation.AcceptMask11bit;
-        k_Filter.ms32_Reserved1 = 0;
-        k_Filter.ms32_Reserved2 = 0;
+        k_Filter.ms32_Filter     = s32_Filter;
+        k_Filter.ms32_Mask       = s32_Mask;
+        k_Filter.me_Operation    = b_29bit ? eFilterOperation.HostPass_29 : eFilterOperation.HostPass_11;
+        k_Filter.mu8_DestChannel = 0;
+        k_Filter.mu8_Index       = 0;
+        k_Filter.mu8_Reserved    = new Byte[6];
+
+        CtrlTransfer((Byte)eUsbRequest.SetFilter, eDirection.Out, mu8_Channel, k_Filter);
+    }
+
+    /// <summary>
+    /// STEP 4b)  (optional)
+    /// set / clear one of 20 bridge filters
+    /// b_Enable = false and u8_Index == 0x13 --> clear only bridge filter Nº 0x13
+    /// b_Enable = false and u8_Index == 0xFF --> clear all bridge filters
+    /// b_Enable = true and b_Block = true    --> set block filter
+    /// b_Enable = true and b_Block = false   --> set pass filter
+    /// </summary>
+    public void SetBridgeFilter(Byte u8_FilterIndex, Byte u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, int s32_Filter, int s32_Mask)
+    {
+        kFilter k_Filter;
+        k_Filter.ms32_Filter     = s32_Filter;
+        k_Filter.ms32_Mask       = s32_Mask;
+        k_Filter.me_Operation    = eFilterOperation.BridgeClear;
+        k_Filter.mu8_DestChannel = u8_DestChannel;
+        k_Filter.mu8_Index       = u8_FilterIndex;
+        k_Filter.mu8_Reserved    = new Byte[6];
+
+        if (b_Enable)
+        {
+            if (b_Block)
+            {
+                if (b_29bit) k_Filter.me_Operation = eFilterOperation.BridgeBlock_29;
+                else         k_Filter.me_Operation = eFilterOperation.BridgeBlock_11;
+            }
+            else
+            {
+                if (b_29bit) k_Filter.me_Operation = eFilterOperation.BridgePass_29;
+                else         k_Filter.me_Operation = eFilterOperation.BridgePass_11;
+            }
+        }
 
         CtrlTransfer((Byte)eUsbRequest.SetFilter, eDirection.Out, mu8_Channel, k_Filter);
     }
@@ -1283,10 +1337,9 @@ public class Candlelight : IDisposable
     /// <summary>
     /// CAN FD packets (mb_FDF) can only be sent if a data baudrate has been set before.
     /// For remote frames (mb_RTR = true) the first byte may contain the value for the DLC field.
-    /// u8_EchoMarker returns the echo marker that you will get in a kTxEchoElmue struct back if ELM_DevFlagDisableTxEcho is not set.
     /// If you get an IOException the device is dead --> abort and close the device and show the message to the user.
     /// </summary>
-    public void SendPacket(CanPacket i_Packet, out Int64 s64_WinTimestamp, out Byte u8_EchoMarker)
+    public void SendPacket(CanPacket i_Packet, out Int64 s64_WinTimestamp)
     {
         const Byte PADDING = 0;
 
@@ -1344,8 +1397,12 @@ public class Candlelight : IDisposable
         // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.
         // 256 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
         // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
+        if (mu8_EchoMarker == 0) 
+            mu8_EchoMarker = 1;  // a marker value of zero would not send an echo
         cTxFrameElmue i_TxFrame = new cTxFrameElmue(i_Packet, mu8_EchoMarker);
         mi_TxEcho[mu8_EchoMarker] = i_Packet;
+
+        mu8_EchoMarker ++;
 
         Byte[] u8_Transmit = Utils.StructureToBytesVar(i_TxFrame, i_TxFrame.mu8_Size);
 
@@ -1353,9 +1410,6 @@ public class Candlelight : IDisposable
         s64_WinTimestamp = Utils.GetWinTimestamp();
 
         mi_PipeOut.Send(u8_Transmit);
-
-        u8_EchoMarker = mu8_EchoMarker;
-        mu8_EchoMarker ++;
     }
 
     // ======================================= Receive ========================================

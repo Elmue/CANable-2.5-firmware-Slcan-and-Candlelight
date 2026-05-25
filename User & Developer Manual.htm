@@ -218,7 +218,8 @@
         <div>— &nbsp; <a href="#Cangaroo"             class="MenuLink" onClick="ShowMenu(false)">Cangaroo</a></div>
         <div>— &nbsp; <a href="#HUD_ECU_Hacker"       class="MenuLink" onClick="ShowMenu(false)">HUD ECU Hacker</a></div>
         <div>— &nbsp; <a href="#CAN_Settings"         class="MenuLink" onClick="ShowMenu(false)">CAN bus Settings</a></div>
-        <div>— &nbsp; <a href="#Filter"               class="MenuLink" onClick="ShowMenu(false)">CAN Filter</a></div>
+        <div>— &nbsp; <a href="#Filter"               class="MenuLink" onClick="ShowMenu(false)">Host Filter</a></div>
+        <div>— &nbsp; <a href="#Bridge"               class="MenuLink" onClick="ShowMenu(false)">CAN Bridge</a></div>
         <div>— &nbsp; <a href="#Sample_Baud"          class="MenuLink" onClick="ShowMenu(false)">Samplepoint &amp; Baudrate</a></div>
         <div>— &nbsp; <a href="#CAN_Hardware"         class="MenuLink" onClick="ShowMenu(false)">CAN Hardware</a></div>
         <div>— &nbsp; <a href="#CAN_Errors"           class="MenuLink" onClick="ShowMenu(false)">CAN bus Errors</a></div>
@@ -358,7 +359,7 @@
     <tr><td><img src="Images/Adapter WeActStudioV1.jpg" alt="CANable - Jhoinrch RH02" width="155" height="90"></td></tr>
     <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter WeActStudioV1.jpg')">Show Full Size</span></td></tr>
 </table>
-<div>The <a href="https://weactstudioone.aliexpress.com" target="_blank">WeActStudio</a> USB2CANFD v1 is a cheap ($7 US) and small (4 x 2 cm) adapter with STM32G0B1 processor.</div>
+<div>The <a href="https://www.aliexpress.com/store/910567080" target="_blank">WeActStudio</a> USB2CANFD v1 is a cheap ($7 US) and small (4 x 2 cm) adapter with STM32G0B1 processor.</div>
 <div>They have published the <a href="Images/Diagram WeActStudio USB2CANFD v1.pdf" target="_blank">diagram</a> (PDF).</div>
 <div>The hardware is OK, but the CAN clock is only 60 MHz, which limits the available <a href="#Sample_Baud">samplepoints</a> for CAN FD.</div>
 <div class="Error">I do not recommend to buy this adapter if you plan to use CAN FD.</div>
@@ -884,21 +885,72 @@
 </table>
 
 <a name="Filter"></a>
-<h3>CAN Filter</h3>
+<h3>Host Filter</h3>
 <div>Filters are a new feature that was missing in the legacy firmware.</div>
 
-<div>CAN bus filters can drastically reduce the traffic over USB.</div>
+<div>Host filters can drastically reduce the traffic over USB.</div>
 <div>This is important because the USB speed is limited to 12 Mbit/s while CAN data may come with up to 10 Mbaud.</div>
-<div>All traffic that does not interest you will not be sent over USB.</div>
+<div>Only CAN IDs that match the filter will be sent over USB to the host.</div>
 <p>
-<div>The screenshot above shows a filter that lets only pass the CAN ID's <b>from 18EE0000 to 18EEFFFF</b>.</div>
+<div>The screenshot above shows a filter that lets only pass the CAN IDs <b>from 18EE0000 to 18EEFFFF</b>.</div>
 <div>Please read the chapter about <a href="https://netcult.ch/elmue/HUD ECU Hacker#CAN_Filter" target="_blank">CAN filters</a> in the HUD ECU Hacker manual.</div>
 <p>
 <div><b>NOTE:</b> The <b>Rx LED</b> flashes when a CAN packet is received. It also flashes for packets that are blocked by the filters.</div>
 <div>This means that the Rx and Tx LEDs always show the entire CAN bus traffic, even if your filter blocks everything.</div>
 <p>
-<div>The STM32 processor does not allow to modify filters after the adapter has been opened.</div>
+<div>The STM32 processor does not allow to modify the host filters after the adapter has been opened.</div>
 <div>The only exception is that a single filter can be replaced by another filter of the same type (11 / 29 bit).</div>
+
+
+<a name="Bridge"></a>
+<h3>CAN Bridge</h3>
+<img src="Images/Bridge Filter.png" alt="CAN Bridge" width="514" height="222">
+<div>An adapter with multiple CAN channels can be configured as CAN bridge.</div>
+<div>From each CAN channel you can forward specific or all CAN IDs to another CAN channel.</div>
+<div>The <b>Host Filters</b> (green) define which CAN IDs are sent over USB to the computer.</div>
+<div>The <b>Bridge Filters</b> (red) define which CAN IDs are forwarded to another CAN channel.</div>
+<div>The <b>Bridge Pass Filters</b> define a mask filter for CAN IDs to be forwarded.</div>
+<div>The <b>Bridge Block Filters</b> define a mask filter for CAN IDs to be blocked.</div>
+<div>Block filters have priority over pass filters.</div>
+<div>You can define up to 20 bridge filters per channel (pass / block and 11 bit / 29 bit mixed).</div>
+<div>Each bridge filter defines a destination channel.</div>
+<p>
+<div>It is allowed to modifiy bridge filters after opening the CAN channel.</div>
+<div>Each bridge filter must be accessed individually by it's index between 0 and 19.</div>
+<div>You must assign a different index to each filter that you set, otherwise you overwrite an existing filter.</div>
+<p>
+<div><u><b>Example 1:</b></u></div>
+<div>A pass filter with Filter = 7E0 and Mask = 7F0 forwards all CAN IDs from 7E0 ... 7EF.</div>
+<div>An additional block filter with Filter = 7E5 and Mask = 7FF blocks the single CAN ID 7E5.</div>
+<div>Both filters combined forward the CAN IDs 7E0 ... 7E4 and 7E6 ... 7EF.</div>
+<p>
+<div><u><b>Example 2:</b></u></div>
+<div>You want to forward all 11 bit CAN IDs from channel 0 to channel 1, except 7E8.</div>
+<div>You define a pass-ALL filter for channel 0 with Filter = 000 and Mask = 000 and Destination Channel = 1.</div>
+<div>You define a block filter for channel 0 with Filter = 7E8 and Mask = 7FF and Destination Channel = 1.</div>
+<p>
+<div>It is also possible to forward a received CAN packet to multiple other CAN channels simultaneously.</div>
+<div>If no pass filters are defined the bridge mode is turned off.</div>
+<p>
+<div>If you want to <b>reverse engineer</b> an ECU that responds on CAN ID 7E8,</div>
+<div>you connect the ECU to one channel and CAN bus to the other channel of a multi-channel adapter.</div>
+<ul>
+<li><div>You set a bridge pass filter for all 11 bit CAN IDs.</div>
+<li><div>You set a bridge block filter for the ECU's response ID 7E8.</div>
+<li><div>You set a host filter for ID 7E8.</div>
+<li><div>All ECU responses on ID 7E8 will now be sent to the computer instead of CAN bus.</div>
+<li><div>In HUD ECU Hacker you write a <b>macro script</b> that manipulates the ECU response.</div>
+<li><div>Finally the macro script sends your <b>fake response</b> back to CAN bus.</div>
+</ul>
+
+<div><u><b>ATTENTION:</b></u></div>
+<div>The origin channel and the destination channel must both be open.</div>
+<div>Forwarded packets are sent to the host as Rx packets on the origin CAN channel on which they were received.</div>
+<div>Forwarded packets do not generate a Tx echo on the destination CAN channel to which they are sent.</div>
+<p>
+<div>You can only forward from a CAN channel with higher baudrate to a slower channel if the traffic is not too high.</div>
+<div>Only CAN FD packets with max. 8 data bytes are forwarded to a classic CAN channel.</div>
+
 
 <a name="Sample_Baud"></a>
 <h3>Samplepoint &amp; Baudrate</h3>
@@ -1143,12 +1195,15 @@
 <div>When the packet has been sent successfully to CAN bus the processor fires a <b>Tx Event</b> that contains the marker.</div>
 <div>The host application must store the last sent packets in an internal array (study the code of the <a href="#Demo_Application">Demo Application</a>).</div>
 <div>The maximum count of packets that can be stored in the adapter is 64 + 3 = 67.</div>
-<div>An 8 bit marker can have values from 0 to 255 which is more than enough to give each Tx packet a unique marker.</div>
+<div>The 8 bit marker can have values from 0x01 to 0xFF which is more than enough to give each Tx packet a unique marker.</div>
 <p>
 <div>The advantage is that the user has a <b>reliable feedback</b> which packets have really been sent.</div>
 <div>In <b>One-Shot mode</b> (no re-transmission) this is the only way to know if a packet has been acknowledged or not.</div>
-<div>The user can also see the <b>exact time</b> when the packet has been dispatched to CAN bus.</div>
+<div>The user also gets the <b>exact timestamp</b> when the packet has been dispatched to CAN bus.</div>
 <div>By using markers <b>only one byte</b> is transferred back to the host, rather than the entire packet (See <a href="#Marker_Example">example</a>).</div>
+<p>
+<div>You can also decide on a per-packet basis if you want to receive an echo or not.</div>
+<div>You will receive <b>no echo event</b> if you send a packet with a marker value of 0x00.</div>
 
 <a name="Timestamps"></a>
 <h3>Timestamps</h3>
@@ -1336,6 +1391,7 @@
 <tr><td>"OI\r"</td><td>Closed</td><td>100</td><td>Open in internal loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
 <tr><td>"OE\r"</td><td>Closed</td><td>100</td><td>Open in external loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
 <tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns seven key/value pairs. See <a href="#Slcan_Version_Info">Version Info</a></td></tr>
+
 <tr><th>Set Modes</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"M1\r"</td><td>Closed</td><td>legacy</td><td>Enable silent mode</td><td>The next command "O\r" will open in bus monitoring mode</td></tr>
 <tr><td>"M0\r"</td><td>Closed</td><td>legacy</td><td>Disable silent mode</td><td>The next command "O\r" will open in normal mode</td></tr>
@@ -1356,6 +1412,7 @@
 <tr><td>"MS\r"</td><td>Open/Closed</td><td>100</td><td>Enable ESI report</td><td>Report the ESI flag of received CAN FD messages</td></tr>
 <tr><td>"Ms\r"</td><td>Open/Closed</td><td>100</td><td>Disable ESI report</td><td>No ESI report</td></tr>
 <tr><td>"MDEFMS\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug, Error, Feedback, Echo, ESI reports</td><td>You can set all modes at once in one command</td></tr>
+
 <tr><th>Set Baudrates</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 75%</td></tr>
 <tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 75%</td></tr>
@@ -1379,21 +1436,29 @@
 <tr><td>"Y8\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 8 Mbaud</td><td>Samplepoint 50% (75% does not work) <span class="Red">deprecated</span></td></tr>
 <tr><td>"s4,69,10,7\r"</td><td>Closed</td><td>100</td><td>Set nominal bitrate: Prescaler=4,<br>Seg1=69, Seg2=10, Synchr. Jump Width=7</td><td>Set 500 kbaud, Samplepoint 87.5%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
 <tr><td>"y4,9,10,7\r"</td><td>Closed</td><td>100</td><td>Set data bitrate: Prescaler=4,<br>Seg1=9, Seg2=10, Synchr. Jump Width=7</td><td>Set 2 Mbaud, Samplepoint 50%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
-<tr><th>Set Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
+
+<tr><th>Host Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Host mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
     <div>You can set up to <b>8 mask filters</b> separated by semicolons.</div>
     <div>11 bit and 29 bit filters can be mixed.</div>
-    <div>See <a href="#Filter">CAN Filters</a>.</div>
     </td></tr>
-<tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Set a mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
-<tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>Set 3 filters for 16 ID's each: 7EX, 72X and 73X</td></tr>
-<tr><td>"f\r"</td><td>Closed</td><td>100</td><td>Clear all filters</td><td>Remove all filters</td></tr>
+<tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Host mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
+<tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>3 host filters for 16 IDs each: 7EX, 72X and 73X</td></tr>
+<tr><td>"f\r"</td><td>Closed</td><td>100</td><td>Clear all <a href="#Filter">host filters</a></td><td>Remove all host filters</td></tr>
+
+<tr><th>Bridge Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"F:P0A=7E0,7F0&gt;1\r"</td><td>Open/Closed</td><td>104</td><td>Set Pass filter Nº 0x0A = forward to channel 1</td><td>Forward CAN ID's 7E0 ... 7EF</td></tr>
+<tr><td>"F:B12=7E5,7FF&gt;1\r"</td><td>Open/Closed</td><td>104</td><td>Set Block filter Nº 0x12 = block on channel 1</td><td>Block CAN ID 7E5</td></tr>
+<tr><td>"f:07\r"</td><td>Open/Closed</td><td>104</td><td>Clear filter Nº 0x07 (Pass or Block)</td><td>Remove current filter at index 7</td></tr>
+<tr><td>"f:FF\r"</td><td>Open/Closed</td><td>104</td><td>Clear all <a href="#Bridge">bridge filters</a></td><td>Turn off bridge mode</td></tr>
+
 <tr><th>Special Commands</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"*Boot0:Off\r"</td><td>Closed</td><td>100</td><td>Disable pin BOOT0 of STM32<b>G4</b>xx processors</td><td>See <a href="#Hardware">Hardware Misdesign</a></td></tr>
 <tr><td>"*Boot0:?\r"</td><td>Open/Closed</td><td>100</td><td>Request status of pin BOOT0</td><td>returns "+1\r" if enabled or "+0\r" if disabled</td></tr>
 <tr><td>"*DFU\r"</td><td>Open/Closed</td><td>100</td><td>Enable pin BOOT0 and enter DFU mode</td><td>If feedback = <code>FBK_ResetRequired</code>: Reconnect USB cable!</td></tr>
 <tr><td>"*Flash:XX=Data\r"</td><td>Open/Closed</td><td>102</td><td>Writes data to <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00=48656C6C6F\r" writes "Hello" to segment 0</td></tr>
 <tr><td>"*Flash:XX?\r"</td><td>Open/Closed</td><td>102</td><td>Reads data from <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00?\r" returns "+48656C6C6F\r"</td></tr>
+
 <tr><th>Transmit Packets</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp; See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
 <tr><td>"Txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
@@ -1403,6 +1468,7 @@
 <tr><td>"Dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
 <tr><td>"bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
 <tr><td>"Bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+
 <tr><th>CAN Channel</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"command\r"</td><td>----</td><td>legacy</td><td>Destination is CAN channel 1</td><td>All adapters</td></tr>
 <tr><td>"&amp;command\r"</td><td>----</td><td>101</td><td>Destination is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
@@ -1435,14 +1501,17 @@
 <tr><td>"#;\r"</td><td>100</td><td>Programming the Option Bytes in flash memory failed</td><td>Requires Feedback mode to be enabled</td></tr>
 <tr><td>"#&lt;\r"</td><td>100</td><td>Please reconnect the USB cable, a hardware reset is required</td><td>Requires Feedback mode to be enabled</td></tr>
 <tr><td>"#=\r"</td><td>102</td><td>A parameter is outside the valid range</td><td>Requires Feedback mode to be enabled</td></tr>
+
 <tr><th>Response</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"+Text\r"</td><td>100</td><td>The firmware sends a plain text response to a command</td><td>Used by commands "*Boot0:?\r" and "V\r"</td></tr>
 <tr><td>"+Hex Data\r"</td><td>102</td><td>The firmware sends a hex byte response to a command</td><td>Used by command "*Flash:XX?\r"</td></tr>
+
 <tr><th>Event</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"&gt;Message\r"</td><td>100</td><td>The firmware sends a debug message (plain text)</td><td>Requires Debug Messages to be enabled</td></tr>
 <tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status. See <a href="#Slcan_Errors">Slcan Errors</a></td><td>Requires CAN Error Reports to be enabled</td></tr>
 <tr><td>"L27\r"</td><td>100</td><td>The firmware has calculated a bus load of 27%.<br>If the bus load is zero, no report is sent.</td><td>Requires Bus Load Reports to be enabled</td></tr>
 <tr><td>"M3C\r"</td><td>100</td><td>The firmware reports the Tx echo marker 0x3C. See <a href="#Slcan_Packets">Slcan Packets</a></td><td>Requires Tx Echo Report markers to be enabled</td></tr>
+
 <tr><th>Rx Packets</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp;  See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
 <tr><td>"Txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
@@ -1452,6 +1521,7 @@
 <tr><td>"Dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
 <tr><td>"bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
 <tr><td>"Bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+
 <tr><th>CAN Channel</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"response\r"</td><td>legacy</td><td>Origin is CAN channel 1</td><td>All adapters</td></tr>
 <tr><td>"&amp;response\r"</td><td>101</td><td>Origin is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
@@ -1826,6 +1896,7 @@
 <li><div><b>04.Mar.2026</b>: Support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>. Candlelight: Added <code>eBoardFlags</code>.</div>
 <li><div><b>16.Apr.2026</b>: User data can be stored in <a href="#RW_Flash">flash memory</a>.</div>
 <li><div><b>17.May.2026</b>: Support for STM32G0B1 processor and new firmware for <a href="#WeActStudioV1">WeActStudioV1</a> adapter.</div>
+<li><div><b>25.May.2026</b>: Added <a href="#Bridge">CAN Bridge</a> mode. <a href="#Echo_Marker">Marker 00</a> sends no echo.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 
@@ -1838,6 +1909,7 @@
 <div>Slcan 101 (since 04.Mar.2026) adds support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>.</div>
 <div>Slcan 102 (since 16.Apr.2026) allows to read/write user data from/to the <a href="#RW_Flash">flash memory</a> and returns the serial number.</div>
 <div>Slcan 103 (since 17.May.2026) adds more Slcan baudrates, reports HAL version.</div>
+<div>Slcan 104 (since 25.May.2026) adds bridge filters.</div>
 
 
 <div>&nbsp;</div>

@@ -69,6 +69,7 @@ struct kDevInfo
     WORD                     mu16_MaxPackSizeOUT;
     bool                     mb_IsElmueSoft;
     bool                     mb_SupportsFD;
+    BYTE                     mu8_Channel;
     USB_DEVICE_DESCRIPTOR    mk_DeviceDescr;
     kCapabilityClassic       mk_Capability;
     kCapabilityFD            mk_CapabilityFD;
@@ -99,10 +100,11 @@ public:
     DWORD    Open(CString s_DevicePath);
     void     Close();
     DWORD    SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, CString* ps_Display);
-    DWORD    AddMaskFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask);
+    DWORD    AddHostFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask);
+    DWORD    SetBridgeFilter(BYTE u8_FilterIndex, BYTE u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, DWORD u32_Filter, DWORD u32_Mask);
     DWORD    Start(eDeviceFlags e_Flags);
     // ------------------------------------
-    DWORD      SendPacket(kCanPacket* pk_CanPacket, __int64* ps64_WinTimestamp, BYTE* pu8_EchoMarker);
+    DWORD      SendPacket(kCanPacket* pk_CanPacket, __int64* ps64_WinTimestamp);
     DWORD      ReceiveData(DWORD u32_Timeout, kHeader* pk_Header, DWORD u32_BufSize, __int64* ps64_RxTimestamp);
     kCanPacket RxFrameToCanPacket(kRxFrameElmue* pk_RxFrame);
     kCanPacket GetTxEchoPacket   (kTxEchoElmue*  pk_TxEcho);

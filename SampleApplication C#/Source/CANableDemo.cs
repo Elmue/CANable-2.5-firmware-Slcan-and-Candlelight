@@ -66,9 +66,13 @@ class Program
     // false --> run DFU demo (switch a device in Candlelight mode into DFU mode, fails if already in DFU mode)
     static bool CANDLELIGHT_DEMO = true; 
 
-    // true  --> only packets with the 11 bit CAN ID 0x7E8 will be received.
-    // false --> all packets are received
-    static bool SET_FILTERS = false;
+    // true  --> only packets with the 11 bit CAN ID 0x7E8 will be sent to the host.
+    // false --> all packets are sent to the host
+    static bool SET_HOST_FILTERS = false;
+
+    // true  --> Received packets with CAN ID 0x7E5 will be forwarded from channel 0 to channel 1 (only multi-channel adapters)
+    // false --> Do not use brdige mode
+    static bool SET_BRIDGE_FILTERS = false;
 
     // true  --> enable transfer of timestamps from the firmware (deprecated!)
     // false --> create performance counter timestamps 
@@ -173,13 +177,30 @@ class Program
 
             // -----------------------------------------
 
-            // optionally you can set filters here.
-            if (SET_FILTERS)
+            // optionally you can set host filters here.
+            if (SET_HOST_FILTERS)
             {
-                s_Action = "Error setting mask filter.";
+                s_Action = "Error setting host filter.";
 
                 // Only the 11 bit CAN ID 0x7E8 will pass through the filter.
-                mi_Candle.AddMaskFilter(false, 0x7E8, 0x7FF);
+                mi_Candle.AddHostFilter(false, 0x7E8, 0x7FF);
+
+                Print(ConsoleColor.DarkYellow, "Set host filter 7E8\n");
+            }
+
+            // -----------------------------------------
+
+            // The adapter must have at least 2 channels
+            if (SET_BRIDGE_FILTERS && 
+                mk_Info.mk_DeviceVersion.ChannelCount >= 2 && 
+                mk_Info.mu8_Channel == 0)
+            {
+                s_Action = "Error setting bridge filter.";
+
+                // Set filter Nº 09 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
+                mi_Candle.SetBridgeFilter(9, 1, true, false, false, 0x7E5, 0x7FF);
+
+                Print(ConsoleColor.DarkYellow, "Set bridge filter 7E5\n");
             }
 
             // -----------------------------------------
@@ -230,7 +251,6 @@ class Program
         i_TxPacket.mi_Data.AddRange(Encoding.ASCII.GetBytes("ElmuSoft"));
 
         Int64 s64_LastStamp = 0;
-        Byte  u8_LastEchoMarker;
 
         while (true)
         {
@@ -245,7 +265,7 @@ class Program
                 Int64 s64_TxStamp; // only valid if no error returned
                 try
                 {
-                    mi_Candle.SendPacket(i_TxPacket, out s64_TxStamp, out u8_LastEchoMarker);
+                    mi_Candle.SendPacket(i_TxPacket, out s64_TxStamp);
 
                     // Timestamps for sending are only available if Windows timestamps are used
                     Print(ConsoleColor.Gray,  mi_Candle.FormatTimestamp(null, s64_TxStamp));

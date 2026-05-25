@@ -166,9 +166,9 @@ typedef enum // sent as 8 bit
     #define CAN_PORTS           GPIOB                    // Port B
     #define CAN_ALTERNATES      GPIO_AF3_FDCAN1          // switch pin 8,9 multiplexer to CAN module
     // -------------------
-    #define LED_RX_PINS         GPIO_PIN_1 // blue
+    #define LED_RX_PINS         GPIO_PIN_0 // green
     #define LED_RX_PORTS        GPIOA
-    #define LED_TX_PINS         GPIO_PIN_0 // green
+    #define LED_TX_PINS         GPIO_PIN_1 // blue
     #define LED_TX_PORTS        GPIOA    
     // The third LED is used by the WeAct firmware to show that the device is in firmware update mode.
     // But WeActStudio uses their own proprietary firmware updater which is CRAP and is erased when uploading this firmware.
@@ -183,9 +183,9 @@ typedef enum // sent as 8 bit
 #elif defined(WeActStudioV2)    
 
     // The WeActStudio USB2CANFD v2 has a STM32G431 processor and a 16 MHz quartz
-    #define LED_RX_PINS         GPIO_PIN_1
+    #define LED_RX_PINS         GPIO_PIN_0
     #define LED_RX_PORTS        GPIOA
-    #define LED_TX_PINS         GPIO_PIN_0
+    #define LED_TX_PINS         GPIO_PIN_1
     #define LED_TX_PORTS        GPIOA    
     #define LED_PWR_PIN         GPIO_PIN_2 // see comment of WeActStudioV1
     #define LED_PWR_PORT        GPIOA    

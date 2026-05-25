@@ -36,7 +36,7 @@ int main(void)
     control_init(); // AFTER utils_init()
       
     // This loop runs eternally approx 100 times in one millisecond (on STM32G431)
-    int channel = 0;    
+    uint8_t channel = 0;    
     while (true)
     {       
         if (HAL_PCD_Is_Suspended()) // computer is in sleep mode (USB off)

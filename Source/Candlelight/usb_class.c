@@ -545,38 +545,10 @@ void ResetDfuStatus()
 // host data has arrived on the USB OUT endpoint (0x02, 0x04, 0x06)
 uint8_t USBD_GS_DataOut(uint8_t epnum)
 {
-    int channel = EpToChannel[epnum & 0xF]; // epnum = 0x02 --> channel 0, 0x04 --> 1, 0x06 --> 2
+    uint8_t channel = EpToChannel[epnum & 0xF]; // epnum = 0x02 --> channel 0, 0x04 --> 1, 0x06 --> 2
     buf_class* usb_buf = buf_get_instance(channel);
-    buf_class* can_buf = usb_buf;
 
-    // Although the multi channel firmware creates one USB interface for each CAN channel,
-    // the legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
-    // kHostFrameLegacy.channel tells the host which channel is the origin/destination of the packet.
-    if (!GLB_ProtoElmue) // legacy protocol
-    {
-        // get the destination CAN channel from the legacy packet
-        kHostFrameLegacy* pk_Legacy = (kHostFrameLegacy*)usb_buf->from_host_buf;
-        channel = pk_Legacy->channel;
-        
-        // if the host has sent an invalid channel --> store the frame in channel 0.
-        // buf_process_can() will set do_not_send == true, the packet is not sent and error_assert(APP_CanTxFail)
-        if (channel >= CHANNEL_COUNT) 
-            channel = 0;
-        
-        can_buf = buf_get_instance(channel);
-    }
-
-    kHostFrameObject* obj_to_can = buf_get_frame_locked(&can_buf->list_can_pool);
-    if (obj_to_can)
-    {
-        memcpy(&obj_to_can->frame, usb_buf->from_host_buf, sizeof(usb_buf->from_host_buf));
-        list_add_tail_locked(&obj_to_can->list, &can_buf->list_to_can);
-    }
-    else // CAN buffer overflow
-    {
-        // in case of buffer overflow inform the host immediately, so the host stops sending more packets and displays an error to the user.
-        error_assert(channel, APP_CanTxOverflow, true); // Both LED's = ON --> indicate severe error
-    }
+    buf_store_can_frame(channel, (kHostFrameLegacy*)usb_buf->from_host_buf);        
 
     // pass the buffer from_host_buf to the HAL for the next frame to receive
     USBD_LL_PrepareReceive(epnum, usb_buf->from_host_buf, sizeof(usb_buf->from_host_buf));
@@ -677,7 +649,7 @@ bool USBD_GS_CustomRequest(USBD_SetupReqTypedef *req)
 
 // This function is called from the main loop only after usb_buf->TxBusy == false.
 // Send a frame to the host on IN endpoint, either kHostFrameLegacy or kHeader
-void USBD_SendFrameToHost(int channel, void* frame)
+void USBD_SendFrameToHost(uint8_t channel, void* frame)
 {
     // Legacy protocol routes all CAN channels through interface 0
     if (!GLB_ProtoElmue)
@@ -720,7 +692,7 @@ void USBD_SendFrameToHost(int channel, void* frame)
 // The data from USBD_SendFrameToHost() has been sent to the host on IN endpoint (0x81, 0x83, 0x85)
 uint8_t USBD_GS_DataIn(uint8_t epnum)
 {
-    int channel = EpToChannel[epnum & 0xF]; // epnum = 0x81 --> channel 0, 0x83 --> 1, 0x85 --> 2
+    uint8_t channel = EpToChannel[epnum & 0xF]; // epnum = 0x81 --> channel 0, 0x83 --> 1, 0x85 --> 2
     buf_class* usb_buf = buf_get_instance(channel);
 
     // This important code was missing in the legacy firmware. (fixed by ElmüSoft)

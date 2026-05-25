@@ -438,23 +438,34 @@ typedef struct
 
 // -----------------------------------------
 
-// 8 bit = 256 possible operations
+// ELM_ReqSetFilter
 typedef enum // 8 bit
 {
-    FIL_ClearAll = 0,    // remove all filters
-    FIL_AcceptMask11bit, // add a new acceptance mask filter for 11 bit CAN IDs
-    FIL_AcceptMask29bit, // add a new acceptance mask filter for 29 bit CAN IDs
-//  FIL_xxxx             // future expansions are easily possible
+    FIL_HostClear = 0,    // remove all host filters (adapter must be closed)
+    FIL_HostPass_11,      // add a new host pass mask filter for 11 bit CAN IDs to be sent to the host over USB
+    FIL_HostPass_29,      // add a new host pass mask filter for 29 bit CAN IDs to be sent to the host over USB
+    // ------------------
+    // Bridge Mode (only for multi-channel adapters):
+    FIL_BridgeClear = 10, // remove one of the bridge filters. If kFilter.Index = 0xFF --> clear all bridge filters.
+    FIL_BridgePass_11,    // set a bridge pass  mask filter for 11 bit CAN IDs to be forwarded to kFilter.DestChannel
+    FIL_BridgePass_29,    // set a bridge pass  mask filter for 29 bit CAN IDs to be forwarded to kFilter.DestChannel 
+    FIL_BridgeBlock_11,   // set a bridge block mask filter for 11 bit CAN IDs to be blocked (not forwarded to kFilter.DestChannel)
+    FIL_BridgeBlock_29,   // set a bridge block mask filter for 29 bit CAN IDs to be blocked (not forwarded to kFilter.DestChannel)
+    // ------------------
+//  FIL_xxxx              // future expansions are easily possible
 } eFilterOperation;
 
 // ELM_ReqSetFilter
 typedef struct
 {
-    uint8_t  Operation; // eFilterOperation
-    uint32_t Filter;    // the filter (e.g. 0x7E0), ignored for Operation FIL_ClearAll
-    uint32_t Mask;      // the mask   (e.g. 0x7FF), ignored for Operation FIL_ClearAll
-    uint32_t Reserved1;
-    uint32_t Reserved2;
+    // all filters:
+    uint8_t  Operation;   // eFilterOperation
+    uint32_t Filter;      // the filter (e.g. 0x7E0)
+    uint32_t Mask;        // the mask   (e.g. 0x7FF)
+    // only for bridge filters:
+    uint8_t  Index;       // filter index
+    uint8_t  DestChannel; // destination channel
+    uint8_t  Reserved[6];
 } __packed __aligned(1) kFilter;
 
 

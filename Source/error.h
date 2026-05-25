@@ -26,11 +26,11 @@ typedef struct
     kCanErrorState last_state;
 } err_class;
 
-void error_init(int channel);
-void error_assert(int channel, eErrorAppFlags flag, bool report_immediately);
-bool error_is_report_due(int channel, uint32_t tick_now);
-void error_clear(int channel);
-kCanErrorState* error_get_state(int channel);
+void error_init(uint8_t channel);
+void error_assert(uint8_t channel, eErrorAppFlags flag, bool report_immediately);
+bool error_is_report_due(uint8_t channel, uint32_t tick_now);
+void error_clear(uint8_t channel);
+kCanErrorState* error_get_state(uint8_t channel);
 
 
 

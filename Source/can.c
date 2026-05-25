@@ -31,10 +31,11 @@ int                  SET_TermPins     [CHANNEL_COUNT] = { TERMINATOR_PINS  };
 can_class            can_inst[CHANNEL_COUNT] = {0};
 
 // ----- Private Methods
-void      can_reset(int channel);
-void      can_print_info(int channel);
-bool      can_apply_filters(can_class* inst);
-uint32_t  can_calc_bit_count_in_frame(can_class* inst, FDCAN_RxHeaderTypeDef *header);
+void      can_reset(uint8_t channel);
+void      can_print_info(uint8_t channel);
+bool      can_apply_host_filters(can_class* inst);
+uint32_t  can_calc_bit_count_in_frame(can_class* inst, uint32_t DataLength, uint32_t FrameType, uint32_t IdType, uint32_t FDFormat, uint32_t BitRateSwitch);
+void      can_forward_bridge_packet(can_class* inst, FDCAN_RxHeaderTypeDef* rx_header, uint8_t* rx_data);
 
 // Initialize CAN peripheral settings, but don't actually start the peripheral
 // called from the main loop
@@ -66,7 +67,7 @@ void can_init()
 
         can_inst[C].handle.Instance = SET_CanInterfaces[C];
     }
-    
+
 #if defined(CAN_TRX_ENABLE_PIN)
     // Enable the CAN transceiver chip, if required by the board (WeActStudio v2)
     GPIO_InitStruct.Pin       = CAN_TRX_ENABLE_PIN;
@@ -75,26 +76,28 @@ void can_init()
     GPIO_InitStruct.Pull      = GPIO_NOPULL;
     GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(CAN_TRX_ENABLE_PORT, &GPIO_InitStruct);
-    
+
     HAL_GPIO_WritePin(CAN_TRX_ENABLE_PORT, CAN_TRX_ENABLE_PIN, CAN_TRX_ENABLE_ON);
-#endif       
+#endif
 }
 
 // called from init() and close() --> reset variable for the next can_open().
 // reset only variables here that cannot be reset in can_open()
-void can_reset(int channel)
+void can_reset(uint8_t channel)
 {
     can_class* inst = &can_inst[channel];
 
     inst->bitrate_nominal.Brp = 0; // invalid = baudrate not set
     inst->bitrate_data   .Brp = 0;
+    inst->std_filter_count    = 0;
+    inst->ext_filter_count    = 0;
+    inst->busload_interval    = 0;
+    inst->tx_pending          = 0;
+    inst->is_open             = false;
 
-    inst->std_filter_count = 0;
-    inst->ext_filter_count = 0;
-    inst->busload_interval = 0;
-    inst->tx_pending       = 0;
-    inst->is_open          = false;
-
+    // clear all bridge filters
+    can_set_bridge_filter(channel, 0, 0xFF, false, false, false, 0, 0);
+    
     // this is indispensable here, otherwise Slcan is dead after a Tx buffer overlow and closing the adapter.
     buf_clear_can_buffer(channel);
 }
@@ -102,7 +105,7 @@ void can_reset(int channel)
 // Start the FDCAN instance
 // mode = FDCAN_MODE_NORMAL, FDCAN_MODE_BUS_MONITORING, FDCAN_MODE_INTERNAL_LOOPBACK, FDCAN_MODE_EXTERNAL_LOOPBACK
 // ATTENTION: Set all GLB_UserFlags before opening
-eFeedback can_open(int channel, uint32_t mode)
+eFeedback can_open(uint8_t channel, uint32_t mode)
 {
     can_class* inst = &can_inst[channel];
     if (inst->is_open)
@@ -111,7 +114,7 @@ eFeedback can_open(int channel, uint32_t mode)
     // Nominal baudrate is mandatory
     if (inst->bitrate_nominal.Brp == 0)
         return FBK_BaudrateNotSet;
-    
+
     if (!can_is_any_open())
     {
         // Reset all CAN instances FDCAN1, FDCAN2, FDCAN3 only if no channel is open
@@ -121,7 +124,12 @@ eFeedback can_open(int channel, uint32_t mode)
 
     buf_clear_can_buffer(channel);
     error_init(channel);
-    led_blink_identify(channel, false); // stop identify blinking
+    
+    // stop identify blinking on all channels
+    for (int C=0; C<CHANNEL_COUNT; C++)
+    {
+        led_blink_identify(C, false); 
+    }
 
     FDCAN_InitTypeDef* init = &inst->handle.Init;
     init->ClockDivider          = FDCAN_CLOCK_DIV1;
@@ -163,8 +171,8 @@ eFeedback can_open(int channel, uint32_t mode)
 
     uint32_t clock_MHz = system_get_can_clock() / 1000000; // 160 or 64
     if (clock_MHz == 0)
-        return FBK_ErrorFromHAL; 
-    
+        return FBK_ErrorFromHAL;
+
     inst->nom_bit_len_ns  = 1 + inst->bitrate_nominal.Seg1 + inst->bitrate_nominal.Seg2; // time quantums
     inst->nom_bit_len_ns *= inst->bitrate_nominal.Brp;     // clock prescaler
     inst->nom_bit_len_ns *= 1000;                          // µs -> ns
@@ -233,7 +241,7 @@ eFeedback can_open(int channel, uint32_t mode)
     // -------------------- filters --------------------------
 
     // Store all user filters in can_filters into the processor's memory
-    if (!can_apply_filters(inst))
+    if (!can_apply_host_filters(inst))
         return FBK_ErrorFromHAL;
 
     // the user can define up to 8 filters
@@ -264,7 +272,7 @@ void can_close_all()
 }
 
 // Disable the CAN peripheral and go off-bus
-void can_close(int channel)
+void can_close(uint8_t channel)
 {
     can_class* inst = &can_inst[channel];
 
@@ -277,12 +285,12 @@ void can_close(int channel)
 
     // reset all class variables, also is_open
     can_reset(channel);
-    led_turn_TX(channel, true); 
+    led_turn_TX(channel, true);
 }
 
 // Called from Buffer. Stores a packet in the Tx FIFO
 // Check HAL_FDCAN_GetTxFifoFreeLevel() and can_is_tx_allowed() before calling this function!
-void can_send_packet(int channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
+void can_send_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
 {
     can_class* inst = &can_inst[channel];
 
@@ -312,7 +320,7 @@ void can_send_packet(int channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_
 
 // Process data from CAN tx/rx circular buffers
 // This function is called approx 100 times in one millisecond (on STM32G431)
-void can_process(int channel, uint32_t tick_now)
+void can_process(uint8_t channel, uint32_t tick_now)
 {
     can_class* inst = &can_inst[channel];
     if (!inst->is_open)
@@ -333,7 +341,8 @@ void can_process(int channel, uint32_t tick_now)
         // Here tx_event.EventType is FDCAN_TX_IN_SPITE_OF_ABORT if auto retransmission is disabled.
         // "In DAR mode (Disable Auto Retransmission) all transmissions are automatically canceled after
         // they have been started on the CAN bus." (see "STM32G4 Series - Chapter FDCAN.pdf" in subfolder "Documentation")
-        if (GLB_UserFlags[channel] & USR_ReportTX)
+        // A marker of zero must not send an echo to the host! (forwarded bridge packets)
+        if ((GLB_UserFlags[channel] & USR_ReportTX) && tx_event.MessageMarker > 0)
         {
             // convert 16 bit timestamp --> 32 bit
             tx_event.TxTimestamp = (system_get_timewrap() << 16) | tx_event.TxTimestamp;
@@ -344,11 +353,8 @@ void can_process(int channel, uint32_t tick_now)
         // In bus montoring mode and restricted mode sending packets is not possible.
         if (inst->handle.Init.Mode == FDCAN_MODE_NORMAL)
         {
-            // TxEventFifoTypeDef and RxHeaderTypeDef are identical except the last 2 members, which are not needed for busload calculation.
-            FDCAN_RxHeaderTypeDef* rx_header = (FDCAN_RxHeaderTypeDef*)&tx_event;
-
             // for bus load calculation
-            inst->bit_count_total += can_calc_bit_count_in_frame(inst, rx_header);
+            inst->bit_count_total += can_calc_bit_count_in_frame(inst, tx_event.DataLength, tx_event.TxFrameType, tx_event.IdType, tx_event.FDFormat, tx_event.BitRateSwitch);
         }
 
         if (inst->tx_pending > 0)
@@ -370,8 +376,12 @@ void can_process(int channel, uint32_t tick_now)
         rx_header.RxTimestamp = (system_get_timewrap() << 16) | rx_header.RxTimestamp;
         buf_store_rx_packet(channel, &rx_header, can_data_buf);
 
+#if CHANNEL_COUNT > 1
+        if (inst->bridge_active)
+            can_forward_bridge_packet(inst, &rx_header, can_data_buf);
+#endif
         // for bus load calculation
-        inst->bit_count_total += can_calc_bit_count_in_frame(inst, &rx_header);
+        inst->bit_count_total += can_calc_bit_count_in_frame(inst, rx_header.DataLength, rx_header.RxFrameType, rx_header.IdType, rx_header.FDFormat, rx_header.BitRateSwitch);
 
         led_flash_RX(channel); // flash 15 ms
     }
@@ -380,8 +390,12 @@ void can_process(int channel, uint32_t tick_now)
     // Rx FIFO 0 and Rx FIFO 1 can store up to three packets each.
     if (HAL_FDCAN_GetRxMessage(&inst->handle, FDCAN_RX_FIFO1, &rx_header, can_data_buf) == HAL_OK)
     {
+#if CHANNEL_COUNT > 1
+        if (inst->bridge_active)
+            can_forward_bridge_packet(inst, &rx_header, can_data_buf);
+#endif
         // for bus load calculation
-        inst->bit_count_total += can_calc_bit_count_in_frame(inst, &rx_header);
+        inst->bit_count_total += can_calc_bit_count_in_frame(inst, rx_header.DataLength, rx_header.RxFrameType, rx_header.IdType, rx_header.FDFormat, rx_header.BitRateSwitch);
 
         led_flash_RX(channel); // flash 15 ms
     }
@@ -472,7 +486,7 @@ void can_process(int channel, uint32_t tick_now)
 // The recovery process may take up to 200 ms for low baudrates (10 kBaud).
 // The adapter easily goes into bus off state if you try to communicate between 2 adapters with a different baudrate.
 // This function must be called after reporting BusOff to the host.
-void can_recover_bus_off(int channel)
+void can_recover_bus_off(uint8_t channel)
 {
     can_class* inst = &can_inst[channel];
     if (!inst->is_open)
@@ -525,7 +539,7 @@ void can_timer_100ms()
             // This function is called every 100 ms = 100 * 1000 µs --> divide by 100000
             uint32_t rate_us_ppm = inst->bit_count_total * inst->nom_bit_len_ns / 100000;
             uint32_t busload_ppm = rate_us_ppm * STUFFING_FACTOR / inst->busload_interval;
-            
+
             // divide by 1000 to remove stuff factor, which is multiplied with 1000, and divide by 10 to convert 1000 into 100%
             uint8_t  new_busload = MIN(99, busload_ppm / 10000);
 
@@ -548,7 +562,7 @@ void can_timer_100ms()
 // set_data = true  -> Set the data    bitrate configuration of the CAN peripheral
 // If all 4 nominal values are identical to the data values, CAN FD is enabled and packets up to 64 byte can be sent without BRS.
 // See "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder "Documentation"
-eFeedback can_set_bit_timing(int channel, bool set_data, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw)
+eFeedback can_set_bit_timing(uint8_t channel, bool set_data, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw)
 {
     can_class* inst = &can_inst[channel];
     if (inst->is_open)
@@ -570,17 +584,17 @@ eFeedback can_set_bit_timing(int channel, bool set_data, uint32_t BRP, uint32_t 
             !IS_FDCAN_NOMINAL_SJW      (Sjw))
                 return FBK_ParamOutOfRange;
     }
-            
+
     can_bitrate_cfg* bitrate = set_data ? &inst->bitrate_data : &inst->bitrate_nominal;
 
     bitrate->Brp  = BRP;
     bitrate->Seg1 = Seg1;
     bitrate->Seg2 = Seg2;
     bitrate->Sjw  = Sjw;
-    
+
     if (can_calc_baud(bitrate) > MAX_CAN_BAUDRATE * 1000000)
         return FBK_ParamOutOfRange;
-    
+
     return FBK_Success;
 }
 
@@ -590,7 +604,7 @@ eFeedback can_set_bit_timing(int channel, bool set_data, uint32_t BRP, uint32_t 
 // Therefore this firmware prints them as a debug message so the user can verify the settings.
 // Additionally this function can print the TDC configuration and if the pin BOOT0 is enabled.
 // This function is only called if CAN is opened.
-void can_print_info(int channel)
+void can_print_info(uint8_t channel)
 {
     if ((GLB_UserFlags[channel] & USR_DebugReport) == 0)
         return;
@@ -623,10 +637,10 @@ void can_print_info(int channel)
         strcat(buf, inst->bitrate_nominal.Brp == inst->bitrate_data.Brp ? "Yes" : "No");
     }
     control_send_debug_mesg(channel, buf);
-    
+
     // ------------------- Debugging --------------------
     // Optional additional information: pin BOOT0 and TDC offset
-    
+
 #if 0
     // Print Transceiver Delay Compensation
     if (inst->tdc_offset > 0)
@@ -642,17 +656,18 @@ void can_print_info(int channel)
         case Option_Inactive: pin_status = "disabled";      break;
         default:              pin_status = "not supported"; break;
     }
-    
-    strcat(buf, ", Pin BOOT0: ");        
+
+    strcat(buf, ", Pin BOOT0: ");
     strcat(buf, pin_status);
 
     control_send_debug_mesg(channel, buf);
 #endif
 }
 
-// ----------------------------------------------------------------------------------------------
+// ------------------------------------- HOST FILTER -------------------------------------------
 
-// The processor allows up to 28 standard filters and up to 8 extended filters.
+// Set filters for Rx packets to be sent to the host over USB.
+// The G0 and G4 series allow up to 28 standard filters and up to 8 extended filters.
 // Nobody needs so many filters -> allow 8 user filters.
 // Rx FIFO 0 receives all packets that pass. They are sent to the host application over USB.
 // Rx FIFO 1 receives all packets that are rejected, they only flash the Rx LED.
@@ -663,13 +678,13 @@ void can_print_info(int channel)
 // But HAL_FDCAN_ConfigFilter() can be called after opening the adapter.
 // So the only possible filter modification after opening the adapter is to modify ONE existing filter.
 // The filter type must be the same (11 bit or 29 bit).
-eFeedback can_set_mask_filter(int channel, bool extended, uint32_t filter, uint32_t mask)
+eFeedback can_add_host_filter(uint8_t channel, bool extended, uint32_t filter, uint32_t mask)
 {
     can_class* inst = &can_inst[channel];
 
     int tot_filters = inst->std_filter_count + inst->ext_filter_count;
-    if (tot_filters >= MAX_FILTERS)
-        return FBK_InvalidParameter;
+    if (tot_filters >= MAX_HOST_FILTERS)
+        return FBK_ParamOutOfRange;
 
     uint32_t maximum = extended ? 0x1FFFFFFF : 0x7FF;
     if (filter > maximum || mask > maximum)
@@ -691,7 +706,7 @@ eFeedback can_set_mask_filter(int channel, bool extended, uint32_t filter, uint3
         tot_filters = 0;
     }
 
-    FDCAN_FilterTypeDef* last_filter = &inst->filters[tot_filters];
+    FDCAN_FilterTypeDef* last_filter = &inst->host_filters[tot_filters];
     last_filter->IdType       = extended ? FDCAN_EXTENDED_ID : FDCAN_STANDARD_ID;
     last_filter->FilterIndex  = extended ? inst->ext_filter_count : inst->std_filter_count;
     last_filter->FilterType   = FDCAN_FILTER_MASK;
@@ -702,27 +717,27 @@ eFeedback can_set_mask_filter(int channel, bool extended, uint32_t filter, uint3
     if (extended) inst->ext_filter_count ++;
     else          inst->std_filter_count ++;
 
-    if (inst->is_open && !can_apply_filters(inst))
+    if (inst->is_open && !can_apply_host_filters(inst))
         return FBK_ErrorFromHAL;
 
     return FBK_Success;
 }
 
 // Store all user filters in can_filters into the processor's memory
-bool can_apply_filters(can_class* inst)
+bool can_apply_host_filters(can_class* inst)
 {
     // the user can define up to 8 filters
     int tot_filters = inst->std_filter_count + inst->ext_filter_count;
     for (int i=0; i<tot_filters; i++)
     {
-        if (HAL_FDCAN_ConfigFilter(&inst->handle, &inst->filters[i]) != HAL_OK)
+        if (HAL_FDCAN_ConfigFilter(&inst->handle, &inst->host_filters[i]) != HAL_OK)
             return false; // error detail in inst->handle.ErrorCode
     }
     return true;
 }
 
-// clear all filters
-eFeedback can_clear_filters(int channel)
+// clear all host filters (adapter must be open)
+eFeedback can_clear_host_filters(uint8_t channel)
 {
     can_class* inst = &can_inst[channel];
 
@@ -734,11 +749,130 @@ eFeedback can_clear_filters(int channel)
     return FBK_Success;
 }
 
+// -------------------------------------- BRIDGE FILTER ------------------------------------------
+
+// Set or remove a specific bridge filter for Rx packets to be forwarded from src_channel to dest_channel.
+// This function can also be called after the adapter has been opened.
+// All filters can be set / cleared individually by their index.
+// To clear all filters at once set enable= false and filter_index = 0xFF.
+eFeedback can_set_bridge_filter(uint8_t src_channel, uint8_t dest_channel, uint8_t filter_index,
+                                bool enable, bool extended, bool block, uint32_t filter, uint32_t mask)
+{
+#if CHANNEL_COUNT > 1
+    can_class* inst = &can_inst[src_channel];
+    
+    if (enable) // set filter
+    {
+        if (dest_channel == src_channel || dest_channel >= CHANNEL_COUNT)
+            return FBK_ParamOutOfRange;
+        
+        uint32_t maximum = extended ? 0x1FFFFFFF : 0x7FF;
+        if (filter > maximum || mask > maximum)
+            return FBK_ParamOutOfRange;
+    }
+    else // clear filter
+    {
+        // Index == 0xFF --> clear all filters
+        if (filter_index == 0xFF)
+        {
+            inst->bridge_active = false;
+            memset(&inst->bridge_filters, 0, sizeof(inst->bridge_filters));
+            return FBK_Success;
+        }
+    }
+
+    if (filter_index >= MAX_BRIDGE_FILTERS)
+        return FBK_ParamOutOfRange;
+
+    brg_filter* cur_filter = &inst->bridge_filters[filter_index];
+    cur_filter->enabled   = enable;
+    cur_filter->extended  = extended;
+    cur_filter->block     = block;
+    cur_filter->dest_chan = dest_channel;
+    cur_filter->filter    = filter & mask;
+    cur_filter->mask      = mask;
+
+    bool active = false;
+    for (int F=0; F<MAX_BRIDGE_FILTERS; F++)
+    {
+        if (inst->bridge_filters[F].enabled && !inst->bridge_filters[F].block)
+        {
+            active = true;
+            break;
+        }
+    }
+    
+    // The variable bridge_active is only for speed optimization if bridge mode is not used.    
+    inst->bridge_active = active;
+    return FBK_Success;
+#else
+    return FBK_UnsupportedFeature; // not a multi-channel adapter
+#endif
+}
+
+#if CHANNEL_COUNT > 1
+// Forward a Rx packet to the channel(s) that are defined in the bridge filter(s)
+void can_forward_bridge_packet(can_class* inst, FDCAN_RxHeaderTypeDef* rx_header, uint8_t* rx_data)
+{
+    bool extended = rx_header->IdType == FDCAN_EXTENDED_ID;
+    uint32_t ID   = rx_header->Identifier;
+
+    bool pass_chan [CHANNEL_COUNT] = {0};
+    bool block_chan[CHANNEL_COUNT] = {0};
+
+    for (int i=0; i<MAX_BRIDGE_FILTERS; i++)
+    {
+        brg_filter* cur_filter = &inst->bridge_filters[i];
+
+        if (cur_filter->enabled &&
+            cur_filter->extended   == extended &&
+           (ID & cur_filter->mask) == cur_filter->filter)
+        {
+            if (cur_filter->block) block_chan[cur_filter->dest_chan] = true;
+            else                   pass_chan [cur_filter->dest_chan] = true;
+        }
+    }
+
+    FDCAN_TxHeaderTypeDef tx_header;
+    tx_header.Identifier          = rx_header->Identifier;
+    tx_header.IdType              = rx_header->IdType;
+    tx_header.TxFrameType         = rx_header->RxFrameType;
+    tx_header.DataLength          = rx_header->DataLength;
+    tx_header.ErrorStateIndicator = rx_header->ErrorStateIndicator;
+    tx_header.TxEventFifoControl  = FDCAN_STORE_TX_EVENTS; // always! Tx Event flashes the Tx LED
+    tx_header.MessageMarker       = 0;                     // no Tx echo for forwarded packets possible
+
+    for (int C=0; C<CHANNEL_COUNT; C++)
+    {
+        if (!pass_chan[C] || block_chan[C] || !can_is_open(C))
+            continue;
+        
+        if (can_using_FD(C))
+        {
+            tx_header.FDFormat      = rx_header->FDFormat;            
+            tx_header.BitRateSwitch = rx_header->BitRateSwitch;
+        }
+        else
+        {
+            // a packet with more than 8 data bytes cannot be forwarded to a classic CAN bus
+            if (tx_header.DataLength > 8)
+                continue;
+            
+            // convert FD packet into classic packet
+            tx_header.FDFormat      = FDCAN_CLASSIC_CAN;            
+            tx_header.BitRateSwitch = FDCAN_BRS_OFF;
+        }
+        
+        buf_store_tx_packet(C, &tx_header, rx_data);
+    }
+}
+#endif
+
 // ----------------------------------------------------------------------------------------------
 
 // Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
 // returns false if the board does not support this feature
-bool can_set_termination(int channel, bool enable)
+bool can_set_termination(uint8_t channel, bool enable)
 {
     if (SET_TermPins[channel] <= 0)
         return false; // --> return FBK_UnsupportedFeature to host
@@ -748,7 +882,7 @@ bool can_set_termination(int channel, bool enable)
     return true;
 }
 
-bool can_get_termination(int channel, bool* enabled)
+bool can_get_termination(uint8_t channel, bool* enabled)
 {
     if (SET_TermPins[channel] <= 0)
         return false; // --> return FBK_UnsupportedFeature to host
@@ -763,7 +897,7 @@ bool can_get_termination(int channel, bool* enabled)
 // interval =   1 --> report busload every 100 ms     (minimum)
 // interval =   7 --> report busload every 700 ms
 // interval = 100 --> report busload every 10 seconds (maximum)
-eFeedback can_enable_busload(int channel, uint32_t interval)
+eFeedback can_enable_busload(uint8_t channel, uint32_t interval)
 {
     if (interval > 100)
         return FBK_ParamOutOfRange;
@@ -786,31 +920,31 @@ bool can_is_any_open()
 }
 
 // Return bus status
-bool can_is_open(int channel)
+bool can_is_open(uint8_t channel)
 {
     return can_inst[channel].is_open;
 }
 
 // > 128 errors have occurred
-bool can_is_passive(int channel)
+bool can_is_passive(uint8_t channel)
 {
     return can_inst[channel].cur_status.ErrorPassive;
 }
 
 // true if data baudrate has been set, otherwise CAN classic
-bool can_using_FD(int channel)
+bool can_using_FD(uint8_t channel)
 {
     return can_inst[channel].bitrate_data.Brp > 0;
 }
 
 // true if data bitrate greater than nominal bitrate
-bool can_using_BRS(int channel)
+bool can_using_BRS(uint8_t channel)
 {
     can_class* inst = &can_inst[channel];
     return can_calc_baud(&inst->bitrate_data) > can_calc_baud(&inst->bitrate_nominal);
 }
 
-eFeedback can_is_tx_allowed(int channel)
+eFeedback can_is_tx_allowed(uint8_t channel)
 {
     can_class* inst = &can_inst[channel];
 
@@ -824,19 +958,19 @@ eFeedback can_is_tx_allowed(int channel)
 }
 
 // Check if at least one Tx FIFO buffer is available
-bool can_is_tx_fifo_free(int channel)
+bool can_is_tx_fifo_free(uint8_t channel)
 {
     return HAL_FDCAN_GetTxFifoFreeLevel(&can_inst[channel].handle) > 0;
 }
 
 // Return reference to CAN handle
-FDCAN_HandleTypeDef *can_get_handle(int channel)
+FDCAN_HandleTypeDef *can_get_handle(uint8_t channel)
 {
     return &can_inst[channel].handle;
 }
 
 // get the nominal or data bitrate
-can_bitrate_cfg* can_getBitrate(int channel, bool get_data)
+can_bitrate_cfg* can_getBitrate(uint8_t channel, bool get_data)
 {
     can_class* inst = &can_inst[channel];
     if (get_data) return &inst->bitrate_data;
@@ -847,7 +981,11 @@ can_bitrate_cfg* can_getBitrate(int channel, bool get_data)
 
 // Calculate the bit count of a CAN frame. Data bits with BRS are converted to nominal baudrate.
 // This code was written by Nakanishi Kiyomaro and was hopefully tested well.
-uint32_t can_calc_bit_count_in_frame(can_class* inst, FDCAN_RxHeaderTypeDef* header)
+uint32_t can_calc_bit_count_in_frame(can_class* inst, uint32_t DataLength,
+                                                      uint32_t FrameType,
+                                                      uint32_t IdType,
+                                                      uint32_t FDFormat,
+                                                      uint32_t BitRateSwitch)
 {
     if (inst->busload_interval == 0)
         return 0;
@@ -860,29 +998,29 @@ uint32_t can_calc_bit_count_in_frame(can_class* inst, FDCAN_RxHeaderTypeDef* hea
     const uint32_t CAN_BIT_NBR_WOD_FXFF_DATA_S = 26;
     const uint32_t CAN_BIT_NBR_WOD_FXFF_DATA_L = 30;
 
-    uint32_t byte_count = utils_dlc_to_byte_count(header->DataLength);
+    uint32_t byte_count = utils_dlc_to_byte_count(DataLength);
 
     uint32_t bit_count;
-    if (header->RxFrameType == FDCAN_REMOTE_FRAME && header->IdType == FDCAN_STANDARD_ID)
+    if (FrameType == FDCAN_REMOTE_FRAME && IdType == FDCAN_STANDARD_ID)
     {
         bit_count = CAN_BIT_NBR_WOD_CBFF;
     }
-    else if (header->RxFrameType == FDCAN_REMOTE_FRAME && header->IdType == FDCAN_EXTENDED_ID)
+    else if (FrameType == FDCAN_REMOTE_FRAME && IdType == FDCAN_EXTENDED_ID)
     {
         bit_count = CAN_BIT_NBR_WOD_CEFF;
     }
-    else if (header->FDFormat == FDCAN_CLASSIC_CAN && header->IdType == FDCAN_STANDARD_ID)
+    else if (FDFormat == FDCAN_CLASSIC_CAN && IdType == FDCAN_STANDARD_ID)
     {
         bit_count = CAN_BIT_NBR_WOD_CBFF + byte_count * 8;
     }
-    else if (header->FDFormat == FDCAN_CLASSIC_CAN && header->IdType == FDCAN_EXTENDED_ID)
+    else if (FDFormat == FDCAN_CLASSIC_CAN && IdType == FDCAN_EXTENDED_ID)
     {
         bit_count = CAN_BIT_NBR_WOD_CEFF + byte_count * 8;
     }
     else // for FD frames
     {
-        if (header->IdType == FDCAN_STANDARD_ID) bit_count = CAN_BIT_NBR_WOD_FBFF_ARBIT;
-        else                                     bit_count = CAN_BIT_NBR_WOD_FEFF_ARBIT;
+        if (IdType == FDCAN_STANDARD_ID) bit_count = CAN_BIT_NBR_WOD_FBFF_ARBIT;
+        else                             bit_count = CAN_BIT_NBR_WOD_FEFF_ARBIT;
 
         // calculate all bits separately that are affected by the bitrate switching (data + CRC)
         uint32_t brs_bits = byte_count * 8;
@@ -892,7 +1030,7 @@ uint32_t can_calc_bit_count_in_frame(can_class* inst, FDCAN_RxHeaderTypeDef* hea
             brs_bits += CAN_BIT_NBR_WOD_FXFF_DATA_L; // Long CRC
 
         // Convert data bit time to nominal bit time
-        if (header->BitRateSwitch == FDCAN_BRS_ON)
+        if (BitRateSwitch == FDCAN_BRS_ON)
         {
             // As double arithmetic is not available here --> calculate with integers multiplied with 1 million
             uint32_t factor = 1 + inst->bitrate_data.Seg1 + inst->bitrate_data.Seg2; // Tq in one bit (data)

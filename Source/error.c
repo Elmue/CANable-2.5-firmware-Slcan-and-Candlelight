@@ -15,7 +15,7 @@ extern eUserFlags  GLB_UserFlags[CHANNEL_COUNT];
 err_class   err_inst[CHANNEL_COUNT] = {0};
 
 // called from can_open()
-void error_init(int channel)
+void error_init(uint8_t channel)
 {
     memset(&err_inst[channel], 0, sizeof(err_class));
 }
@@ -24,7 +24,7 @@ void error_init(int channel)
 // use report_immediately = true only if it is a very important error.
 // this is used for Tx buffer full to inform the host without delay that no more Tx packets can be received.
 // report_immediately == false --> report in usual intervals of 100 ms or 3 seconds
-void error_assert(int channel, eErrorAppFlags flag, bool report_immediately)
+void error_assert(uint8_t channel, eErrorAppFlags flag, bool report_immediately)
 {
     err_class* inst = &err_inst[channel];
     
@@ -33,13 +33,13 @@ void error_assert(int channel, eErrorAppFlags flag, bool report_immediately)
         inst->report_now = true;
 }
 
-kCanErrorState* error_get_state(int channel)
+kCanErrorState* error_get_state(uint8_t channel)
 {
     return &err_inst[channel].cur_state;
 }
 
 // return true if the error state should be reported now to the host.
-bool error_is_report_due(int channel, uint32_t tick_now)
+bool error_is_report_due(uint8_t channel, uint32_t tick_now)
 {   
     err_class* inst = &err_inst[channel];
     
@@ -126,7 +126,7 @@ _ReportNow:
 }
 
 // Clear all errors. If they are still present they will be set again in can_process()
-void error_clear(int channel)
+void error_clear(uint8_t channel)
 {
     memset(&err_inst[channel].cur_state, 0, sizeof(kCanErrorState));
 }

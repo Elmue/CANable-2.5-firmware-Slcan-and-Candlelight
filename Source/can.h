@@ -11,7 +11,11 @@
 
 // The user can define 8 mask filters for 11 bit or 29 bit packets
 // The processor allows up to 28 standard filters and up to 8 extended filters.
-#define MAX_FILTERS  8
+// SRAMCAN_FLE_NBR cannot be used here because STM is so STUPID to define it in a *c file instead of a *h file.
+#define MAX_HOST_FILTERS    8 
+
+// Bridge filters are not handled in the processor --> no limitation 
+#define MAX_BRIDGE_FILTERS  20
 
 // Structure for CAN/FD bitrate configuration
 typedef struct 
@@ -30,8 +34,18 @@ typedef struct
 
 typedef struct
 {
+    bool     enabled;   // active / inactive
+    bool     block;     // block  / pass filter
+    bool     extended;  // 11 bit / 29 bit ID
+    uint8_t  dest_chan; // destination channel for packet forwarding
+    uint32_t filter;
+    uint32_t mask;     
+} brg_filter;
+
+typedef struct
+{
     FDCAN_HandleTypeDef         handle;
-    FDCAN_FilterTypeDef         filters[MAX_FILTERS];
+    FDCAN_FilterTypeDef         host_filters[MAX_HOST_FILTERS];
     FDCAN_ProtocolStatusTypeDef cur_status; // current bus status
     can_bitrate_cfg             bitrate_nominal;
     can_bitrate_cfg             bitrate_data;
@@ -42,8 +56,8 @@ typedef struct
     bool bitrate_printed_once;
     bool delay_printed_once;
 
-    uint32_t std_filter_count;    // standard filters
-    uint32_t ext_filter_count;    // extended filters
+    uint32_t std_filter_count;    // standard host filters
+    uint32_t ext_filter_count;    // extended host filters
     uint32_t bit_count_total;     // for calculation of bus load, total count of all bits of all Rx messages converted to nominal baudrate
     uint32_t nom_bit_len_ns;      // for calculation of bus load, length of one nominal bit in ns (constant)
     uint8_t  old_busload_pct;     // for calculation of bus load, last reported percent value
@@ -52,6 +66,12 @@ typedef struct
     uint32_t tdc_offset;          // for Transceiver Delay Compensation
     uint32_t last_tx_tick;        // for Transmit Timeout
     int      tx_pending;          // for Transmit Timeout
+    
+    // ----- Bridge Filters
+#if CHANNEL_COUNT > 1
+    brg_filter bridge_filters[MAX_BRIDGE_FILTERS];
+    bool       bridge_active;    
+#endif
 } can_class;
 
 static inline uint32_t can_calc_baud(can_bitrate_cfg* bitrate)
@@ -65,28 +85,29 @@ static inline uint32_t can_calc_sample(can_bitrate_cfg* bitrate)
 }
 
 void can_init();
-eFeedback  can_open(int channel, uint32_t mode);
+eFeedback  can_open(uint8_t channel, uint32_t mode);
 void       can_close_all();
-void       can_close(int channel);
-void       can_process(int channel, uint32_t tick_now);
+void       can_close(uint8_t channel);
+void       can_process(uint8_t channel, uint32_t tick_now);
 void       can_timer_100ms();
-void       can_send_packet(int channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
-eFeedback  can_set_bit_timing(int channel, bool set_data, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw);
-eFeedback  can_enable_busload(int channel, uint32_t interval);
-bool       can_set_termination(int channel, bool enable);
-bool       can_get_termination(int channel, bool* enabled);
+void       can_send_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
+eFeedback  can_set_bit_timing(uint8_t channel, bool set_data, uint32_t BRP, uint32_t Seg1, uint32_t Seg2, uint32_t Sjw);
+eFeedback  can_enable_busload(uint8_t channel, uint32_t interval);
+bool       can_set_termination(uint8_t channel, bool enable);
+bool       can_get_termination(uint8_t channel, bool* enabled);
 bool       can_is_any_open();
-bool       can_is_open(int channel);
-bool       can_is_passive(int channel);
-bool       can_using_FD(int channel);
-bool       can_using_BRS(int channel);
-bool       can_is_tx_fifo_free(int channel);
-eFeedback  can_is_tx_allowed(int channel);
-eFeedback  can_set_mask_filter(int channel, bool extended, uint32_t filter, uint32_t mask);
-eFeedback  can_clear_filters(int channel);
-void       can_recover_bus_off(int channel);
+bool       can_is_open(uint8_t channel);
+bool       can_is_passive(uint8_t channel);
+bool       can_using_FD(uint8_t channel);
+bool       can_using_BRS(uint8_t channel);
+bool       can_is_tx_fifo_free(uint8_t channel);
+eFeedback  can_is_tx_allowed(uint8_t channel);
+eFeedback  can_add_host_filter(uint8_t channel, bool extended, uint32_t filter, uint32_t mask);
+eFeedback  can_clear_host_filters(uint8_t channel);
+eFeedback  can_set_bridge_filter(uint8_t src_channel, uint8_t dest_channel, uint8_t filter_index, bool enable, bool extended, bool block, uint32_t filter, uint32_t mask);
+void       can_recover_bus_off(uint8_t channel);
 
-can_bitrate_cfg*     can_getBitrate(int channel, bool get_data);
-FDCAN_HandleTypeDef* can_get_handle(int channel);
+can_bitrate_cfg*     can_getBitrate(uint8_t channel, bool get_data);
+FDCAN_HandleTypeDef* can_get_handle(uint8_t channel);
 
 
