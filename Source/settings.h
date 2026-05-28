@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -17,12 +18,6 @@
 
 // ============================================================================================
 // The following enums are used for Slcan and Candlelight
-
-typedef enum
-{
-    false = 0,
-    true  = 1,
-} bool;
 
 // If command feedback is enabled these error codes are sent to the host.
 // This enum is used for Slcan and for Candlelight.
