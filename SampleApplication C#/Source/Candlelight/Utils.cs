@@ -167,7 +167,7 @@ public class Utils
 
     #endregion
 
-    private static Stopwatch mi_Timestamp = Stopwatch.StartNew();
+    private static Stopwatch mi_Timestamp = new Stopwatch();
 
     // ------------------------------------------------
 
@@ -176,6 +176,8 @@ public class Utils
     // Then this function is used as a replacement to generate a timestamp on reception of a packet and when sending a packet.
     public static Int64 GetWinTimestamp()
     {
+        mi_Timestamp.Start(); // start when called for the first time
+
         double d_Time = mi_Timestamp.ElapsedTicks;
         d_Time *= 1000000.0; // µs per second
 

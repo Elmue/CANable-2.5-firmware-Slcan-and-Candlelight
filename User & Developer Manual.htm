@@ -209,7 +209,7 @@
         <div>— &nbsp; <a href="#WebUpdater"           class="MenuLink" onClick="ShowMenu(false)">Official Firmware</a></div>
         <div>— &nbsp; <a href="#Slcan_Protocol"       class="MenuLink" onClick="ShowMenu(false)">Slcan Protocol</a></div>
         <div>— &nbsp; <a href="#Candlelight_Protocol" class="MenuLink" onClick="ShowMenu(false)">Candlelight Protocol</a></div>
-        <div>— &nbsp; <a href="#Speed_Comparison"     class="MenuLink" onClick="ShowMenu(false)">Inefficient USB Data Transfer</a></div>
+        <div>— &nbsp; <a href="#Speed_Comparison"     class="MenuLink" onClick="ShowMenu(false)">USB Data Transfer Speed</a></div>
         <div>— &nbsp; <a href="#Legacy_Installation"  class="MenuLink" onClick="ShowMenu(false)">Legacy Candlelight Installation</a></div>
         <div>— &nbsp; <a href="#Ms_OS_Descriptor"     class="MenuLink" onClick="ShowMenu(false)">Microsoft OS Descriptor</a></div>
         <div>— &nbsp; <a href="#Zadig"                class="MenuLink" onClick="ShowMenu(false)">Zadig</a></div>
@@ -501,15 +501,13 @@
 <div>However, my firmware is still 100% backward compatible with the legacy protocol.</div>
 
 <a name="Speed_Comparison"></a>
-<h3>Inefficient USB Data Transfer</h3>
+<h3>USB Data Transfer Speed</h3>
 <div>The following table compares the efficiency of different firmware versions receiving a CAN FD packet.</div>
 <div>The payload in this example consists of a 29 bit CAN ID + 16 data bytes + flags = 21 byte.</div>
 <p>
 <table class="Pre" style="white-space: nowrap;">
 <tr><td class="Green">19F50C02: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F (FDF, BRS)</td></tr>
 </table>
-
-
 <table class="DataTable">
 <tr><th>Firmware</th><th>Payload</th><th>Transferred over USB</th><th>Efficiency</th></tr>
 <tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
@@ -517,6 +515,19 @@
 <tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td align="right"><span style="color:#FF0000"><b>0 %</b></span></td></tr>
 <tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td>21 / 23 = <span style="color:#00AA00"><b>91 %</b></span></td></tr>
 </table>
+<div>Additionally the Candlelight 2.5 protocol supports packing multiple frames into one USB packet.</div>
+<table class="TblImage">
+    <tr><td align="center"><b>USB Full Speed Transfer</b></td></tr>
+    <tr><td><img src="Images/USB FS Oscilloscope.png" alt="USB Full Speed Oscilloscope Capture" width="252" height="100"></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/USB FS Oscilloscope.png')">Show Full Size</span></td></tr>
+</table>
+<div>This oscilloscope capture and analysis has been created with the open source <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer" target="_blank">Oszi Waveform Analyzer</a>.</div>
+<div>To transfer 4 payload bytes over USB an overhead of SYNC, DATA1, CRC, EOP and an ACK packet is requried.</div>
+<div>The ElmüSoft protocol improves speed by sending as much as possible frames in one <b>BLOB</b> (Binary Large Object).</div>
+<div>The same USB protocol overhead is required if 4 bytes are sent or 64 bytes, which is the maximum for USB Full Speed.</div>
+<div>The new firmware can pack up to 250 frames with up to 2048 byte into one USB blob.</div>
+<div>Blobs are only sent at very high CAN speeds if there are multiple frames waiting in the USB FIFO.</div>
+
 
 <a name="Legacy_Installation"></a>
 <h3>Legacy Candlelight Installation not working</h3>
@@ -1780,7 +1791,7 @@
 <div>The new protocol sends <b>optimized structs</b> for Tx and Rx packtes, Echo Markers, Debug Messages, Error reports, Bus load events.</div>
 <div>You can test all this in the demo application.</div>
 <p>
-<div>The screenshot above uses <b>timestamps</b> from the computer CPU. They are converted to local time with 1 µs precision.</div>
+<div>The screenshot above uses <b>timestamps</b> from the computer CPU with 1 µs precision.</div>
 <div>When you set the flag <code>GS_DevFlagTimestamp</code> the demo switches to <b>firmware timestamps</b> generated in the adapter.</div>
 <div>They have no advantage at all. They produce more USB traffic and you will see several lines with <b>"No Timestamp"</b>.</div>
 <div>The reason is that firmware timestamps are only available for events <b>received from</b> the firmware.</div>
@@ -1897,6 +1908,8 @@
 <li><div><b>16.Apr.2026</b>: User data can be stored in <a href="#RW_Flash">flash memory</a>.</div>
 <li><div><b>17.May.2026</b>: Support for STM32G0B1 processor and new firmware for <a href="#WeActStudioV1">WeActStudioV1</a> adapter.</div>
 <li><div><b>25.May.2026</b>: Added <a href="#Bridge">CAN Bridge</a> mode. <a href="#Echo_Marker">Marker 00</a> sends no echo.</div>
+<li><div><b>28.May.2026</b>: Improved <a href="#Speed_Comparison">USB Speed</a> by packing multiple frames into one blob. Added <code>ELM_DevFlagSendUsbBlobs</code>.</div>
+
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
 

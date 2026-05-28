@@ -45,6 +45,7 @@ uint32_t      system_get_timestamp();
 uint32_t      system_get_timewrap();
 uint32_t      system_get_flash_addr(uint32_t segment);
 eFeedback     system_write_flash(uint32_t segment, uint8_t* buffer, uint16_t data_len);
+void          system_reset_timestamps();
 
 // ARM's
 // "Application Note 321 ARM Cortex-M Programming Guide to Memory Barrier Instructions"

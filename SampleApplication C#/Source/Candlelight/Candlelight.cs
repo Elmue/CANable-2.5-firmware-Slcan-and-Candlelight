@@ -114,6 +114,7 @@ public class Candlelight : IDisposable
         // ------- ElmüSoft -------
         ProtocolElmue       = 0x04000, // ElmüSoft protocol
         DisableTxEcho       = 0x08000, // no echo for Tx commands
+        SendUsbBlobs        = 0x10000, // send blobs over USB
     }
 
     enum eTermination : int
@@ -333,6 +334,8 @@ public class Candlelight : IDisposable
         Error,        // the message contains multiple error flags (same format as legacy protocol, see buf_store_error())
         String,       // the message contains an ASCII string to be displayed to the user
         Busload,      // the message contains one byte which is the bus load in percent
+        TxBlob,       // the message contains a blob (cBlob) with multiple cTxFrameElmue
+        RxBlob,       // the message contains a blob (cBlob) with multiple cRxFrameElmue
     } 
 
     // If any of these flags is set, both LED's (Rx + Tx) are permanently ON
@@ -509,6 +512,13 @@ public class Candlelight : IDisposable
     // =======================================================================
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    class cBlob
+    {
+        public Byte         mu8_FrameCount; // the count of cTxFrameElmue or cRxFrameElmue that follow after this header
+        public eMessageType me_MesgType;    // eMessageType.TxBlob or eMessageType.RxBlob
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public class cHeader
     {
         public Byte         mu8_Size;     // the total length of this message (this struct + the appended data bytes)
@@ -617,11 +627,11 @@ public class Candlelight : IDisposable
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     public class cErrorElmue : cHeader
     {
-        public eErrFlagsCanID  me_ErrID; 
+        public  eErrFlagsCanID  me_ErrID; 
         [MarshalAs(UnmanagedType.ByValArray, SizeConst = 8)]
-        public Byte[]          mu8_ErrData;    // several error flags and error counters
+        public  Byte[]          mu8_ErrData;    // several error flags and error counters
         // ----- variable start ------
-        public UInt32          mu32_Timestamp; // only sent to host if GS_DevFlagTimestamp has been set
+        public  UInt32          mu32_Timestamp; // only sent to host if GS_DevFlagTimestamp has been set
 
         /// <summary>
         /// Get the size of the fix fields in the struct before the variable fields begin
@@ -647,7 +657,7 @@ public class Candlelight : IDisposable
         /// If the firmware sends less bytes than this minimum size an exception is thrown
         /// </summary>
         public override int GetMinSize(bool b_McuTimestamp)
-        {
+    {
             return (int)Marshal.OffsetOf(GetType(), "mu8_AsciiMsg"); 
         }
 
@@ -816,29 +826,35 @@ public class Candlelight : IDisposable
 
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
-    // The version number is BCD encoded (0x251118 = 18.nov.2025)
-    const int MIN_FIRMWARE = 0x260525;
+    // The version number is BCD encoded (0x251218 = 18.dec.2025)
+    const int MIN_FIRMWARE = 0x260528;
 
-    // The firmware update interface is always interface 1
+    // must be equal to DFU_INTERFACE_NUMBER in usb_class.h in the firmware
     const Byte DFU_INTERFACE = 1;
 
-    WinUSB         mi_WinUSB;
-    kDevInfo       mk_Info;
-    StringBuilder  ms_Details;
-    cPipeIn        mi_PipeIn;
-    cPipeOut       mi_PipeOut;
-    Byte           mu8_Channel;
-    bool           mb_InitDone;
-    bool           mb_Started;
-    bool           mb_BaudFDSet;
-    Stopwatch      mi_TxOverflow;  // firmware Tx buffer is full (64 + 3 packets sent)
-    bool           mb_McuTimestamp;
-    Byte           mu8_EchoMarker; // counter 1...255
-    CanPacket[]    mi_TxEcho;      // the last 256 Tx packets
-    Int64          ms64_LastMcuStamp;
-    Int64          ms64_McuRollOver;
-    Int64          ms64_ClockOffset;
-    Int64          ms64_StampOffset;
+    // must be equal to MAX_BLOB_SIZE in candlelight_def.h in firmware
+    const int MAX_BLOB_SIZE = 2048;
+    
+    // must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
+    const int CAN_QUEUE_SIZE = 64;
+
+    WinUSB           mi_WinUSB;
+    kDevInfo         mk_Info;
+    StringBuilder    ms_Details;
+    cPipeIn          mi_PipeIn;
+    cPipeOut         mi_PipeOut;
+    Byte             mu8_Channel;
+    bool             mb_InitDone;
+    bool             mb_Started;
+    bool             mb_BaudFDSet;
+    Stopwatch        mi_TxOverflow;  // firmware Tx buffer is full (64 + 3 packets sent)
+    bool             mb_McuTimestamp;
+    Byte             mu8_EchoMarker; // counter 1...255
+    CanPacket[]      mi_TxEcho;      // the last 256 Tx packets
+    Int64            ms64_LastMcuStamp;
+    Int64            ms64_McuRollOver;
+    List<cHeader>    mi_RxQueue;
+    Int64            ms64_QueueStamp;
 
     public kDevInfo DeviceInfo
     {
@@ -896,12 +912,13 @@ public class Candlelight : IDisposable
         mk_Info           = new kDevInfo();
         ms_Details        = new StringBuilder();
         mi_TxOverflow     = new Stopwatch();
+        mi_RxQueue        = new List<cHeader>();
         mb_InitDone       = false;
         mb_BaudFDSet      = false;
         mb_Started        = false;
         ms64_LastMcuStamp = -1;
         ms64_McuRollOver  =  0;
-        ms64_ClockOffset  = -1;
+        ms64_QueueStamp   =  0;
 
         // ------------- WinUSB -----------------
 
@@ -986,7 +1003,7 @@ public class Candlelight : IDisposable
 
         mk_Info.mb_IsElmueSoft =  (mk_Info.mk_Capability.me_Feature & eDeviceFlags.ProtocolElmue) > 0;
         mk_Info.mb_SupportsFD  = ((mk_Info.mk_Capability.me_Feature & eDeviceFlags.CanFD)         > 0 && 
-                                    (mk_Info.mk_Capability.me_Feature & eDeviceFlags.BitTimingFD)   > 0);
+                                  (mk_Info.mk_Capability.me_Feature & eDeviceFlags.BitTimingFD)   > 0);
 
         if (mk_Info.mb_SupportsFD)
             mk_Info.mk_CapabilityFD = CtrlTransfer<kCapabilityFD> ((Byte)eUsbRequest.GetCapabilityFD,  eDirection.In, mu8_Channel); 
@@ -1028,9 +1045,9 @@ public class Candlelight : IDisposable
         // Implement new features if available in the new firmware!
         Debug.Assert(mk_Info.mk_DeviceVersion.mu32_SoftVersionBcd == MIN_FIRMWARE, "Update MIN_FIRMWARE to the latest firmware version!");
 
-        mi_TxEcho = new CanPacket[256];  // FIRST
-        mi_PipeIn.StartThread();         // AFTER
-            
+        mi_TxEcho = new CanPacket[256];       // FIRST
+        mi_PipeIn.StartThread(MAX_BLOB_SIZE); // AFTER
+
         mb_InitDone = true;
     }
 
@@ -1150,6 +1167,9 @@ public class Candlelight : IDisposable
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         e_Flags |= eDeviceFlags.ProtocolElmue;
+        if ((mk_Info.mk_Capability.me_Feature & eDeviceFlags.SendUsbBlobs) > 0)
+            e_Flags |= eDeviceFlags.SendUsbBlobs;
+
         CtrlTransfer((Byte)eUsbRequest.SetDeviceMode, eDirection.Out, mu8_Channel, new kDeviceMode(eDevMode.Start, e_Flags));
 
         mb_McuTimestamp = (e_Flags & eDeviceFlags.HwTimestamp) > 0;
@@ -1335,22 +1355,67 @@ public class Candlelight : IDisposable
     // ======================================= Send ========================================
 
     /// <summary>
+    /// Send multiple CAN packets in one blob over USB to the firmware.
+    /// This optimizes the USB speed to the maximum.
+    /// </summary>
+    public void SendPacketBlob(CanPacket[] i_Packets, out Int64 s64_WinTimestamp)
+    {
+        if (!mb_InitDone || !mb_Started)
+            throw new Exception("The device must be open and started.");
+
+        if ((mk_Info.mk_Capability.me_Feature & eDeviceFlags.SendUsbBlobs) == 0)
+            throw new Exception("Blobs are not supported by the firmware");
+
+        // the firmware has a FIFO for max 64 packets
+        if (i_Packets.Length > CAN_QUEUE_SIZE)
+            throw new Exception("Too many Tx packets.");
+
+        List<Byte> i_Transmit = new List<Byte>(MAX_BLOB_SIZE);
+
+        cBlob i_Blob = new cBlob();
+        i_Blob.mu8_FrameCount = (Byte)i_Packets.Length;
+        i_Blob.me_MesgType    = eMessageType.TxBlob;
+        i_Transmit.AddRange(Utils.StructureToBytesFix(i_Blob));
+
+        foreach (CanPacket i_TxPack in i_Packets)
+        {
+            i_Transmit.AddRange(TxPacketToTxBytes(i_TxPack));
+        }
+
+        if (i_Transmit.Count > MAX_BLOB_SIZE)
+            throw new Exception("Blob data exceeds MAX_BLOB_SIZE");
+
+        // Get timestamp immediately before sending the packet
+        s64_WinTimestamp = Utils.GetWinTimestamp();
+
+        mi_PipeOut.Send(i_Transmit.ToArray());
+    }
+
+    /// <summary>
     /// CAN FD packets (mb_FDF) can only be sent if a data baudrate has been set before.
     /// For remote frames (mb_RTR = true) the first byte may contain the value for the DLC field.
     /// If you get an IOException the device is dead --> abort and close the device and show the message to the user.
     /// </summary>
     public void SendPacket(CanPacket i_Packet, out Int64 s64_WinTimestamp)
     {
-        const Byte PADDING = 0;
-
-        // original packet is modified here and stored in mi_TxEcho --> cloning required
-        i_Packet = i_Packet.Clone();
-
         if (!mb_InitDone || !mb_Started)
             throw new Exception("The device must be open and started.");
 
+        Byte[] u8_Transmit = TxPacketToTxBytes(i_Packet);
+
+        // Get timestamp immediately before sending the packet
+        s64_WinTimestamp = Utils.GetWinTimestamp();
+
+        mi_PipeOut.Send(u8_Transmit);
+    }
+
+    private Byte[] TxPacketToTxBytes(CanPacket i_Packet)
+    {
+        // Pad missing bytes with zeroe's
+        const Byte PAD_BYTE = 0;
+
         if (mi_PipeIn.PipeErrors > 30 || mi_PipeOut.PipeErrors > 30)
-            throw new IOException("Too many errors. The CANable has a problem or has been disconnected.");
+            throw new IOException("Too many errors. The CANable has a problem or has been disconnected."); // --> exit
 
         int s32_MaxData = mb_BaudFDSet ? 64 : 8;
         if (i_Packet.mi_Data.Count > s32_MaxData)
@@ -1377,10 +1442,10 @@ public class Candlelight : IDisposable
             throw new Exception("The CAN ID is invalid.");
 
         if (i_Packet.mb_RTR && i_Packet.mi_Data.Count > 1)
-            throw new Exception("Remote frames contain no data or one byte that defines the DLC value.");
+            throw new Exception("Remote frames contain no data or only one byte that defines the DLC value.");
 
         int s32_PadLen = i_Packet.mi_Data.Count;
-                if (s32_PadLen > 48) s32_PadLen = 64;
+             if (s32_PadLen > 48) s32_PadLen = 64;
         else if (s32_PadLen > 32) s32_PadLen = 48;
         else if (s32_PadLen > 24) s32_PadLen = 32;
         else if (s32_PadLen > 20) s32_PadLen = 24;
@@ -1388,9 +1453,12 @@ public class Candlelight : IDisposable
         else if (s32_PadLen > 12) s32_PadLen = 16;
         else if (s32_PadLen >  8) s32_PadLen = 12;
 
+        // original packet is modified here and stored in mi_TxEcho --> cloning required
+        i_Packet = i_Packet.Clone();
+
         while (i_Packet.mi_Data.Count < s32_PadLen)
         {
-            i_Packet.mi_Data.Add(PADDING);
+            i_Packet.mi_Data.Add(PAD_BYTE);
         }
 
         // The STM32G431 supports to store a unique 8 bit marker for each sent frame which is returned when the frame has been acknowledged.
@@ -1399,17 +1467,11 @@ public class Candlelight : IDisposable
         // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
         if (mu8_EchoMarker == 0) 
             mu8_EchoMarker = 1;  // a marker value of zero would not send an echo
+
         cTxFrameElmue i_TxFrame = new cTxFrameElmue(i_Packet, mu8_EchoMarker);
-        mi_TxEcho[mu8_EchoMarker] = i_Packet;
+        mi_TxEcho[mu8_EchoMarker ++] = i_Packet;
 
-        mu8_EchoMarker ++;
-
-        Byte[] u8_Transmit = Utils.StructureToBytesVar(i_TxFrame, i_TxFrame.mu8_Size);
-
-        // Get timestamp immediately before sending the packet
-        s64_WinTimestamp = Utils.GetWinTimestamp();
-
-        mi_PipeOut.Send(u8_Transmit);
+        return Utils.StructureToBytesVar(i_TxFrame, i_TxFrame.mu8_Size);
     }
 
     // ======================================= Receive ========================================
@@ -1421,21 +1483,60 @@ public class Candlelight : IDisposable
     /// </summary>
     public cHeader ReceiveData(int s32_Timeout, out Int64 s64_RxTimestamp)
     {
+        // This timestamp is only used in case that an error is returned
+        s64_RxTimestamp = Utils.GetWinTimestamp();
+
         if (!mb_InitDone || !mb_Started)
             throw new Exception("The device must be open and started.");
 
         if (mi_PipeIn.PipeErrors > 30 || mi_PipeOut.PipeErrors > 30)
-            throw new IOException("Too many errors. The CANable has a problem or has been disconnected.");
+            throw new IOException("Too many errors. The CANable has a problem or has been disconnected."); // --> exit
 
-        Byte[] u8_RxData = mi_PipeIn.Receive(s32_Timeout, out s64_RxTimestamp);
-        if (u8_RxData == null)
-            return null; // timeout
+        if (mi_RxQueue.Count == 0)
+        {
+            Byte[] u8_RxData = mi_PipeIn.Receive(s32_Timeout, out ms64_QueueStamp);
+            if (u8_RxData == null)
+                return null; // timeout
 
-        cHeader i_Header = Utils.BytesToStructureVar<cHeader>(u8_RxData, 0, Marshal.SizeOf(typeof(cHeader)));
-        if (i_Header.mu8_Size != u8_RxData.Length)
-            throw new Exception("Received crippled USB data from device");
+            DecodeRxData(u8_RxData); // recursive --> writes into mi_RxQueue
+        }
 
         cHeader i_Struct = null;
+        if (mi_RxQueue.Count > 0)                
+        {
+            i_Struct = mi_RxQueue[0];
+            mi_RxQueue.RemoveAt(0);
+            s64_RxTimestamp = ms64_QueueStamp;
+        }
+        return i_Struct;
+    }
+
+    /// <summary>
+    /// recursive
+    /// </summary>
+    private void DecodeRxData(Byte[] u8_RxData)
+    {
+        if (u8_RxData.Length < 2)
+            throw new Exception("Received incomplete USB data from adapter");
+
+        cHeader i_Header = Utils.BytesToStructureVar<cHeader>(u8_RxData, 0, Marshal.SizeOf(typeof(cHeader)));
+        if (i_Header.me_MesgType == eMessageType.RxBlob)
+        {
+            cBlob i_Blob = Utils.BytesToStructureVar<cBlob>(u8_RxData, 0, Marshal.SizeOf(typeof(cBlob)));
+
+            int s32_Offset = Marshal.SizeOf(typeof(cBlob));
+            for (int F=0; F<i_Blob.mu8_FrameCount; F++)
+            {
+                i_Header = Utils.BytesToStructureVar<cHeader>(u8_RxData, s32_Offset, Marshal.SizeOf(typeof(cHeader)));
+
+                Byte[] u8_Frame = Utils.ExtractByteArr(u8_RxData, s32_Offset, i_Header.mu8_Size);
+                DecodeRxData(u8_Frame); // recursive
+                s32_Offset += i_Header.mu8_Size;
+            }
+            return;
+        }
+
+        cHeader i_Struct;
         switch (i_Header.me_MesgType)
         {
             case eMessageType.TxEcho:  i_Struct = Utils.BytesToStructureVar<cTxEchoElmue> (u8_RxData, 0); break;
@@ -1447,10 +1548,10 @@ public class Candlelight : IDisposable
                 throw new Exception("Received invalid USB data from device (MessageType = " + u8_RxData[1] + ")");
         }
 
-        if (u8_RxData.Length < i_Struct.GetMinSize(mb_McuTimestamp))
+        if (u8_RxData.Length < i_Struct.GetMinSize(mb_McuTimestamp))          
             throw new Exception("Received incomplete USB data from device");
 
-        return i_Struct;
+        mi_RxQueue.Add(i_Struct);
     }
 
     public CanPacket RxFrameToCanPacket(cRxFrameElmue i_Frame)
@@ -1520,7 +1621,10 @@ public class Candlelight : IDisposable
             if (s64_Stamp >= 0)
             {
                 // The 32 bit firmware timestamp will roll over after 1 hour, this must be detected here.
-                if (s64_Stamp < ms64_LastMcuStamp)
+                // ATTENTION: The MCU may send an Rx packet with a lower timestamp than the previous Rx packet.
+                // This is very strange, but it may happen --> ignore small jumps back and detect only big jumps.
+                if (s64_Stamp         <  0x10000000 &&
+                    ms64_LastMcuStamp >  0xF0000000)
                     ms64_McuRollOver += 0x100000000;
             
                 ms64_LastMcuStamp = s64_Stamp;
@@ -1536,18 +1640,6 @@ public class Candlelight : IDisposable
 
         if (s64_Stamp < 0)
             return "No Timestamp    ";
-
-        // get the clock offset in µs for the very first timestamp to be converted
-        if (ms64_ClockOffset < 0)
-        {
-            DateTime k_Now = DateTime.Now;
-            ms64_ClockOffset = (((((Int64)k_Now.Hour * 60) + k_Now.Minute) * 60 + k_Now.Second) * 1000 + k_Now.Millisecond) * 1000;
-            // ATTENTION: This must be stored in a separate variable from ms64_ClockOffset!
-            // Otherwise ms64_ClockOffset may become negative and is updated each time again.
-            ms64_StampOffset = s64_Stamp; 
-        }
-
-        s64_Stamp += ms64_ClockOffset - ms64_StampOffset;
 
         int s32_Micro = (int)(s64_Stamp % 1000);
         s64_Stamp    /= 1000;

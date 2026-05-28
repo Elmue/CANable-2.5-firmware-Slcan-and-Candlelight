@@ -56,6 +56,10 @@ bool HW_TIMESTAMP = false;
 // true --> test writing/reading user data to/from flash memory
 bool FLASH_MEMORY_TEST = false;
 
+// true --> send 3 Tx packets in one blob
+bool SEND_TX_BLOB = false;
+
+
 // forward declarations
 void CandlelightDemo();
 void DfuDemo();
@@ -113,7 +117,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
     SetConsoleTitle(L"ElmüSoft Candlelight C++ Demo");
 
     // Increase console buffer for 3000 lines output with 200 chars per line
-    COORD k_Size = {120, 3000}; 
+    COORD k_Size = {300, 3000}; 
     SetConsoleScreenBufferSize(gh_ConsoleOut, k_Size);
 
     COORD k_Max = GetLargestConsoleWindowSize(gh_ConsoleOut);
@@ -277,21 +281,26 @@ void CandlelightDemo()
 
     PrintConsole(MAGENTA, L"Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
 
+    // -----------------------------------------
+
     kCanPacket k_TxPacket  = {0};
     k_TxPacket.mu32_ID     = 0x7E0 + gs32_DeviceIndex;
     k_TxPacket.mu8_DataLen = 8;
-    k_TxPacket.mu8_Data[0] = 'E';
-    k_TxPacket.mu8_Data[1] = 'l';
-    k_TxPacket.mu8_Data[2] = 'm';
-    k_TxPacket.mu8_Data[3] = 'u';
-    k_TxPacket.mu8_Data[4] = 'S';
-    k_TxPacket.mu8_Data[5] = 'o';
-    k_TxPacket.mu8_Data[6] = 'f';
-    k_TxPacket.mu8_Data[7] = 't';
+    memcpy(k_TxPacket.mu8_Data, "ElmuSoft", 8);
+
+    kCanPacket k_TxPack2  = {0};
+    k_TxPack2.mu32_ID     = k_TxPacket.mu32_ID + 1;
+    k_TxPack2.mu8_DataLen = 8;
+    memcpy(k_TxPack2.mu8_Data, "TxBlob 2", 8);
+
+    kCanPacket k_TxPack3  = {0};
+    k_TxPack3.mu32_ID     = k_TxPacket.mu32_ID + 2;
+    k_TxPack3.mu8_DataLen = 8;
+    memcpy(k_TxPack3.mu8_Data, "TxBlob 3", 8);
+
+    // -----------------------------------------
 
     __int64 s64_LastStamp = 0;
-    BYTE u8_RxData[RX_FIFO_BUF_SIZE]; // 128 byte
-
     while (true)
     {
         // Read the comment of GetWinTimestamp()
@@ -301,9 +310,21 @@ void CandlelightDemo()
         if (s64_Now - s64_LastStamp >= 2000000)
         {
             s64_LastStamp = s64_Now;
+            kCanPacket k_BlobPackets[] = { k_TxPacket, k_TxPack2, k_TxPack3 };
 
             __int64 s64_TxStamp; // only valid if no error returned
-            u32_Error = gi_Candle.SendPacket(&k_TxPacket, &s64_TxStamp);
+            int     s32_PackCount;
+            if (SEND_TX_BLOB)    // send blob with 3 packets at once over USB
+            {
+                u32_Error = gi_Candle.SendPacketBlob(k_BlobPackets, 3, &s64_TxStamp);
+                s32_PackCount = 3;
+            }
+            else
+            {
+                u32_Error = gi_Candle.SendPacket(&k_TxPacket, &s64_TxStamp);
+                s32_PackCount = 1;
+            }
+
             if (u32_Error)
             {
                 PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, gi_Candle.GetWinTimestamp()));
@@ -315,10 +336,16 @@ void CandlelightDemo()
             }
             else
             {
-                // Timestamps for sending are only available if Windows timestamps are used
-                PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
-                PrintConsole(WHITE, L" Send");
-                PrintConsole(LIME,  L" %s\n", gi_Candle.FormatCanPacket(&k_TxPacket));
+                for (int P=0; P<s32_PackCount; P++)
+                {
+                    // Timestamps for sending are only available if Windows timestamps are used
+                    PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
+                    PrintConsole(WHITE, L" Send");
+                    PrintConsole(LIME,  L" %s", gi_Candle.FormatCanPacket(&k_BlobPackets[P]));
+
+                    if (SEND_TX_BLOB) PrintConsole(GREY, L" (Tx Blob)\n");
+                    else              PrintConsole(GREY, L"\n");
+                }
             }
 
             // pseudo random data
@@ -333,9 +360,10 @@ void CandlelightDemo()
         }
 
         // Check for Rx data
-        __int64 s64_RxTimestamp;
-        kHeader* pk_Header = (kHeader*)u8_RxData;
-        u32_Error = gi_Candle.ReceiveData(100, pk_Header, sizeof(u8_RxData), &s64_RxTimestamp);
+        __int64  s64_RxTimestamp;
+        bool     b_RxBlob;
+        kHeader* pk_Header;
+        u32_Error = gi_Candle.ReceiveData(100, &pk_Header, &s64_RxTimestamp, &b_RxBlob);
         if (u32_Error)
         {
             // Timeout means that no data was received during 100 ms. This is not an error.
@@ -359,14 +387,14 @@ void CandlelightDemo()
                 {
                     kCanPacket k_RxPacket = gi_Candle.RxFrameToCanPacket((kRxFrameElmue*)pk_Header);
                     PrintConsole(WHITE, L" Recv");
-                    PrintConsole(CYAN,  L" %s\n", gi_Candle.FormatCanPacket(&k_RxPacket));
+                    PrintConsole(CYAN,  L" %s", gi_Candle.FormatCanPacket(&k_RxPacket));
                     break;
                 }
                 case MSG_TxEcho:
                 {
                     kCanPacket k_EchoPacket = gi_Candle.GetTxEchoPacket((kTxEchoElmue*)pk_Header);
                     PrintConsole(WHITE, L" Echo");
-                    PrintConsole(GREEN, L" %s\n", gi_Candle.FormatCanPacket(&k_EchoPacket));
+                    PrintConsole(GREEN, L" %s", gi_Candle.FormatCanPacket(&k_EchoPacket));
                     break;
                 }
                 case MSG_Error:
@@ -378,32 +406,33 @@ void CandlelightDemo()
                     if (e_ErrLevel == LEVEL_Medium) u16_Color = YELLOW;
                     if (e_ErrLevel == LEVEL_High)   u16_Color = RED;
                     PrintConsole(WHITE,     L" Err ");
-                    PrintConsole(u16_Color, L" %s\n", s_Error);
+                    PrintConsole(u16_Color, L" %s", s_Error);
                     break;
                 }
                 case MSG_String:
                 {
                     kStringElmue* pk_String = (kStringElmue*)pk_Header;
-                    u8_RxData[pk_Header->size] = 0;         // Add zero termination
-                    CString s_RxData(pk_String->ascii_msg); // ASCII --> Unicode
                     PrintConsole(WHITE, L" Debg");
-                    PrintConsole(GREY,  L" %s\n", s_RxData);
+                    PrintConsole(GREY,  L" %s", gi_Candle.ConvertStringFrame(pk_String));
                     break;
                 }
                 case MSG_Busload:
                 {
                     kBusloadElmue* pk_Busload = (kBusloadElmue*)pk_Header;
                     PrintConsole(WHITE, L" Load");
-                    PrintConsole(GREY,  L" Busload: %u%%\n", pk_Busload->bus_load);
+                    PrintConsole(GREY,  L" Busload: %u%%", pk_Busload->bus_load);
                     break;
                 }
                 default:
                 {
                     PrintConsole(WHITE, L" Err ");
-                    PrintConsole(RED,   L" Unknown USB message received: %s\n", gi_Candle.FormatHexBytes(u8_RxData, pk_Header->size));
+                    PrintConsole(RED,   L" Unknown USB message received: %s", gi_Candle.FormatHexBytes((BYTE*)pk_Header, pk_Header->size));
                     break;
                 }
             }
+
+            if (b_RxBlob) PrintConsole(GREY, L" (Rx Blob)\n");
+            else          PrintConsole(GREY, L"\n");
         }
 
         // Check if ENTER key has been pressed

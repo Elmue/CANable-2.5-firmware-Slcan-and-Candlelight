@@ -81,13 +81,16 @@ class Program
     // true --> test writing/reading user data to/from flash memory
     static bool FLASH_MEMORY_TEST = false;
 
+    // true --> send 3 Tx packets in one blob
+    static bool SEND_TX_BLOB = false;
+
     static Candlelight mi_Candle = new Candlelight();
     static kDevInfo    mk_Info;
     static int         ms32_DeviceIndex; // user selection if multiple devices connected
 
     static void Main(string[] args)
     {
-        Console.SetBufferSize(120, 3000);
+        Console.SetBufferSize(300, 3000);
             
         int s32_Width  = Math.Min(Console.LargestWindowWidth, 120) - 4;
         int s32_Height = Math.Min(Console.LargestWindowHeight, 60) - 4;
@@ -246,9 +249,24 @@ class Program
             return;
         }
 
+        // -----------------------------------------
+
         CanPacket i_TxPacket = new CanPacket();
         i_TxPacket.ms32_ID = 0x7E0 + ms32_DeviceIndex;
         i_TxPacket.mi_Data.AddRange(Encoding.ASCII.GetBytes("ElmuSoft"));
+
+        // Used to send 3 packets in one blob
+        CanPacket i_TxPack2 = new CanPacket();
+        i_TxPack2.ms32_ID = i_TxPacket.ms32_ID + 1;
+        i_TxPack2.mi_Data.AddRange(Encoding.ASCII.GetBytes("TxBlob 2"));
+
+        CanPacket i_TxPack3 = new CanPacket();
+        i_TxPack3.ms32_ID = i_TxPacket.ms32_ID + 2;
+        i_TxPack3.mi_Data.AddRange(Encoding.ASCII.GetBytes("TxBlob 3"));
+
+        CanPacket[] i_BlobPackets = new CanPacket[] { i_TxPacket, i_TxPack2, i_TxPack3 };
+
+        // -----------------------------------------
 
         Int64 s64_LastStamp = 0;
 
@@ -263,14 +281,27 @@ class Program
                 s64_LastStamp = s64_Now;
 
                 Int64 s64_TxStamp; // only valid if no error returned
+                int   s32_PackCount;
                 try
                 {
-                    mi_Candle.SendPacket(i_TxPacket, out s64_TxStamp);
+                    if (SEND_TX_BLOB) // send blob with 3 packets at once over USB
+                    {
+                        mi_Candle.SendPacketBlob(i_BlobPackets, out s64_TxStamp);
+                        s32_PackCount = i_BlobPackets.Length;
+                    }
+                    else // send single packet
+                    {
+                        mi_Candle.SendPacket(i_TxPacket, out s64_TxStamp);
+                        s32_PackCount = 1;
+                    }
 
-                    // Timestamps for sending are only available if Windows timestamps are used
-                    Print(ConsoleColor.Gray,  mi_Candle.FormatTimestamp(null, s64_TxStamp));
-                    Print(ConsoleColor.White, " Send");
-                    Print(ConsoleColor.Green, " {0}\n", i_TxPacket);
+                    for (int P=0; P<s32_PackCount; P++)
+                    {
+                        // Timestamps for sending are only available if Windows timestamps are used
+                        Print(ConsoleColor.Gray,  mi_Candle.FormatTimestamp(null, s64_TxStamp));
+                        Print(ConsoleColor.White, " Send");
+                        Print(ConsoleColor.Green, " {0}\n", i_BlobPackets[P]);
+                    }
                 }
                 catch (Exception Ex)
                 {
@@ -327,7 +358,7 @@ class Program
                     {
                         CanPacket i_EchoPacket = mi_Candle.GetTxEchoPacket((cTxEchoElmue)i_Header);
                         Print(ConsoleColor.White, " Echo");
-                        if (i_EchoPacket == null) Print(ConsoleColor.Red, "Internal Error");
+                        if (i_EchoPacket == null) Print(ConsoleColor.Red, " Invalid echo marker received\n");
                         else                      Print(ConsoleColor.DarkGreen, " {0}\n", i_EchoPacket);
                         break;
                     }

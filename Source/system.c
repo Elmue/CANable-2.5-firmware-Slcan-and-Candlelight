@@ -217,6 +217,13 @@ void HAL_FDCAN_TimestampWraparoundCallback(FDCAN_HandleTypeDef *hfdcan)
     timestamp_wrap ++;
 }
 
+// Reset timer 3 (CAN packet timestamps) to zero
+void system_reset_timestamps()
+{
+    TIM3->CNT = 0;
+    timestamp_wrap = 0;
+}
+
 // ===================================================================================================
 
 // While TARGET_MCU (from the make file) defines for which MCU serie the code was COMPILED,

@@ -4,6 +4,9 @@
     https://netcult.ch/elmue/CANable Firmware Update
 */
 
+// This acumulates 3 USB packets to be sent as a blob to the host
+#define  DEBUG_TEST_BLOB    0
+
 #include "buffer.h"
 #include "error.h"
 #include "control.h"
@@ -26,10 +29,13 @@ bool GLB_ProtoElmue = false;
 buf_class  buf_inst[CHANNEL_COUNT] = {0};
 
 // ----- Private Methods
-void buf_process_host (uint8_t channel, buf_class* usb_buf);
-void buf_process_can  (uint8_t channel, buf_class* usb_buf, buf_class* can_buf);
-void buf_clear_buffers(uint8_t channel, bool clear_can, bool clear_host);
-void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo);
+void              buf_process_host (uint8_t channel, buf_class* usb_buf);
+void              buf_process_can  (uint8_t channel, buf_class* can_buf);
+void              buf_clear_buffers(uint8_t channel, bool clear_can, bool clear_host);
+kHostFrameObject* buf_peek_host_frame_locked(list_item* list_head);
+buf_class*        buf_get_inst_for_usb(uint8_t channel);
+bool              buf_store_can_frame(uint8_t channel, uint8_t* can_frame);
+void              buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo);
 
 // public
 void buf_init()
@@ -81,8 +87,8 @@ void buf_process(uint8_t channel, uint32_t tick_now)
     buf_class* can_buf = &buf_inst[channel];
     buf_class* usb_buf = buf_get_inst_for_usb(channel);
 
+    buf_process_can (channel, can_buf);
     buf_process_host(channel, usb_buf);
-    buf_process_can (channel, usb_buf, can_buf);
 
     // The APP_xxx errors are deleted after sending them to the host.
     // They must be refreshed here, so the Rx + Tx LED stay ON permanently and show that there is a problem.
@@ -97,19 +103,90 @@ void buf_process_host(uint8_t channel, buf_class* usb_buf)
     if (usb_buf->TxBusy)
         return; // USB IN transfer to the host is still in progress
 
+    // only for testing: wait until there are 3 pending frames to be sent to the host in one blob
+#if DEBUG_TEST_BLOB
+    if (HOST_QUEUE_SIZE - count_free_entries(usb_buf, true) < 3)
+        return;
+#endif
+
     kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_to_host);
     if (!obj_to_host)
         return; // nothing to be sent
 
-    USBD_SendFrameToHost(channel, &obj_to_host->frame);
+    uint16_t len;
+    if (GLB_ProtoElmue) // new ElmüSoft protocol
+    {
+        // Using the optimized new ElmüSoft protocol reduces unnecessary USB overhead as it was sent by the legacy firmware.
+        // If a CAN frame has only 2 data bytes, send only 2 data bytes over USB.
+        // All ElmüSoft messages use the same header, no matter if CAN packet or an ASCII message.
+        // If ELM_DevFlagSendUsbBlobs is set --> send multiple fames in one blob to the host.
 
-    // packet was sent --> give the frame back to the pool
-    list_add_tail_locked(&obj_to_host->list, &usb_buf->list_host_pool);
+        kHostFrameObject* next_obj = buf_peek_host_frame_locked(&usb_buf->list_to_host);
+
+        // Send blob with multiple frames
+        if ((GLB_UserFlags[channel] & USR_SendBlobs) && next_obj != NULL)
+        {
+            kBlob* blob = (kBlob*)usb_buf->to_host_buf;
+            blob->frame_count = 0;
+            blob->msg_type    = MSG_RxBlob;
+            len = sizeof(kBlob);
+
+            // Copy all frames in list_to_host into to_host_buf
+            while (obj_to_host)
+            {
+                uint16_t size = ((kHeader*)obj_to_host->frame)->size;
+                memcpy(usb_buf->to_host_buf + len, obj_to_host->frame, size);
+                len += size;
+                blob->frame_count ++;
+
+                // packet was stored --> give the frame back to the pool
+                list_add_tail_locked(&obj_to_host->list, &usb_buf->list_host_pool);
+
+                // frame_count is a byte --> max count = 255
+                if (next_obj == NULL || blob->frame_count > 250)
+                    break;
+
+                // check if the next frame also fits into to_host_buf
+                int next_size = ((kHeader*)next_obj->frame)->size;
+                if (len + next_size >= MAX_BLOB_SIZE)
+                    break;
+
+                obj_to_host = buf_get_host_frame_locked (&usb_buf->list_to_host);
+                next_obj    = buf_peek_host_frame_locked(&usb_buf->list_to_host);
+            }
+        }
+        else // only one frame to be sent
+        {
+            len = ((kHeader*)obj_to_host->frame)->size;
+
+            memcpy(usb_buf->to_host_buf, obj_to_host->frame, len);
+
+            // packet was stored --> give the frame back to the pool
+            list_add_tail_locked(&obj_to_host->list, &usb_buf->list_host_pool);
+        }
+    }
+    else // legacy Geschwister Schneider protocol
+    {
+        kHostFrameLegacy* pk_Legacy = (kHostFrameLegacy*)obj_to_host->frame;
+
+        // The legacy protocol is not intelligently designed. The timestamp is behind a fix 64 byte data array.
+        // For CAN FD it sends ALWAYS 76 or 80 bytes over USB no matter how many bytes the frame really has.
+        len = sizeof(kHostFrameLegacy); // 80 bytes
+        if ((pk_Legacy->flags & FRM_FDF) == 0) len -= 56;
+        if ((GLB_UserFlags[pk_Legacy->channel] & USR_Timestamp) == 0) len -= 4;
+
+        memcpy(usb_buf->to_host_buf, obj_to_host->frame, len);
+
+        // packet was stored --> give the frame back to the pool
+        list_add_tail_locked(&obj_to_host->list, &usb_buf->list_host_pool);
+    }
+
+    USBD_SendInDataToHost(channel, usb_buf->to_host_buf, len);
 }
 
 // called from the main loop
 // send a host packet to CAN bus if list_to_can has data
-void buf_process_can(uint8_t channel, buf_class* usb_buf, buf_class* can_buf)
+void buf_process_can(uint8_t channel, buf_class* can_buf)
 {
     if (!can_is_tx_fifo_free(channel))
         return; // all 3 CAN Tx FIFO's are full
@@ -167,9 +244,38 @@ void buf_process_can(uint8_t channel, buf_class* usb_buf, buf_class* can_buf)
     list_add_tail_locked(&obj_to_can->list, &can_buf->list_can_pool);
 }
 
-// called from USBD_GS_DataOut() in usb_class.c
-// Enqueue a Tx frame from USB
-void buf_store_can_frame(uint8_t channel, kHostFrameLegacy* can_frame)
+// public function
+// Called from USB_DataOut() in usb_class.c in an interrupt
+// Handle Tx blobs from the host
+void buf_store_can_frame_blob(uint8_t channel, uint8_t* can_frame)
+{
+    kBlob* blob = (kBlob*)can_frame;
+    if (blob->msg_type == MSG_TxBlob)
+    {
+        int offset = sizeof(kBlob);
+        for (uint8_t i=0; i<blob->frame_count; i++)
+        {
+            kTxFrameElmue *tx_frame = (kTxFrameElmue*)(can_frame + offset);
+            if (offset + tx_frame->header.size > MAX_BLOB_SIZE)
+            {
+                error_assert(channel, APP_CanTxOverflow, true); // both LED ON
+                return; // host has sent an invalid blob
+            }
+
+            if (!buf_store_can_frame(channel, can_frame + offset))
+                return; // invalid frame or buffer overflow
+
+            offset += tx_frame->header.size;
+        }
+        return;
+    }
+
+    buf_store_can_frame(channel, can_frame);
+}
+
+// private function
+// Enqueue a Tx frame (kTxFrameElmue or kHostFrameLegacy) received from USB
+bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
 {
     uint32_t can_id;
     uint8_t  flags;
@@ -182,7 +288,7 @@ void buf_store_can_frame(uint8_t channel, kHostFrameLegacy* can_frame)
         if (tx_frame->header.msg_type != MSG_TxFrame)
         {
             error_assert(channel, APP_CanTxFail, true); // both LED ON
-            return;
+            return false; // host has sent an invalid frame
         }
 
         can_id     = tx_frame->can_id;
@@ -202,16 +308,16 @@ void buf_store_can_frame(uint8_t channel, kHostFrameLegacy* can_frame)
     }
     else // legacy Geschwister Schneider protocol
     {
-        kHostFrameLegacy *tx_frame = can_frame;
+        kHostFrameLegacy* tx_frame = (kHostFrameLegacy*)can_frame;
 
         // Although the multi channel firmware creates one USB interface for each CAN channel,
-        // the legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
+        // The legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
         // kHostFrameLegacy.channel tells the host which channel is the origin/destination of the packet.
         channel = tx_frame->channel;
         if (channel >= CHANNEL_COUNT)
         {
-            error_assert(0, APP_CanTxFail, true); // both LED ON
-            return;
+            error_assert(channel, APP_CanTxFail, true); // both LED ON
+            return false; // host has sent an invalid channel
         }
 
         can_id     = tx_frame->can_id;
@@ -219,7 +325,6 @@ void buf_store_can_frame(uint8_t channel, kHostFrameLegacy* can_frame)
         flags      = tx_frame->flags;
         frame_data = tx_frame->pack_FD.data;
         can_dlc    = tx_frame->can_dlc;
-        // marker not used, legacy sends a fake echo with echo_id.
     }
 
     // ------------------------------
@@ -250,9 +355,9 @@ void buf_store_can_frame(uint8_t channel, kHostFrameLegacy* can_frame)
     {
         if (!can_using_FD(channel))
         {
-            // the user tries to send a CAN FD packet in classic mode (data baudrate has not been set)
+            // the host tries to send a CAN FD packet in classic mode (data baudrate has not been set)
             error_assert(channel, APP_CanTxFail, true);
-            return;
+            return false;
         }
 
         tx_header.FDFormat = FDCAN_FD_CAN;
@@ -264,11 +369,11 @@ void buf_store_can_frame(uint8_t channel, kHostFrameLegacy* can_frame)
 
     tx_header.DataLength = can_dlc;
 
-    buf_store_tx_packet(channel, &tx_header, frame_data);
+    return buf_store_tx_packet(channel, &tx_header, frame_data);
 }
 
 // Enqueue a packet for CAN bus.
-void buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
+bool buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
 {
     buf_class* can_buf = &buf_inst[channel];
 
@@ -278,16 +383,19 @@ void buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint
         memcpy(&obj_to_can->header, tx_header, sizeof(obj_to_can->header));
         memcpy(&obj_to_can->data,   tx_data,   sizeof(obj_to_can->data));
         list_add_tail_locked(&obj_to_can->list, &can_buf->list_to_can);
+        return true;
     }
     else // CAN buffer overflow
     {
         // in case of buffer overflow inform the host immediately, so the host stops sending more packets and displays an error to the user.
         error_assert(channel, APP_CanTxOverflow, true); // Both LED's = ON --> indicate severe error
+        return false;
     }
 }
 
 // ---------------------------------------------------------------------------------------------------
 
+// public function
 // Enqueue a CAN Rx packet for the host.
 // rx_data is a 64 byte buffer with the received / sent data bytes
 // append the frame to list_to_host
@@ -295,6 +403,7 @@ void buf_store_rx_packet(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint
 {
     buf_store_rx_packet_echo(channel, rx_header, rx_data, ECHO_RxData);
 }
+// private function
 // fake_echo is only used for legacy mode
 void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo)
 {
@@ -336,7 +445,7 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
         }
         else byte_count = utils_dlc_to_byte_count(can_dlc);
 
-        kRxFrameElmue* frame = (kRxFrameElmue*)&obj_to_host->frame;
+        kRxFrameElmue* frame   = (kRxFrameElmue*)obj_to_host->frame;
         frame->header.size     = sizeof(kRxFrameElmue) + byte_count;
         frame->header.msg_type = MSG_RxFrame;
         frame->flags           = flags;
@@ -355,7 +464,7 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
     }
     else // legacy Geschwister Schneider protocol
     {
-        kHostFrameLegacy* frame = &obj_to_host->frame;
+        kHostFrameLegacy* frame = (kHostFrameLegacy*)obj_to_host->frame;
         frame->channel  = channel;
         frame->reserved = 0;
         frame->flags    = flags;
@@ -381,14 +490,13 @@ void buf_store_tx_echo(uint8_t channel, FDCAN_TxEventFifoTypeDef* tx_event)
     if (!GLB_ProtoElmue) // legacy protocol -> Tx Echo not supported
         return;
 
-    // Legacy does not come here
-    buf_class* usb_buf = &buf_inst[channel];
+    buf_class* usb_buf = buf_get_inst_for_usb(channel);
 
     kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
     if (!obj_to_host)
         return; // buffer overflow! buf_process() will report this error to the host
 
-    kTxEchoElmue* frame = (kTxEchoElmue*)&obj_to_host->frame;
+    kTxEchoElmue* frame    = (kTxEchoElmue*)obj_to_host->frame;
     frame->header.size     = sizeof(kTxEchoElmue);
     frame->header.msg_type = MSG_TxEcho;
     frame->marker          = tx_event->MessageMarker;
@@ -410,8 +518,8 @@ void buf_store_error(uint8_t channel)
     if (!obj_to_host)
         return; // buffer overflow! buf_process() will report this error to the host
 
-    kHostFrameLegacy* frame_gs    = &obj_to_host->frame;
-    kErrorElmue*      frame_elmue = (kErrorElmue*)&obj_to_host->frame;
+    kHostFrameLegacy* frame_gs    = (kHostFrameLegacy*)obj_to_host->frame;
+    kErrorElmue*      frame_elmue = (kErrorElmue*)     obj_to_host->frame;
     memset(frame_gs, 0, sizeof(kHostFrameLegacy));
 
     uint8_t* frame_data;
@@ -512,18 +620,24 @@ void buf_store_error(uint8_t channel)
 
 // ---------------------------------------------------------------------------------------------------
 
-// Helper function: Get a frame and remove it from it's list whith IRQs disabled
+// Helper function: Get the the next frame after the head frame whith IRQs disabled
+// returns NULL if there is no next frame
+kHostFrameObject* buf_peek_host_frame_locked(list_item* list_head)
+{
+    system_disable_irq();
+    kHostFrameObject* frame_obj = list_get_head_or_null(list_head, kHostFrameObject, list);
+    system_enable_irq();
+    return frame_obj;
+}
+
+// Helper function: Get the head frame and remove it from it's list whith IRQs disabled
 // returns NULL if the list is empty
 kHostFrameObject* buf_get_host_frame_locked(list_item* list_head)
 {
     system_disable_irq();
     kHostFrameObject* frame_obj = list_get_head_or_null(list_head, kHostFrameObject, list);
-    if (!frame_obj)
-    {
-        system_enable_irq();
-        return NULL;
-    }
-    list_remove(&frame_obj->list); // remove frame_obj from it's list
+    if (frame_obj)
+        list_remove(&frame_obj->list); // remove frame_obj from it's list
     system_enable_irq();
     return frame_obj;
 }
@@ -532,12 +646,8 @@ kCanFrameObject* buf_get_can_frame_locked(list_item* list_head)
 {
     system_disable_irq();
     kCanFrameObject* frame_obj = list_get_head_or_null(list_head, kCanFrameObject, list);
-    if (!frame_obj)
-    {
-        system_enable_irq();
-        return NULL;
-    }
-    list_remove(&frame_obj->list); // remove frame_obj from it's list
+    if (frame_obj)
+        list_remove(&frame_obj->list); // remove frame_obj from it's list
     system_enable_irq();
     return frame_obj;
 }
@@ -548,12 +658,12 @@ buf_class* buf_get_instance(uint8_t channel)
 }
 
 // Although the multi channel firmware creates one USB interface for each CAN channel,
-// the legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
+// The legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
 // kHostFrameLegacy.channel tells the host which channel is the origin/destination of the packet.
 buf_class* buf_get_inst_for_usb(uint8_t channel)
 {
     if (GLB_ProtoElmue)
         return &buf_inst[channel]; // ElmüSoft -> send each CAN channel through it's own USB interface 0, 2 or 3
     else
-        return &buf_inst[0];       // Legacy   -> send all CAN channels through USB interface 0
+        return &buf_inst[0];           // Legacy   -> send all CAN channels through USB interface 0
 }

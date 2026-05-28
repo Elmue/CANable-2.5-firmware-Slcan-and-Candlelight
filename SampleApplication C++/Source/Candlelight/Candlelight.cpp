@@ -46,11 +46,14 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
-// The version number is BCD encoded (0x251118 = 18.nov.2025)
-const DWORD MIN_FIRMWARE = 0x260525;
+// The version number is BCD encoded (0x251218 = 18.dec.2025)
+const DWORD MIN_FIRMWARE = 0x260528;
 
-// The firmware update interface is always interface 1
+// must be equal to DFU_INTERFACE_NUMBER in usb_class.h in the firmware
 const BYTE DFU_INTERFACE = 1;
+
+// must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
+const int CAN_QUEUE_SIZE = 64;
 
 const WORD LANGUAGE_ENGLISH_USA = 0x409;
 
@@ -292,7 +295,6 @@ DWORD Candlelight::Open(CString s_DevicePath)
     ms64_McuRollOver    =  0;
     ms64_PerfTimeStart  = -1;
     ms64_LastMcuStamp   = -1;
-    ms64_ClockOffset    = -1;
     mu32_TxOverflow     = 0;    
     mu32_RxPipeErrors   = 0;
     mu32_TxPipeErrors   = 0;
@@ -303,6 +305,8 @@ DWORD Candlelight::Open(CString s_DevicePath)
     mb_Started          = false;
     me_LastError        = FBK_Success;
     ms_Details          = L"";
+    mu32_BlobOffset     = 0;
+    ms32_BlobFrames     = 0;
 
     memset(&mk_Info,        0, sizeof(mk_Info));
     memset(&mk_EchoPackets, 0, sizeof(mk_EchoPackets));
@@ -432,6 +436,14 @@ DWORD Candlelight::Open(CString s_DevicePath)
     u32_Timeout = 500;
     if (!WinUsb_SetPipePolicy(mh_WinUsb, mk_Info.mu8_EndpointOUT, PIPE_TRANSFER_TIMEOUT, sizeof(u32_Timeout), &u32_Timeout))
         return GetLastError();
+
+    /*
+    // The maximum TX size of the OUT pipe is 0x40000 = 256 kB
+    DWORD u32_MaxTransfer = 0;
+    DWORD u32_ValLength   = sizeof(u32_MaxTransfer);
+    if (!WinUsb_GetPipePolicy(mh_WinUsb, mk_Info.mu8_EndpointOUT, MAXIMUM_TRANSFER_SIZE, &u32_ValLength, &u32_MaxTransfer))
+        return GetLastError();
+    */
 
     // --------------------------------------------------------------------
 
@@ -643,8 +655,13 @@ DWORD Candlelight::Start(eDeviceFlags e_Flags)
         return ERROR_INVALID_OPERATION;
 
     kDeviceMode k_Mode;
-    k_Mode.flags = e_Flags | ELM_DevFlagProtocolElmue; // required for this demo!
+    k_Mode.flags = e_Flags;
     k_Mode.mode  = GS_ModeStart;
+
+    k_Mode.flags |= ELM_DevFlagProtocolElmue; // required for this demo!
+    if (mk_Info.mk_Capability.feature & ELM_DevFlagSendUsbBlobs)
+        k_Mode.flags |= ELM_DevFlagSendUsbBlobs;
+
     DWORD u32_Error = CtrlTransfer(DIR_Out, GS_ReqSetDeviceMode, mu8_Channel, &k_Mode, sizeof(k_Mode)); // turn off Tx LED
     if (u32_Error)
         return u32_Error;
@@ -669,15 +686,89 @@ DWORD Candlelight::Reset()
 
 // ======================================= Send ========================================
 
-// CAN FD packets (b_FDF) can only be sent if a data baudrate has been set before.
-// Remote frames (b_RTR = true): s32_DataLen = 0 --> DLC = 0 will be sent, or s32_DataLen = 1 and u8_Data[0] contains the DLC to send.
-DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp)
+// Send s32_Count CAN packets in one blob over USB to the firmware.
+// This optimizes the USB speed to the maximum.
+DWORD Candlelight::SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, __int64* ps64_WinTimestamp)
 {
-    const BYTE PADDING = 0;
     *ps64_WinTimestamp = -1;
 
     if (!mb_InitDone || !mb_Started)
         return ERROR_INVALID_OPERATION;
+
+    if ((mk_Info.mk_Capability.feature & ELM_DevFlagSendUsbBlobs) == 0)
+    {
+        me_LastError = FBK_UnsupportedFeature;
+        return ERROR_CODE_IN_FEEDBACK;
+    }
+
+    // the firmware has a FIFO for max 64 packets
+    if (s32_Count > CAN_QUEUE_SIZE)
+        return ERROR_BUFFER_OVERFLOW;
+
+    BYTE u8_Transmit[MAX_BLOB_SIZE];
+    kBlob* pk_Blob = (kBlob*)u8_Transmit;
+    pk_Blob->frame_count = s32_Count;
+    pk_Blob->msg_type    = MSG_TxBlob;
+
+    int s32_TxLen = sizeof(kBlob);
+    for (int P=0; P<s32_Count; P++)
+    {
+        DWORD u32_Error = TxPacketToTxBytes(&pk_Packets[P], u8_Transmit, sizeof(u8_Transmit), &s32_TxLen);
+        if (u32_Error)
+            return u32_Error;
+    }
+
+    // Get timestamp immediately before sending the packet
+    *ps64_WinTimestamp = GetWinTimestamp();
+
+    DWORD u32_Transferred;
+    if (!WinUsb_WritePipe(mh_WinUsb, mk_Info.mu8_EndpointOUT, u8_Transmit, s32_TxLen, &u32_Transferred, NULL))
+    {
+        mu32_TxPipeErrors ++;
+        return GetLastError();
+    }
+
+    mu32_TxPipeErrors = 0;
+    return ERROR_SUCCESS;
+}
+
+// CAN FD packets (b_FDF) can only be sent if a data baudrate has been set before.
+// Remote frames (b_RTR = true): s32_DataLen = 0 --> DLC = 0 will be sent, or s32_DataLen = 1 and u8_Data[0] contains the DLC to send.
+DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp)
+{
+    *ps64_WinTimestamp = -1;
+
+    if (!mb_InitDone || !mb_Started)
+        return ERROR_INVALID_OPERATION;
+
+    BYTE u8_Transmit[256];
+
+    int s32_TxLen = 0;
+    DWORD u32_Error = TxPacketToTxBytes(pk_Packet, u8_Transmit, sizeof(u8_Transmit), &s32_TxLen);
+    if (u32_Error)
+        return u32_Error;
+
+    // Get timestamp immediately before sending the packet
+    *ps64_WinTimestamp = GetWinTimestamp();
+
+    DWORD u32_Transferred;
+    if (!WinUsb_WritePipe(mh_WinUsb, mk_Info.mu8_EndpointOUT, u8_Transmit, s32_TxLen, &u32_Transferred, NULL))
+    {
+        mu32_TxPipeErrors ++;
+        return GetLastError();
+    }
+
+    mu32_TxPipeErrors = 0;
+    return ERROR_SUCCESS;
+}
+
+DWORD Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, BYTE* u8_TxBuf, int s32_BufSize, int* ps32_Offset)
+{
+    // Pad missing bytes with zeroe's
+    const BYTE PAD_BYTE = 0;
+
+    if (mu32_RxPipeErrors > 30 || mu32_TxPipeErrors > 30)
+        return ERROR_TOO_MANY_ERRORS;
 
     int s32_MaxData = mb_BaudFDSet ? 64 : 8;
     if (pk_Packet->mu8_DataLen > s32_MaxData)
@@ -719,7 +810,7 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp)
     // set padding bytes to zero
     for (int i=pk_Packet->mu8_DataLen; i<64; i++)
     {
-        pk_Packet->mu8_Data[i] = PADDING;
+        pk_Packet->mu8_Data[i] = PAD_BYTE;
     }
          if (pk_Packet->mu8_DataLen > 48) pk_Packet->mu8_DataLen = 64;
     else if (pk_Packet->mu8_DataLen > 32) pk_Packet->mu8_DataLen = 48;
@@ -735,7 +826,6 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp)
     // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
     if (mu8_EchoMarker == 0) 
         mu8_EchoMarker = 1;  // a marker value of zero would not send an echo
-    memcpy(&mk_EchoPackets[mu8_EchoMarker], pk_Packet, sizeof(kCanPacket));
 
     kTxFrameElmue k_TxFrame   = {0};
     k_TxFrame.header.size     = sizeof(kTxFrameElmue) + pk_Packet->mu8_DataLen;
@@ -746,23 +836,17 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp)
     if (pk_Packet->mb_FDF) k_TxFrame.flags |= FRM_FDF;
     if (pk_Packet->mb_BRS) k_TxFrame.flags |= FRM_BRS;
 
-    mu8_EchoMarker ++;
+    if (*ps32_Offset + k_TxFrame.header.size >= s32_BufSize)
+        return ERROR_BUFFER_OVERFLOW;
 
-    BYTE u8_Transmit[sizeof(kTxFrameElmue) + 64];
-    memcpy(u8_Transmit, &k_TxFrame, sizeof(k_TxFrame));
-    memcpy(u8_Transmit + sizeof(k_TxFrame), pk_Packet->mu8_Data, pk_Packet->mu8_DataLen);
+    memcpy(&mk_EchoPackets[mu8_EchoMarker ++], pk_Packet, sizeof(kCanPacket));
 
-    // Get timestamp immediately before sending the packet
-    *ps64_WinTimestamp = GetWinTimestamp();
+    memcpy(u8_TxBuf + *ps32_Offset, &k_TxFrame, sizeof(kTxFrameElmue));
+    *ps32_Offset += sizeof(kTxFrameElmue);
 
-    DWORD u32_Transferred;
-    if (!WinUsb_WritePipe(mh_WinUsb, mk_Info.mu8_EndpointOUT, u8_Transmit, k_TxFrame.header.size, &u32_Transferred, NULL))
-    {
-        mu32_TxPipeErrors ++;
-        return GetLastError();
-    }
+    memcpy(u8_TxBuf + *ps32_Offset, pk_Packet->mu8_Data, pk_Packet->mu8_DataLen);
+    *ps32_Offset += pk_Packet->mu8_DataLen;
 
-    mu32_TxPipeErrors = 0;
     return ERROR_SUCCESS;
 }
 
@@ -825,7 +909,7 @@ void Candlelight::ReadPipeThreadMember()
 
         DWORD u32_Read  = 0;
         DWORD u32_Error = ERROR_SUCCESS;
-        if (!WinUsb_ReadPipe(mh_WinUsb, mk_Info.mu8_EndpointIN, pk_FifoWrite->mu8_Buffer, RX_FIFO_BUF_SIZE, NULL, &k_Overlapped))
+        if (!WinUsb_ReadPipe(mh_WinUsb, mk_Info.mu8_EndpointIN, pk_FifoWrite->mu8_Buffer, sizeof(pk_FifoWrite->mu8_Buffer), NULL, &k_Overlapped))
         {
             u32_Error = GetLastError();
             if (u32_Error == ERROR_IO_PENDING)
@@ -884,21 +968,55 @@ void Candlelight::ReadPipeThreadMember()
 }
 
 // Receive a Rx packet, a Tx echo packet, an error frame, a debug message, a busload packet, or .......
-// pk_Header and ps64_WinTimestamp are only valid if the function does not return an error.
-DWORD Candlelight::ReceiveData(DWORD u32_Timeout, kHeader* pk_Header, DWORD u32_BufSize, __int64* ps64_RxTimestamp)
+// pk_Header and pb_RxBlob are only valid if the function does not return an error.
+DWORD Candlelight::ReceiveData(DWORD u32_Timeout, kHeader** ppk_Header, __int64* ps64_RxTimestamp, bool* pb_RxBlob)
 {
-    // This timestamp is only in case that an error is returned
+    // This timestamp is only used in case that an error is returned
     *ps64_RxTimestamp = GetWinTimestamp();
+    *ppk_Header = 0;
 
     if (!mb_InitDone || !mb_Started)
         return ERROR_INVALID_OPERATION;
 
-    if (u32_BufSize < RX_FIFO_BUF_SIZE)
-        return ERROR_INSUFFICIENT_BUFFER;
-
     if (mu32_RxPipeErrors > 30 || mu32_TxPipeErrors > 30)
         return ERROR_TOO_MANY_ERRORS;
 
+    // Get frames form the IN pipe if there is no pending data in mk_BlobData
+    if (ms32_BlobFrames <= 0)
+    {
+        DWORD u32_Error = ReceiveFifo(u32_Timeout); // laods mk_BlobData
+        if (u32_Error)
+            return u32_Error;
+
+        kBlob* pk_Blob = (kBlob*)mk_BlobData.mu8_Buffer;
+        if (pk_Blob->msg_type == MSG_RxBlob)
+        {
+            ms32_BlobFrames = pk_Blob->frame_count;
+            mu32_BlobOffset = sizeof(kBlob);
+        }
+    }
+
+    kHeader* pk_Header = (kHeader*)(mk_BlobData.mu8_Buffer + mu32_BlobOffset);
+
+    if (mu32_BlobOffset + pk_Header->size > mk_BlobData.mu32_BytesRead)
+    {
+        ms32_BlobFrames = 0;
+        return ERROR_CORRUPT_IN_DATA;
+    }
+
+    if (pb_RxBlob) *pb_RxBlob = ms32_BlobFrames > 0;
+
+    ms32_BlobFrames --;
+    mu32_BlobOffset += pk_Header->size;
+
+    *ppk_Header       = pk_Header;
+    *ps64_RxTimestamp = mk_BlobData.ms64_WinTimestamp;
+    return ERROR_SUCCESS;    
+}
+
+// Get the next frame from the Rx FIFO and copy it to mk_BlobData.
+DWORD Candlelight::ReceiveFifo(DWORD u32_Timeout)
+{
     mi_Critical.Lock();
         kRxFifo* pk_FifoRead = &mk_RxFifo[ms32_FifoReadIdx];
         int s32_Available = ms32_FifoCount;
@@ -929,16 +1047,13 @@ DWORD Candlelight::ReceiveData(DWORD u32_Timeout, kHeader* pk_Header, DWORD u32_
             return ERROR_TIMEOUT;
     }
 
-    // store the timestamp when the thread has received the packet
-    *ps64_RxTimestamp = pk_FifoRead->ms64_WinTimestamp;
-    DWORD u32_Error   = pk_FifoRead->mu32_Error;
+    DWORD u32_Error = pk_FifoRead->mu32_Error;
     
     if (u32_Error == ERROR_SUCCESS)
-    {
-        memcpy(pk_Header, pk_FifoRead->mu8_Buffer, pk_FifoRead->mu32_BytesRead);
-        if (pk_FifoRead->mu32_BytesRead < pk_Header->size)
-            u32_Error = ERROR_CORRUPT_IN_DATA;
-    }
+        memcpy(&mk_BlobData, pk_FifoRead, sizeof(kRxFifo));
+
+    ms32_BlobFrames = 0;
+    mu32_BlobOffset = 0;
 
     mi_Critical.Lock();
         ms32_FifoReadIdx = (ms32_FifoReadIdx + 1) % RX_FIFO_MAX_COUNT;
@@ -970,6 +1085,16 @@ kCanPacket Candlelight::RxFrameToCanPacket(kRxFrameElmue* pk_Frame)
 kCanPacket Candlelight::GetTxEchoPacket(kTxEchoElmue* pk_TxEcho)
 {
     return mk_EchoPackets[pk_TxEcho->marker];
+}
+
+// Convert UFT8 string to Unicode
+CString Candlelight::ConvertStringFrame(kStringElmue* pk_String)
+{
+    int s32_StrLen = pk_String->header.size - sizeof(kHeader);
+    WCHAR c_Unicode[256];
+    int s32_Written = MultiByteToWideChar(CP_UTF8, 0, pk_String->ascii_msg, s32_StrLen, c_Unicode, sizeof(c_Unicode));
+    c_Unicode[s32_Written] = 0;
+    return c_Unicode;
 }
 
 // ==========================================================================================
@@ -1172,7 +1297,10 @@ CString Candlelight::FormatTimestamp(kHeader* pk_Header, __int64 s64_WinTimestam
         if (s64_Stamp >= 0)
         {
             // The 32 bit firmware timestamp will roll over after 1 hour, this must be detected here.
-            if (s64_Stamp < ms64_LastMcuStamp)
+            // ATTENTION: The MCU may send an Rx packet with a lower timestamp than the previous Rx packet.
+            // This is very strange, but it may happen --> ignore small jumps back and detect only big jumps.
+            if (s64_Stamp         <  0x10000000 &&
+                ms64_LastMcuStamp >  0xF0000000)
                 ms64_McuRollOver += 0x100000000;
             
             ms64_LastMcuStamp = s64_Stamp;
@@ -1188,19 +1316,6 @@ CString Candlelight::FormatTimestamp(kHeader* pk_Header, __int64 s64_WinTimestam
 
     if (s64_Stamp < 0)
         return L"No Timestamp    ";
-
-    // get the clock offset in µs for the very first timestamp to be converted
-    if (ms64_ClockOffset < 0)
-    {
-        SYSTEMTIME k_Now;
-        GetLocalTime(&k_Now);
-        ms64_ClockOffset = (((((__int64)k_Now.wHour * 60) + k_Now.wMinute) * 60 + k_Now.wSecond) * 1000 + k_Now.wMilliseconds) * 1000;
-        // ATTENTION: This must be stored in a separate variable from ms64_ClockOffset!
-        // Otherwise ms64_ClockOffset may become negative and is updated each time again.
-        ms64_StampOffset = s64_Stamp; 
-    }
-
-    s64_Stamp += ms64_ClockOffset - ms64_StampOffset;
 
     DWORD u32_Micro = s64_Stamp % 1000;
     s64_Stamp /= 1000;
@@ -1400,6 +1515,8 @@ CString Candlelight::FormatLastError(DWORD u32_Error)
             return L"Please upload the latest firmware.";
         case ERROR_TOO_MANY_ERRORS:
             return L"Too many errors. The CANable has a problem or has been disconnected.";
+        case ERROR_BUFFER_OVERFLOW:
+            return L"Buffer overflow.";
         case ERROR_CODE_IN_FEEDBACK:
         {
             switch (me_LastError)

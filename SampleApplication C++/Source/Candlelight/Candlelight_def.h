@@ -100,6 +100,9 @@ typedef enum // transferred as 32 bit
     // Do not send an echo for the successfully sent CAN packets (by default this is enabled in the Candlelight firmware)
     // The Tx event packet is sent in the moment when the ACK was recived. You can turn this off to reduce USB traffic.
     ELM_DevFlagDisableTxEcho          = 0x08000, 
+    // IN:  If there are multiple CAN Rx packets waiting in the FIFO buffer -> optimize USB transfer by sendig them together in a blob.
+    // OUT: The host can always send multiple CAN Tx frames with kBlob and MSG_TxBlob even without setting this flag.
+    ELM_DevFlagSendUsbBlobs           = 0x10000, 
 } eDeviceFlags;
 
 // ==============================================================================
@@ -141,6 +144,7 @@ typedef enum // sent as 4 bit
 // Candlelight sends this in a special error packet with a flag (legacy: CAN_ID_Error, ElmüSoft: MSG_Error)
 typedef enum // sent as 8 bit 
 {
+    APP_NoError         = 0x00, // no error
     APP_CanRxFail       = 0x01, // the HAL reports an error receiving a CAN packet.
     APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or invalid Tx packet or HAL error
     APP_CanTxOverflow   = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
@@ -453,23 +457,33 @@ typedef struct  // Legacy (size = 80 byte)
 // There are several design errors in the legacy Candlelight protocol that have been fixed in the new ElmüSoft protocol.
 // These errors reduce the possible USB data throughput unneccessarily.
 // We have only a Full Speed USB interface (12 MBit) and want to transfer as much as possible CAN data which may come with 10 Mbaud.
+// In case of a multi-channel adapter USB must transfer data of multiple CAN channels.
 //
-// 1) When a CAN packet with 8 data bytes is received in CAN FD mode, always 64 data bytes were transmitted in an 80 byte struct over USB.
-// 2) kHostFrameLegacy generates unneccessary traffic by sending 6 bytes that are not required in each frame.
-// 3) All Tx frames are always echoed back entirely to the host and this additional USB traffic cannot be turned off.
-// 4) The idea to send multiple CAN channels over one Full speed USB connection is totally absurd.
-// 5) Bus errors are sent in a stupid way (flooding the host with the same error again and again, hundreds per second).
-// 6) The legacy structures do not allow to send other data than CAN packets or error frames.
-// 7) The legacy firmware had fatal bugs, of which one resulted even in a firmware crash.
+// Issues with the legacy firmware:
+// --------------------------------
+// 1) When a CAN packet with 8 data bytes was received in CAN FD mode, always 64 data bytes were transmitted in an 80 byte struct over USB.
+// 2) kHostFrameLegacy generated unneccessary traffic by sending 6 bytes that are not required in each frame.
+// 3) All Tx frames were always echoed back entirely to the host and this additional USB traffic could not be turned off.
+// 4) Bus errors were sent in a stupid way (flooding the host with the same error again and again, hundreds per second).
+// 5) The legacy structures did not allow to send other data than CAN packets or error frames.
+// 6) The legacy firmware had fatal bugs, one of them even resulted in a firmware crash.
+// 7) The legacy code was very difficult to understand because the authors were too lazy to write comments.
 //
-// However, the legacy GS protocol with all it's design errors is still implemented here for backward compatibility with legacy software.
-// You have to set ELM_DevFlagProtocolElmue to enable the new CANable 2.5 protocol which optimizes USB transfer to the maximum.
-// Additionally the new ElmüSoft protocol can send string messages and calculates the bus load and has a lots of bugfixes.
+// However, the legacy GS protocol with all it's design errors is still implemented here for backward compatibility with Linux.
+//
+// The new ElmüSoft protocol:
+// --------------------------
+// You have to set ELM_DevFlagProtocolElmue to enable the new CANable 2.5 protocol which significantly optimizes USB transfer.
+// If you additionally set ELM_DevFlagSendUsbBlobs the USB transfer speed will be optimized to the maximum that is possible.
+// The new firmware enables double buffering for USB OUT endpoints for the highest transfer that the hardware allows.
+// The new ElmüSoft protocol can also send string messages and calculates the bus load and has a lots of bugfixes.
 // See subfolder "SampleApplication C++" for a sample code how to generate precise timestamps using the performance counter in the CPU.
-// The legacy code was very difficult to understand because the authors were too lazy to write comments. This has been fixed by ElmüSoft.
 // A new error reporting has been implemented that sends bus errors (passive, bus off, error counters) in an efficient way to the host.
 // For more details see https://netcult.ch/elmue/CANable Firmware Update
 // ---------------------------------------------------------------------------------
+
+// The buffer size for USB In and OUT transfer
+#define MAX_BLOB_SIZE       2048
 
 // one byte alignment
 #pragma pack(push,1)
@@ -585,15 +599,27 @@ typedef enum // 16 bit
 typedef enum // 8 bit
 {
     // received from host
-    MSG_TxFrame = 10, // the message contains a CAN frame to be sent to CAN bus (kTxFrameElmue)
+    MSG_TxFrame = 10, // 0x0A the message contains a CAN frame to be sent to CAN bus (kTxFrameElmue)
     // sent to host
-    MSG_TxEcho,       // the message contains the echo marker of a Tx CAN frame (kTxEchoElmue, can be disabled with ELM_DevFlagDisableTxEcho)    
-    MSG_RxFrame,      // the message contains a received CAN frame from CAN bus (kRxFrameElmue)
-    MSG_Error,        // the message contains multiple error flags (kErrorElmue, same format as legacy protocol, see buf_store_error())
-    MSG_String,       // the message contains an ASCII string to be displayed to the user (kStringElmue)
-    MSG_Busload,      // the message contains one byte which is the bus load in percent (kBusloadElmue)
+    MSG_TxEcho,       // 0x0B the message contains the echo marker of a Tx CAN frame (kTxEchoElmue, can be disabled with ELM_DevFlagDisableTxEcho)    
+    MSG_RxFrame,      // 0x0C the message contains a received CAN frame from CAN bus (kRxFrameElmue)
+    MSG_Error,        // 0x0D the message contains multiple error flags (kErrorElmue, same format as legacy protocol, see buf_store_error())
+    MSG_String,       // 0x0E the message contains an ASCII string to be displayed to the user (kStringElmue)
+    MSG_Busload,      // 0x0F the message contains one byte which is the bus load in percent (kBusloadElmue)
+    MSG_TxBlob,       // 0x10 the message contains a blob (kBlob) with multiple kTxFrameElmue
+    MSG_RxBlob,       // 0x11 the message contains a blob (kBlob) with multiple kRxFrameElmue
 //  MSG_xxxx          // future expansions are easily possible
 } eMessageType;
+
+// Multiple CAN frames can be transferred in one blob (binary large object) to reduce the overhead of USB tokens and USB handshake.
+// This requires the flag ELM_DevFlagSendUsbBlobs to be set when opening the channel.
+// The maximum size of the entire blob are MAX_BLOB_SIZE bytes.
+typedef struct 
+{
+    uint8_t  frame_count; // the count of kTxFrameElmue or kRxFrameElmue that follow after this header
+    uint8_t  msg_type;    // eMessageType = MSG_TxBlob or MSG_RxBlob
+} __packed __aligned(1) kBlob;
+
 
 // common header for all structs. Allows easily adding new features in the future.
 typedef struct 
@@ -608,7 +634,7 @@ typedef struct
 // see buf_process_can_bus()
 typedef struct 
 {
-    kHeader  header;      // MSG_TxFrame
+    kHeader  header;        // msg_type = MSG_TxFrame
     uint8_t  flags;       // eFrameFlags    
     uint32_t can_id;      // CAN ID + eCanIdFlags
     uint8_t  marker;      // one-byte marker that is sent back to the host with MSG_TxEcho when the packet has been ACKnowledged    
@@ -621,7 +647,7 @@ typedef struct
 // see buf_store_rx_packet()
 typedef struct 
 {
-    kHeader  header;      // MSG_RxFrame
+    kHeader  header;            // msg_type = MSG_RxFrame
     uint8_t  flags;       // eFrameFlags    
     uint32_t can_id;      // CAN ID + eCanIdFlags
     uint32_t timestamp;   // timestamp with 1 µs precision, only sent to host if GS_DevFlagTimestamp has been set, roll over detection required!
@@ -630,7 +656,7 @@ typedef struct
 // see buf_store_tx_echo()
 typedef struct 
 {
-    kHeader  header;      // MSG_TxEcho
+    kHeader  header;      // msg_type = MSG_TxEcho
     uint8_t  marker;      // the same marker that was sent in kTxFrameElmue sent back to the host when the packet was ACKnowledged on CAN bus.
     uint32_t timestamp;   // timestamp with 1 µs precision, only sent to host if GS_DevFlagTimestamp has been set, roll over detection required!
 } __packed __aligned(1) kTxEchoElmue;
@@ -638,7 +664,7 @@ typedef struct
 // see buf_store_error()
 typedef struct 
 {
-    kHeader  header;      // MSG_Error
+    kHeader  header;      // msg_type = MSG_Error
     uint32_t err_id;      // eErrFlagsCanID
     uint8_t  err_data[8]; // several error flags and error counters
     uint32_t timestamp;   // timestamp with 1 µs precision, only sent to host if GS_DevFlagTimestamp has been set, roll over detection required!
@@ -647,7 +673,7 @@ typedef struct
 // see control_send_debug_mesg()
 typedef struct 
 {
-    kHeader  header;       // MSG_String
+    kHeader  header;       // msg_type = MSG_String
     char     ascii_msg[0]; // string data
 } __packed __aligned(1) kStringElmue;
 

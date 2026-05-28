@@ -586,6 +586,7 @@ public class WinUSB : IDisposable
         bool        mb_FifoOverflow;
         IntPtr      mh_ThreadEvent;
         IntPtr      mh_ReceiveEvent;
+        int         ms32_BufSize;
 
         public cPipeIn(WinUSB i_WinUSB, IntPtr h_Handle, cInterface i_Interface, kPipeInformation k_Pipe) 
             : base(i_WinUSB, h_Handle, i_Interface, k_Pipe)
@@ -610,8 +611,10 @@ public class WinUSB : IDisposable
             Utils.CloseHandle(mh_ReceiveEvent);
         }
 
-        public void StartThread()
+        public void StartThread(int s32_BufSize)
         {
+            ms32_BufSize = s32_BufSize;
+
             Thread i_Thread = new Thread(new ThreadStart(ReadPipeThread));
             i_Thread.IsBackground = true;
             i_Thread.Priority     = ThreadPriority.Highest;
@@ -645,7 +648,7 @@ public class WinUSB : IDisposable
 
             // The buffer should be a multiple of the endpoint's max packet size.
             // The buffer must not be moved by the garbage collector between WinUsb_ReadPipe() and WinUsb_GetOverlappedResult()
-            Byte[]   u8_RxBuffer = new Byte[128];
+            Byte[]   u8_RxBuffer = new Byte[ms32_BufSize];
             GCHandle i_GcHandle  = GCHandle.Alloc(u8_RxBuffer, GCHandleType.Pinned);
             IntPtr   h_RxBuffer  = i_GcHandle.AddrOfPinnedObject();
 
@@ -783,7 +786,6 @@ public class WinUSB : IDisposable
                     return null; // Timeout
             }
 
-            // s32_Timestamp = i_FifoRead.ms32_Timestamp;
             Byte[] u8_RxData = i_FifoRead.mu8_Buffer;
             int   s32_Error  = i_FifoRead.ms32_Error;
             s64_RxTimestamp  = i_FifoRead.ms64_WinTimestamp;
@@ -969,11 +971,11 @@ public class WinUSB : IDisposable
                         i_Descr = Utils.BytesToStructureVar<kDfuDescriptor>(u8_Data, s32_Offset, i_Head.bLength);
                     break;
                 default:
-                    // Descriptor not implemented
+                    Debug.Assert(false, "Descriptor not implemented: " + i_Head.eDescrType);
                     break;
             }
 
-            s32_Offset += i_Descr.bLength;
+            s32_Offset += i_Head.bLength;
 
             if (i_Descr != null)
                 mi_AllDescriptors.Add(i_Descr);

@@ -19,6 +19,7 @@ typedef enum // 32 bit
     USR_DebugReport = 0x10, // enable ASCII debug messages to the host (Candlelight: enabled with ELM_DevFlagProtocolElmue)
     USR_Feedback    = 0x20, // enable feedback mode (return execution status of a command with enum eFeedback) (Candlelight uses ELM_ReqGetLastError instead)
     USR_Timestamp   = 0x40, // send timestamps to the host
+    USR_SendBlobs   = 0x80, // allow to send multiple CAN frames packed together in blobs over USB
     // --------------------
     // IMPORTANT:
     // Never *EVER* modify these defaults!!! You will break all applications that have been written for CANable adapters!

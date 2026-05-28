@@ -69,29 +69,29 @@ bool       Class_InitDone  = false;
 
 // ----- Private Functions
 // These functions are all called over usb_core and usb_lowlevel from PCD_EP_ISR_Handler() interrupts
-uint8_t  USBD_GS_Init       (uint8_t cfgidx);
-uint8_t  USBD_GS_DeInit     (uint8_t cfgidx);
-uint8_t  USBD_GS_Setup      (USBD_SetupReqTypedef *req);
-uint8_t  USBD_GS_EP0_RxReady();
-uint8_t  USBD_GS_DataIn     (uint8_t epnum);
-uint8_t  USBD_GS_DataOut    (uint8_t epnum);
+uint8_t  USB_IRQ_Init       (uint8_t cfgidx);
+uint8_t  USB_IRQ_DeInit     (uint8_t cfgidx);
+uint8_t  USB_IRQ_Setup      (USBD_SetupReqTypedef *req);
+uint8_t  USB_IRQ_EP0_RxReady();
+uint8_t  USB_IRQ_DataIn     (uint8_t epnum);
+uint8_t  USB_IRQ_DataOut    (uint8_t epnum);
 // -------------
-void     USBD_GS_Vendor_Request(USBD_SetupReqTypedef *req);
-bool     USBD_GS_DFU_Request   (USBD_SetupReqTypedef *req);
-bool     USBD_GS_CustomRequest (USBD_SetupReqTypedef *req);
+void     USB_IRQ_Vendor_Request(USBD_SetupReqTypedef *req);
+bool     USB_IRQ_DFU_Request   (USBD_SetupReqTypedef *req);
+bool     USB_IRQ_CustomRequest (USBD_SetupReqTypedef *req);
 // -------------
 void     ResetDfuStatus();
 
 // WinUSB class callbacks structure
 USBD_ClassTypeDef USBD_ClassCallbacks =
 {
-    .Init              = USBD_GS_Init,
-    .DeInit            = USBD_GS_DeInit,
-    .Setup             = USBD_GS_Setup,
+    .Init              = USB_IRQ_Init,
+    .DeInit            = USB_IRQ_DeInit,
+    .Setup             = USB_IRQ_Setup,
     .EP0_TxSent        = NULL,
-    .EP0_RxReady       = USBD_GS_EP0_RxReady,
-    .DataIn            = USBD_GS_DataIn,
-    .DataOut           = USBD_GS_DataOut,
+    .EP0_RxReady       = USB_IRQ_EP0_RxReady,
+    .DataIn            = USB_IRQ_DataIn,
+    .DataOut           = USB_IRQ_DataOut,
     .SOF               = NULL,
     .IsoINIncomplete   = NULL, // ISO endpoints not used
     .IsoOUTIncomplete  = NULL, // ISO endpoints not used
@@ -391,7 +391,7 @@ USBD_StatusTypeDef USBD_ConfigureEndpoints()
 // =========================================================================================================
 
 // interrupt callback
-uint8_t USBD_GS_Init(uint8_t cfgidx)
+uint8_t USB_IRQ_Init(uint8_t cfgidx)
 {
     Class_InitDone = true;
     ResetDfuStatus();
@@ -413,12 +413,12 @@ uint8_t USBD_GS_Init(uint8_t cfgidx)
         if (status != USBD_OK)
             return status;
     }
-    
+
     return USBD_OK;
 }
 
 // interrupt callback
-uint8_t USBD_GS_DeInit(uint8_t cfgidx)
+uint8_t USB_IRQ_DeInit(uint8_t cfgidx)
 {
     if (Class_InitDone)
     {
@@ -435,7 +435,7 @@ uint8_t USBD_GS_DeInit(uint8_t cfgidx)
 // interrupt callback
 // A SETUP request has been received
 // This callback is called from USBD_StdDevReq() in usb_ctrlreq.c and the return value is ignored.
-uint8_t USBD_GS_Setup(USBD_SetupReqTypedef *req)
+uint8_t USB_IRQ_Setup(USBD_SetupReqTypedef *req)
 {
     // ATTENTION: USBD_CtlSendData() does not work with a local buffer on the stack --> define as static!
     static uint8_t ifalt = 0;
@@ -444,7 +444,7 @@ uint8_t USBD_GS_Setup(USBD_SetupReqTypedef *req)
     {
         case USB_REQ_TYPE_CLASS:
         case USB_REQ_TYPE_VENDOR:
-            USBD_GS_Vendor_Request(req);
+            USB_IRQ_Vendor_Request(req);
             break;
 
         case USB_REQ_TYPE_STANDARD:
@@ -462,12 +462,12 @@ uint8_t USBD_GS_Setup(USBD_SetupReqTypedef *req)
 // called from inside an interrupt callback
 // First stage of vendor SETUP requests
 // See "USB Tutorial.chm" in subfolder "Documentation"
-void USBD_GS_Vendor_Request(USBD_SetupReqTypedef *req)
+void USB_IRQ_Vendor_Request(USBD_SetupReqTypedef *req)
 {
     // wIndex = interface number
     if (req->wIndex == DFU_INTERFACE_NUMBER)
     {
-        if (USBD_GS_DFU_Request(req))
+        if (USB_IRQ_DFU_Request(req))
             return; // success
     }
     else
@@ -482,7 +482,7 @@ void USBD_GS_Vendor_Request(USBD_SetupReqTypedef *req)
 // Second stage of SETUP requests with OUT data
 // This callback is called from USBD_LL_DataOutStage() in usb_core.c and the return value is ignored.
 // IMPORTANT: Read comment of control_setup_OUT_data() !!!
-uint8_t USBD_GS_EP0_RxReady()
+uint8_t USB_IRQ_EP0_RxReady()
 {
     control_setup_OUT_data();
     return USBD_OK; // ignored
@@ -490,7 +490,7 @@ uint8_t USBD_GS_EP0_RxReady()
 
 // called from inside an interrupt callback
 // request has destination to interface 1 (firmware update)
-bool USBD_GS_DFU_Request(USBD_SetupReqTypedef *req)
+bool USB_IRQ_DFU_Request(USBD_SetupReqTypedef *req)
 {
     if ((req->bRequestType & USB_REQ_RECIPIENT_MASK) != USB_REQ_RECIPIENT_INTERFACE ||
         (req->bRequestType & USB_REQ_TYPE_MASK)      != USB_REQ_TYPE_CLASS)
@@ -500,7 +500,7 @@ bool USBD_GS_DFU_Request(USBD_SetupReqTypedef *req)
     {
         case DFU_RequDetach:
             ResetDfuStatus();
-            
+
             // Enter DFU mode with a delay of 300 ms
             // If the pin BOOT0 was disabled the user must reconnect the USB cable to generate a hardware reset.
             // Inform the firmware updater that the device cannot enter DFU mode by returning state DfuSte_AppDetach
@@ -508,9 +508,9 @@ bool USBD_GS_DFU_Request(USBD_SetupReqTypedef *req)
             eFeedback e_Feedback = dfu_switch_to_bootloader();
             switch (e_Feedback)
             {
-                case FBK_Success: 
+                case FBK_Success:
                     break;
-                case FBK_ResetRequired: 
+                case FBK_ResetRequired:
                     DFU_Status.State = DfuState_AppDetach; // hardware reset required --> user must disconnect USB cable
                     break;
                 default: // FBK_UnsupportedFeature, FBK_AdapterMustBeClosed, FBK_OptBytesProgrFailed
@@ -523,7 +523,7 @@ bool USBD_GS_DFU_Request(USBD_SetupReqTypedef *req)
         case DFU_RequGetStatus:
             USBD_CtlSendData((uint8_t*)&DFU_Status, sizeof(DFU_Status));
             return true;
-            
+
         case DFU_RequClearStatus:
             ResetDfuStatus();
             return true;
@@ -543,12 +543,16 @@ void ResetDfuStatus()
 
 // interrupt callback
 // host data has arrived on the USB OUT endpoint (0x02, 0x04, 0x06)
-uint8_t USBD_GS_DataOut(uint8_t epnum)
+uint8_t USB_IRQ_DataOut(uint8_t epnum)
 {
     uint8_t channel = EpToChannel[epnum & 0xF]; // epnum = 0x02 --> channel 0, 0x04 --> 1, 0x06 --> 2
     buf_class* usb_buf = buf_get_instance(channel);
 
-    buf_store_can_frame(channel, (kHostFrameLegacy*)usb_buf->from_host_buf);        
+    // Legacy routes all traffic though interface 0
+    if (!GLB_ProtoElmue)
+        channel = 0;
+
+    buf_store_can_frame_blob(channel, usb_buf->from_host_buf);
 
     // pass the buffer from_host_buf to the HAL for the next frame to receive
     USBD_LL_PrepareReceive(epnum, usb_buf->from_host_buf, sizeof(usb_buf->from_host_buf));
@@ -569,7 +573,7 @@ uint8_t* USBD_GetUserStringDescr(uint8_t index, uint16_t *length)
             // Do not display a stupid abbreviation like "gs_usb" that an ordinary computer user will not understand.
 #if CANDLE_INRERFACE_COUNT > 1
             uint8_t* unicode = USBD_GetStringDescr("CAN FD Interface x", length);
-            unicode[36] = ('1' - CANDLE_INTERFACE_STR_1_IDX) + index; // replace the 'x' with '1', '2', '3'
+            unicode[36] = '1' + index - CANDLE_INTERFACE_STR_1_IDX; // replace the 'x' with '1', '2', '3'
             return unicode;
 #else
             return USBD_GetStringDescr("CAN FD Interface", length);
@@ -579,7 +583,7 @@ uint8_t* USBD_GetUserStringDescr(uint8_t index, uint16_t *length)
         case DFU_INTERFACE_STR_IDX:
             return USBD_GetStringDescr("Firmware Update Interface", length);
 
-        case 0xEE: // Microsoft OS String Descriptor Request --> "MSFT100" + Vendor Code
+        case 0xEE: // Microsoft OS String Descriptor Request --> return "MSFT100" + Vendor Code
         {
             uint8_t* unicode = USBD_GetStringDescr("MSFT100x", length);
             unicode[16] = USBD_MS_OS_VENDOR_CODE; // replace the 'x' with the vendor code
@@ -602,7 +606,7 @@ bool USBD_SetupStageRequest()
     {
         case USB_REQ_RECIPIENT_DEVICE:    // device request
         case USB_REQ_RECIPIENT_INTERFACE: // interface request
-            return USBD_GS_CustomRequest(&USB_Handle.request);
+            return USB_IRQ_CustomRequest(&USB_Handle.request);
         default:
             return false;
     }
@@ -613,7 +617,7 @@ bool USBD_SetupStageRequest()
 // Windows sends an interface request, but for testing with WinUSB it is required that also a device request is answered the same way.
 // For details read: https://netcult.ch/elmue/CANable Firmware Update
 // return true if request was handled
-bool USBD_GS_CustomRequest(USBD_SetupReqTypedef *req)
+bool USB_IRQ_CustomRequest(USBD_SetupReqTypedef *req)
 {
     if (req->bRequest != USBD_MS_OS_VENDOR_CODE || req->wValue >= USBD_INTERFACES_COUNT)
         return false;
@@ -648,49 +652,27 @@ bool USBD_GS_CustomRequest(USBD_SetupReqTypedef *req)
 // ==================================== IN Transfer ==========================================
 
 // This function is called from the main loop only after usb_buf->TxBusy == false.
-// Send a frame to the host on IN endpoint, either kHostFrameLegacy or kHeader
-void USBD_SendFrameToHost(uint8_t channel, void* frame)
+// Send frame(s) to the host on IN endpoint, either kHostFrameLegacy or kRxFrameElmue or kBlob
+void USBD_SendInDataToHost(uint8_t channel, uint8_t* buf, uint16_t len)
 {
     // Legacy protocol routes all CAN channels through interface 0
     if (!GLB_ProtoElmue)
         channel = 0;
-    
-    buf_class* usb_buf = buf_get_instance(channel);
-    uint16_t len;
-    if (GLB_ProtoElmue) // new ElmüSoft protocol
-    {
-        // Using the optimized new ElmüSoft protocol reduces unnecessary USB overhead as it was sent by the legacy firmware.
-        // If a CAN frame has only 2 data bytes, send only 2 data bytes over USB.
-        // All ElmüSoft messages use the same header, no matter if CAN packet or an ASCII message.
-        len = ((kHeader*)frame)->size;
-    }
-    else // legacy Geschwister Schneider protocol
-    {
-        kHostFrameLegacy* pk_Legacy = (kHostFrameLegacy*)frame;
-        
-        // The legacy protocol is not intelligently designed. The timestamp is behind a fix 64 byte data array.
-        // For CAN FD it sends ALWAYS 76 or 80 bytes over USB no matter how many bytes the frame really has.
-        len = sizeof(kHostFrameLegacy); // 80 bytes
-        if ((pk_Legacy->flags & FRM_FDF) == 0) len -= 56;
-        if ((GLB_UserFlags[pk_Legacy->channel] & USR_Timestamp) == 0) len -= 4;
-    }
 
+    buf_class* usb_buf = buf_get_instance(channel);
     usb_buf->TxBusy  = true;
     usb_buf->SendZLP = len > 0 && (len % EP_DATA_PACKET_SIZE) == 0;
 
     // IMPORTANT:
     // USBD_LL_Transmit does not copy the frame data to another buffer.
-    // The HAL needs a pointer to a buffer that stays unchanged until all data has been sent.
+    // The HAL needs a pointer to a buffer that stays unchanged until all data has been sent: buf_class.to_host_buf
     // If the data exceeds the USB endpoint maximum packet size (64 byte), it will be sent in multiple USB packets.
-    memcpy(usb_buf->to_host_buf, frame, len);
-
-    // always returns HAL_OK
-    USBD_LL_Transmit(EndpointsIN[channel], usb_buf->to_host_buf, len);
+    USBD_LL_Transmit(EndpointsIN[channel], buf, len);
 }
 
 // interrupt callback
-// The data from USBD_SendFrameToHost() has been sent to the host on IN endpoint (0x81, 0x83, 0x85)
-uint8_t USBD_GS_DataIn(uint8_t epnum)
+// The data from USBD_SendInDataToHost() has been sent to the host on the IN endpoint (0x81, 0x83, 0x85)
+uint8_t USB_IRQ_DataIn(uint8_t epnum)
 {
     uint8_t channel = EpToChannel[epnum & 0xF]; // epnum = 0x81 --> channel 0, 0x83 --> 1, 0x85 --> 2
     buf_class* usb_buf = buf_get_instance(channel);

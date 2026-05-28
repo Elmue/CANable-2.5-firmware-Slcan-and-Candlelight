@@ -64,7 +64,8 @@ void control_init()
                                    GS_DevFlagCAN_FD         |
                                    GS_DevFlagBitTimingFD    |
                                    ELM_DevFlagProtocolElmue |
-                                   ELM_DevFlagDisableTxEcho;
+                                   ELM_DevFlagDisableTxEcho |
+                                   ELM_DevFlagSendUsbBlobs;
     if (SET_TermPins[0] > 0)
         GS_CapabilityClassic.feature |= GS_DevFlagTermination;
 
@@ -115,9 +116,9 @@ void control_init()
 // For IN  data requests (to the host) send the response.
 // For OUT data requests (from the host) provide a buffer which will be filled and passed to control_vendor_OUT_data()
 // See "USB Tutorial.chm" in subfolder "Documentation"
-// This function is called from HAL_PCD_SetupStageCallback() -> USBD_LL_SetupStage() -> USBD_StdDevReq() -> USBD_GS_Setup() -> USBD_GS_Vendor_Request()
+// This function is called from HAL_PCD_SetupStageCallback() -> USBD_LL_SetupStage() -> USBD_StdDevReq() -> USB_Setup() -> USB_Vendor_Request()
 // returns false on error and sets ELM_LastError.
-// IMPORTANT: Read the comment for USBD_GS_Vendor_Request()
+// IMPORTANT: Read the comment for USB_Vendor_Request()
 bool control_setup_request(USBD_SetupReqTypedef *req)
 {
     // GetLastError always sends a valid response even if the ElmüSoft protocol is not enabled or the host sends an invalid channel.
@@ -341,7 +342,7 @@ bool control_setup_request(USBD_SetupReqTypedef *req)
 
 // Second Stage: The OUT data of a SETUP vendor request from the host has been received in the Endpoint 0 buffer.
 // See "USB Tutorial.chm" in subfolder "Documentation"
-// This function is called from ISR handler -> HAL_PCD_DataOutStageCallback -> USBD_LL_DataOutStage() -> USBD_GS_EP0_RxReady()
+// This function is called from ISR handler -> HAL_PCD_DataOutStageCallback -> USBD_LL_DataOutStage() -> USB_EP0_RxReady()
 // IMPORTANT:
 // The HAL does not allow to stall endpoint 0 in this stage anymore.
 // If the host has sent invalid data for BitTiming or for a Filter we have no way to inform the host about this error.
@@ -402,17 +403,23 @@ void control_setup_OUT_data()
 
             // ------------------------- 2.) Set Flags -------------------------------------
 
+            // set / reset global flag for all channels
             if (!can_is_any_open())
-                GLB_ProtoElmue = false; // reset global flag if all channels are closed
+                GLB_ProtoElmue = false; 
+            
+            if (dev_Mode->flags & ELM_DevFlagProtocolElmue) GLB_ProtoElmue = true;   
+
+            // ----------------
 
             GLB_UserFlags[channel] = USR_CandleDefault; // reset channel flags to their default
             if (dev_Mode->flags &  GS_DevFlagOneShot)       GLB_UserFlags[channel] &= ~USR_Retransmit;
             if (dev_Mode->flags &  GS_DevFlagTimestamp)     GLB_UserFlags[channel] |=  USR_Timestamp;
             if (dev_Mode->flags & ELM_DevFlagDisableTxEcho) GLB_UserFlags[channel] &= ~USR_ReportTX;
-            if (dev_Mode->flags & ELM_DevFlagProtocolElmue) GLB_ProtoElmue = true;
 
             if (GLB_ProtoElmue)
             {
+                if (dev_Mode->flags & ELM_DevFlagSendUsbBlobs) GLB_UserFlags[channel] |= USR_SendBlobs;                
+                
                 for (int C=0; C<CHANNEL_COUNT; C++)
                 {
                     GLB_UserFlags[C] |= USR_DebugReport;
@@ -544,7 +551,7 @@ void control_report_busload(uint8_t channel, uint8_t busload_percent)
     if (!obj_to_host)
         return; // buffer overflow! buf_process() will report this error to the host
 
-    kBusloadElmue* packet = (kBusloadElmue*)&obj_to_host->frame;
+    kBusloadElmue* packet   = (kBusloadElmue*)obj_to_host->frame;
     packet->header.size     = sizeof(kBusloadElmue);
     packet->header.msg_type = MSG_Busload;
     packet->bus_load        = busload_percent;
@@ -581,7 +588,7 @@ bool control_send_debug_mesg(uint8_t channel, const char* message)
         len = 20;
     }
 
-    kStringElmue* packet = (kStringElmue*)&obj_to_host->frame;
+    kStringElmue* packet    = (kStringElmue*)obj_to_host->frame;
     packet->header.size     = sizeof(kStringElmue) + len;
     packet->header.msg_type = MSG_String;
     memcpy(packet->ascii_msg, message, len);

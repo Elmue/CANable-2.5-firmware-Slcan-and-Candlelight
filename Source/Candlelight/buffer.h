@@ -24,8 +24,8 @@
 
 #define container_of(ptr, type, member) \
 	({ \
-		__typeof(((type *)0)->member) *_p = (ptr); \
-		(type *)((char *)_p - offsetof(type, member)); \
+		__typeof(((type*)0)->member) *_p = (ptr); \
+		(type*)((char*)_p - offsetof(type, member)); \
 	})
 
 #define list_entry(ptr, type, field)             container_of(ptr, type, field)
@@ -60,19 +60,6 @@ static inline bool list_is_empty(const list_item *head)
 //     When the list items are not used anymore they are given back to the pool.
 //     So after initialization the pool is full and the other list is empty.
 // }
-
-// for debugging: returns 0 ... CAN_QUEUE_SIZE or HOST_QUEUE_SIZE
-static inline int count_free_entries(const list_item *head)
-{
-    list_item* item = head->next;
-    for (int i=0; true; i++)
-    {
-        if (item == head)
-            return i;
-        
-        item = item->next;
-    }
-}
 
 // removes entry form it's list by connecting the previous element directly to the next in both directions.
 static inline void list_remove(list_item *entry)
@@ -119,8 +106,9 @@ static inline void list_add_tail_locked(list_item *entry, list_item *head)
 // sent to host
 typedef struct 
 {
-    list_item        list;
-    kHostFrameLegacy frame;
+    list_item list;
+    // stores kHostFrameLegacy, kRxFrameElmue, kTxEchoElmue, kErrorElmue, kStringElmue, kBusloadElmue
+    uint8_t frame[sizeof(kHostFrameLegacy)]; 
 } kHostFrameObject;
 
 // sent to CAN bus
@@ -164,8 +152,8 @@ typedef struct
     // The result was an adapter not sending anymore and even crashes when the buffer got full!
     // Nobody ever noticed that because of a complete lack of proper error handling.
     // The legacy firmware did not even set an error flag when a buffer overflow occurred.
-    uint8_t    to_host_buf  [sizeof(kHostFrameLegacy)]; // stores USB IN  data during transmission (fixed by ElmüSoft)
-    uint8_t    from_host_buf[sizeof(kHostFrameLegacy)]; // stores USB OUT data after reception     (fixed by ElmüSoft)   
+    uint8_t    to_host_buf  [MAX_BLOB_SIZE]; // stores USB IN  data during transmission (fixed by ElmüSoft)
+    uint8_t    from_host_buf[MAX_BLOB_SIZE]; // stores USB OUT data after reception     (fixed by ElmüSoft)   
     
 }  __attribute__ ((aligned (4))) buf_class;
 
@@ -175,12 +163,31 @@ void buf_init();
 void buf_process(uint8_t channel, uint32_t tick_now);
 void buf_clear_can_buffer(uint8_t channel);
 void buf_store_error(uint8_t channel);
-void buf_store_can_frame(uint8_t channel, kHostFrameLegacy* can_frame);
-void buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
+void buf_store_can_frame_blob(uint8_t channel, uint8_t* can_frame);
+bool buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
 void buf_store_rx_packet(uint8_t channel, FDCAN_RxHeaderTypeDef* rx_header, uint8_t *rx_data);
 void buf_store_tx_echo  (uint8_t channel, FDCAN_TxEventFifoTypeDef* tx_event);
 buf_class* buf_get_instance(uint8_t channel);
-buf_class* buf_get_inst_for_usb(uint8_t channel);
 kHostFrameObject* buf_get_host_frame_locked(list_item* list_head);
 kCanFrameObject*  buf_get_can_frame_locked (list_item* list_head);
      
+
+// for debugging only: returns 0 ... CAN_QUEUE_SIZE or HOST_QUEUE_SIZE
+static inline int count_free_entries(buf_class* buf, bool host)
+{
+    list_item *head = host ? &buf->list_host_pool : &buf->list_can_pool;
+    
+    system_disable_irq();
+    list_item* item = head->next;
+    
+    int count;        
+    for (count=0; true; count++)
+    {
+        if (item == head)
+            break;
+        
+        item = item->next;
+    }
+    system_enable_irq();
+    return count;
+}

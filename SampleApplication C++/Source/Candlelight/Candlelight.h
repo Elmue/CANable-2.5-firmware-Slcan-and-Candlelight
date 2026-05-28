@@ -18,7 +18,6 @@
 #define ERROR_TOO_MANY_ERRORS   57016  // too many errors during WritePipe / ReadPipe
 
 #define RX_FIFO_MAX_COUNT          30  // up to 30 USB packets can be buffered
-#define RX_FIFO_BUF_SIZE          128  // max bytes that can be read from USB (should be multiple of max. endpoint packet size (=64))
 
 typedef enum 
 {
@@ -104,10 +103,12 @@ public:
     DWORD    SetBridgeFilter(BYTE u8_FilterIndex, BYTE u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, DWORD u32_Filter, DWORD u32_Mask);
     DWORD    Start(eDeviceFlags e_Flags);
     // ------------------------------------
+    DWORD      SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, __int64* ps64_WinTimestamp);
     DWORD      SendPacket(kCanPacket* pk_CanPacket, __int64* ps64_WinTimestamp);
-    DWORD      ReceiveData(DWORD u32_Timeout, kHeader* pk_Header, DWORD u32_BufSize, __int64* ps64_RxTimestamp);
+    DWORD      ReceiveData(DWORD u32_Timeout, kHeader** ppk_Header, __int64* ps64_RxTimestamp, bool* pb_Blob = NULL);
     kCanPacket RxFrameToCanPacket(kRxFrameElmue* pk_RxFrame);
     kCanPacket GetTxEchoPacket   (kTxEchoElmue*  pk_TxEcho);
+    CString    ConvertStringFrame(kStringElmue*  pk_String);
     // ------------------------------------
     __int64  GetWinTimestamp();
     CString  FormatCanPacket(kCanPacket* pk_Packet);
@@ -133,6 +134,8 @@ private:
     DWORD    RegReadString(HKEY h_Class, const WCHAR* u16_Path, const WCHAR* u16_Entry, CString* ps_Value);
     DWORD    ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHAR s_String[128]);
     DWORD    CtrlTransfer(eDirection e_Dir, BYTE u8_Request, WORD u16_Value, void* p_Data, DWORD u32_DataSize, DWORD* pu32_DataRead = NULL);
+    DWORD    TxPacketToTxBytes(kCanPacket* pk_Packet, BYTE* u8_TxBuf, int s32_BufSize, int* ps32_Offset);
+    DWORD    ReceiveFifo(DWORD u32_Timeout);
     DWORD    Reset();
 
     HANDLE                   mh_Device;
@@ -152,8 +155,6 @@ private:
     __int64                  ms64_LastMcuStamp;    // the last MCU timestamp
     __int64                  ms64_McuRollOver;     // offset for 32 bit firmware timestamp
     __int64                  ms64_PerfTimeStart;   // offset for performance timer
-    __int64                  ms64_ClockOffset;     // convert relative timestamp into clock time
-    __int64                  ms64_StampOffset;     // offset of timestamp when the clock time was taken
 
     // ----------- ReadPipe Thread -----------
 
@@ -162,7 +163,7 @@ private:
 
     struct kRxFifo
     {
-        BYTE    mu8_Buffer[RX_FIFO_BUF_SIZE];
+        BYTE    mu8_Buffer[MAX_BLOB_SIZE];
         DWORD   mu32_BytesRead;
         DWORD   mu32_Error;
         __int64 ms64_WinTimestamp;
@@ -176,6 +177,9 @@ private:
     HANDLE                   mh_ThreadEvent;
     HANDLE                   mh_ReceiveEvent;
     CCriticalSection         mi_Critical;
+    kRxFifo                  mk_BlobData;       // the last received blob or single frame
+    DWORD                    mu32_BlobOffset;   // current read position in kRxFifo.mu8_Buffer
+    int                      ms32_BlobFrames;   // count of remaining frames in mk_BlobData to be read
 
     // --------------- Echo -----------------
 
