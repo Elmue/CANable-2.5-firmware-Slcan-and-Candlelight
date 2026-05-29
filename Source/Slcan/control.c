@@ -207,8 +207,8 @@ eFeedback control_parse_str(uint8_t channel, char buf[], int len)
                     case 'e': GLB_UserFlags[channel] &= ~USR_ErrorReport; break; // "Me"
                     case 'F': GLB_UserFlags[channel] |=  USR_Feedback;    break; // "MF"  Enable command execution Feedback mode
                     case 'f': GLB_UserFlags[channel] &= ~USR_Feedback;    break; // "Mf"
-                    case 'M': GLB_UserFlags[channel] |=  USR_ReportTX;    break; // "MT"  Enable Tx echo report with Marker
-                    case 'm': GLB_UserFlags[channel] &= ~USR_ReportTX;    break; // "Mt"
+                    case 'M': GLB_UserFlags[channel] |=  USR_TxEcho;      break; // "MT"  Enable Tx echo report with Marker
+                    case 'm': GLB_UserFlags[channel] &= ~USR_TxEcho;      break; // "Mt"
                     case 'S': GLB_UserFlags[channel] |=  USR_ReportESI;   break; // "MS"  Enable ESI report
                     case 's': GLB_UserFlags[channel] &= ~USR_ReportESI;   break; // "Ms"
                     // -----------------------------------------------------
@@ -559,7 +559,7 @@ eFeedback control_parse_str(uint8_t channel, char buf[], int len)
     // The host must generate a unique one-byte marker for each sent packet using a counter that increments with each Tx message.
     // The Tx FIFO can store 3 packets and the buffer can store 64 waiting messages.
     // So 3 + 64 different values are sufficient that each message that is waiting for an ACK has it's own unique marker.
-    if (GLB_UserFlags[channel] & USR_ReportTX)
+    if (GLB_UserFlags[channel] & USR_TxEcho)
     {
         if (!utils_parse_hex_value(buf, &parse_loc, 2, &tx_header.MessageMarker))
             return FBK_InvalidParameter;

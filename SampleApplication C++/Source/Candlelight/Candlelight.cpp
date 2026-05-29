@@ -47,7 +47,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251218 = 18.dec.2025)
-const DWORD MIN_FIRMWARE = 0x260528;
+const DWORD MIN_FIRMWARE = 0x260529;
 
 // must be equal to DFU_INTERFACE_NUMBER in usb_class.h in the firmware
 const BYTE DFU_INTERFACE = 1;
@@ -303,6 +303,7 @@ DWORD Candlelight::Open(CString s_DevicePath)
     mb_BaudFDSet        = false;
     mb_InitDone         = false;
     mb_Started          = false;
+    mb_EnableTxEcho     = true;
     me_LastError        = FBK_Success;
     ms_Details          = L"";
     mu32_BlobOffset     = 0;
@@ -552,7 +553,16 @@ DWORD Candlelight::ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHA
 
 // --------------------------------------------------------------------
 
-// STEP 3)
+// STEP 3)  (optional)
+// Define if you want to receive Tx Echo Markers
+void Candlelight::EnableTxEcho(bool b_Enable)
+{
+    mb_EnableTxEcho = b_Enable;
+}
+
+// --------------------------------------------------------------------
+
+// STEP 4)
 // Please read "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder Documentation
 // returns the formatted baudrate and samplepoint in s_Display
 DWORD Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, CString* ps_Display)
@@ -597,7 +607,7 @@ DWORD Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2
     return ERROR_SUCCESS;
 }
 
-// STEP 4a)  (optional)
+// STEP 5)  (optional)
 // Add one to eight host filters
 // ATTENTION: If you set only an 11 bit filter, no 29 bit ID's will pass and vice versa.
 DWORD Candlelight::AddHostFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
@@ -613,7 +623,7 @@ DWORD Candlelight::AddHostFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask)
     return CtrlTransfer(DIR_Out, ELM_ReqSetFilter, mu8_Channel, &k_Filter, sizeof(k_Filter));
 }
 
-// STEP 4b)  (optional)
+// STEP 6)  (optional)
 // set / clear one of 20 bridge filters
 // b_Enable = false and Index == 0x13  --> clear only bridge filter Nº 0x13
 // b_Enable = false and Index == 0xFF  --> clear all bridge filters
@@ -647,7 +657,7 @@ DWORD Candlelight::SetBridgeFilter(BYTE u8_FilterIndex, BYTE u8_DestChannel, boo
 
 // --------------------------------------------------------------------
 
-// STEP 5)
+// STEP 7)
 // Connect to CAN bus, turn off the Tx LED
 DWORD Candlelight::Start(eDeviceFlags e_Flags)
 {
@@ -822,10 +832,14 @@ DWORD Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, BYTE* u8_TxBuf, int 
 
     // The STM32G431 supports to store a unique 8 bit marker for each sent frame which is returned when the frame has been acknowledged.
     // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.
-    // 256 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
+    // 255 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
     // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
-    if (mu8_EchoMarker == 0) 
-        mu8_EchoMarker = 1;  // a marker value of zero would not send an echo
+    if (mb_EnableTxEcho)
+    {
+        if (mu8_EchoMarker == 0) 
+            mu8_EchoMarker = 1;  // a marker value of zero does not send an echo
+    }
+    else mu8_EchoMarker = 0; // no echo marker
 
     kTxFrameElmue k_TxFrame   = {0};
     k_TxFrame.header.size     = sizeof(kTxFrameElmue) + pk_Packet->mu8_DataLen;

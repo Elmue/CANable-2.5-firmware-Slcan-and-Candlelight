@@ -250,7 +250,8 @@ void CandlelightDemo()
     // u32_DevFlags |= GS_DevFlagOneShot;        // turn off automatic re-transmission
     // u32_DevFlags |= GS_DevFlagListenOnly;     // silent mode
     // u32_DevFlags |= GS_DevFlagLoopback;       // loopback mode
-    // u32_DevFlags |= ELM_DevFlagDisableTxEcho; // turn off the 'echo' of sent packets
+
+    gi_Candle.EnableTxEcho(true);
 
     // If you turn off GS_DevFlagTimestamp, Windows timestamps will be used.
     // Firmware timestamps produce more USB traffic and are not available for sent packets.

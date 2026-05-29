@@ -98,6 +98,7 @@ public:
     DWORD    EnumDevices(bool b_Candlelight, CArray<cUsbDevice, cUsbDevice>* pi_Devices);
     DWORD    Open(CString s_DevicePath);
     void     Close();
+    void     EnableTxEcho(bool b_Enable);
     DWORD    SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, CString* ps_Display);
     DWORD    AddHostFilter(bool b_29bit, DWORD u32_Filter, DWORD u32_Mask);
     DWORD    SetBridgeFilter(BYTE u8_FilterIndex, BYTE u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, DWORD u32_Filter, DWORD u32_Mask);
@@ -148,6 +149,7 @@ private:
     bool                     mb_BaudFDSet;
     bool                     mb_InitDone;
     bool                     mb_Started;
+    bool                     mb_EnableTxEcho;
     DWORD                    mu32_TxOverflow;    
     DWORD                    mu32_RxPipeErrors;   
     DWORD                    mu32_TxPipeErrors;   

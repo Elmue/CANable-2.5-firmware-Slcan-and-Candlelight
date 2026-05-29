@@ -64,7 +64,6 @@ void control_init()
                                    GS_DevFlagCAN_FD         |
                                    GS_DevFlagBitTimingFD    |
                                    ELM_DevFlagProtocolElmue |
-                                   ELM_DevFlagDisableTxEcho |
                                    ELM_DevFlagSendUsbBlobs;
     if (SET_TermPins[0] > 0)
         GS_CapabilityClassic.feature |= GS_DevFlagTermination;
@@ -412,9 +411,8 @@ void control_setup_OUT_data()
             // ----------------
 
             GLB_UserFlags[channel] = USR_CandleDefault; // reset channel flags to their default
-            if (dev_Mode->flags &  GS_DevFlagOneShot)       GLB_UserFlags[channel] &= ~USR_Retransmit;
-            if (dev_Mode->flags &  GS_DevFlagTimestamp)     GLB_UserFlags[channel] |=  USR_Timestamp;
-            if (dev_Mode->flags & ELM_DevFlagDisableTxEcho) GLB_UserFlags[channel] &= ~USR_ReportTX;
+            if (dev_Mode->flags & GS_DevFlagOneShot)   GLB_UserFlags[channel] &= ~USR_Retransmit;
+            if (dev_Mode->flags & GS_DevFlagTimestamp) GLB_UserFlags[channel] |=  USR_Timestamp;
 
             if (GLB_ProtoElmue)
             {

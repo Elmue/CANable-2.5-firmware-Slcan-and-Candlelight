@@ -46,57 +46,82 @@ typedef enum // transferred as 8 bit
 
 // These flags are used to enable/disable a mode with GS_ReqSetDeviceMode 
 // and the same flags are returned as capability with commands GS_ReqGetCapabilities and GS_ReqGetCapabilitiesFD
+// Prefix GS_xxx  = legacy flags from Geschwister Schneider
+// Prefix ELM_xxx = new CANable 2.5 flags added by ElmüSoft
+// Prefix MKB_xxx = flags added by Marc Kleine Budde to legacy firmware
 typedef enum // transferred as 32 bit 
 {
     GS_DevFlagNone                    = 0,
-    // ----------- GS flags from Geschwister Schneider -----------
-    // silent mode (do not send ACK)
-    GS_DevFlagListenOnly              = 0x00001,
+    
+    // silent mode (do not send ACK)    
+    GS_DevFlagListenOnly              = 0x00001, // bit 0
+    
     // support of loopback mode (sent packets are received directly inside the processor)
     // If this flag is combined with ListenOnly, the internal loopback mode is enabled, otherwise the external loopback mode.
-    GS_DevFlagLoopback                = 0x00002,
-    // take 3 samples per 1 bit on CAN bus, not implemenetd
-    GS_DevFlagTripleSample            = 0x00004,
+    GS_DevFlagLoopback                = 0x00002, // bit 1
+    
+    // take 3 samples per 1 bit on CAN bus, not implemented
+//  GS_DevFlagTripleSample            = 0x00004, // bit 2
+
     // if set, send a packet only once, otherwise retransmit until an ACK was revcived
-    GS_DevFlagOneShot                 = 0x00008,
+    GS_DevFlagOneShot                 = 0x00008, // bit 3
+    
     // Send a hardware timestamp with each Rx packet and Tx echo.
     // Deprecated: creates more USB traffic overhead on a slow Full speed USB device.
     // Timestamps should be created in the host application at packet reception.
     // See subfolder "SampleApplication C++" for a sample code how to generate precise timestamps in Windows.
-    GS_DevFlagTimestamp               = 0x00010,
+    GS_DevFlagTimestamp               = 0x00010, // bit 4
+    
     // blink the LEDs to distinguish between multiple connected devices
-    GS_DevFlagIdentify                = 0x00020,
+    GS_DevFlagIdentify                = 0x00020, // bit 5
+    
     // undocumented, not implemented, WTF is a user id ?
-    GS_DevFlagUserID                  = 0x00040,
+//  GS_DevFlagUserID                  = 0x00040, // bit 6
+
     // This is total nonsense: Send always 128 byte USB packets to the host, not implemented
-    GS_DevFlagPadPacketsToMaxSize     = 0x00080,
+//  GS_DevFlagPadPacketsToMaxSize     = 0x00080, // bit 7
+
     // In the feature flags this means that CAN FD is supported.
     // In kDeviceMode it is useless because CAN FD is enabled as soon as a data bitrate has been set.
-    GS_DevFlagCAN_FD                  = 0x00100,
+    GS_DevFlagCAN_FD                  = 0x00100, // bit 8
+    
     // request workaround for LPC546XX erratum USB.15: let host driver add a padding byte to each USB frame, not implemented
-    GS_DevFlagQuirk_LPC546XX          = 0x00200,
+//  GS_DevFlagQuirk_LPC546XX          = 0x00200, // bit 9
+
     // Setting a data bitrate for CAN FD is supported (commands GS_ReqGetCapabilitiesFD and GS_ReqSetBitTimingFD can be used)
-    GS_DevFlagBitTimingFD             = 0x00400,
+    GS_DevFlagBitTimingFD             = 0x00400, // bit 10
+    
     // The 120 ohm termination resistor can be turned on/off by command, only few boards support this.
-    GS_DevFlagTermination             = 0x00800,
+    GS_DevFlagTermination             = 0x00800, // bit 11
+    
     // undocumented, not implemented
-    GS_DevFlagBerrReporting           = 0x01000,
+//  GS_DevFlagBerrReporting           = 0x01000, // bit 12
+
     // Not implemented (send struct kDeviceState) because errors are reported in special error frames.
     // It is not required that the host application must poll errors. They are reported automatically when the error status changes.
-    GS_DevFlagGetState                = 0x02000,
+    GS_DevFlagGetState                = 0x02000, // bit 13
 
-    // ----------- ELM flags added by ElmüSoft -----------
     // Switch to the new extended ElmüSoft CANable 2.5 protocol (use kHostFrameElmue instead of kHostFrameLegacy)  
     // ATTENTION: This flag enables the ElmüSoft protocol for ALL channels and it stays enabled until all channels have been closed!
     // This flag also enables debug reports (USR_DebugReport).
     // In the Capabilities this flag means that all ELM_ReqXXX commands are supported.
-    ELM_DevFlagProtocolElmue          = 0x04000, 
-    // Do not send an echo for the successfully sent CAN packets (by default this is enabled in the Candlelight firmware)
-    // The Tx event packet is sent in the moment when the ACK was recived. You can turn this off to reduce USB traffic.
-    ELM_DevFlagDisableTxEcho          = 0x08000, 
+    ELM_DevFlagProtocolElmue          = 0x04000, // bit 14
+  
+    // This flag has been replaced with ELM_DevFlagSendUsbBlobs in firmware version 29.may.2026 
+    // Now you can decide on a per packet basis if you want to receive an echo marker back or not.
+    // Now you can send kTxFrameElmue.marker = 0 if you don't want to receive a Tx echo. 
+    // Now Tx markers are only valid from 0x01 to 0xFF.
+//  ELM_DevFlagDisableTxEcho          = 0x08000, // bit 15
+    
     // IN:  If there are multiple CAN Rx packets waiting in the FIFO buffer -> optimize USB transfer by sendig them together in a blob.
     // OUT: The host can always send multiple CAN Tx frames with kBlob and MSG_TxBlob even without setting this flag.
-    ELM_DevFlagSendUsbBlobs           = 0x10000, 
+    ELM_DevFlagSendUsbBlobs           = 0x08000, // bit 15
+       
+    // Legacy hardware filters supported. Not implemented here.
+    // ELM_DevFlagProtocolElmue includes support for HW filters since the very first version.
+    // No additional flag is required to indicate this feature.
+    // Marc Kleine Budde uses a completely incompatible struct to transmit the filter settings.
+//  MKB_DevFlagFilter                 = 0x10000, // bit 16
 } eDeviceFlags;
 
 // ==============================================================================
@@ -542,7 +567,7 @@ typedef enum // 8 bit
     // received from host
     MSG_TxFrame = 10, // 0x0A the message contains a CAN frame to be sent to CAN bus (kTxFrameElmue)
     // sent to host
-    MSG_TxEcho,       // 0x0B the message contains the echo marker of a Tx CAN frame (kTxEchoElmue, can be disabled with ELM_DevFlagDisableTxEcho)    
+    MSG_TxEcho,       // 0x0B the message contains the echo marker of a Tx CAN frame (only sent if Tx marker > 0)
     MSG_RxFrame,      // 0x0C the message contains a received CAN frame from CAN bus (kRxFrameElmue)
     MSG_Error,        // 0x0D the message contains multiple error flags (kErrorElmue, same format as legacy protocol, see buf_store_error())
     MSG_String,       // 0x0E the message contains an ASCII string to be displayed to the user (kStringElmue)

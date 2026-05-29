@@ -13,7 +13,7 @@
 typedef enum // 32 bit
 {
     USR_Retransmit  = 0x01, // re-transmit packets that have not been ACKnowledged
-    USR_ReportTX    = 0x02, // report packets to the host that have been sent successfully (enable Tx Echo)
+    USR_TxEcho      = 0x02, // report packets to the host that have been sent successfully, for Candlelight set Tx marker = 0 to turn off echo
     USR_ReportESI   = 0x04, // report the ESI flag of received packets (Candlelight: always ON)
     USR_ErrorReport = 0x08, // report error status every 100 ms if it has changed, report unchanged errors every 3 seconds. (Candlelight: always ON)
     USR_DebugReport = 0x10, // enable ASCII debug messages to the host (Candlelight: enabled with ELM_DevFlagProtocolElmue)
@@ -24,7 +24,7 @@ typedef enum // 32 bit
     // IMPORTANT:
     // Never *EVER* modify these defaults!!! You will break all applications that have been written for CANable adapters!
     USR_SlcanDefault  = USR_Retransmit,
-    USR_CandleDefault = USR_Retransmit | USR_ReportTX | USR_ErrorReport | USR_ReportESI,
+    USR_CandleDefault = USR_Retransmit | USR_TxEcho | USR_ErrorReport | USR_ReportESI,
 } eUserFlags;
 
 typedef struct

@@ -113,8 +113,8 @@ public class Candlelight : IDisposable
         GetState            = 0x02000, // not implemented
         // ------- ElmüSoft -------
         ProtocolElmue       = 0x04000, // ElmüSoft protocol
-        DisableTxEcho       = 0x08000, // no echo for Tx commands
-        SendUsbBlobs        = 0x10000, // send blobs over USB
+        SendUsbBlobs        = 0x08000, // send blobs over USB
+        LegacyFilters       = 0x10000, // not implemented
     }
 
     enum eTermination : int
@@ -329,7 +329,7 @@ public class Candlelight : IDisposable
         // received from host
         TxFrame = 10, // the message contains a CAN frame to be sent to CAN bus
         // sent to host
-        TxEcho,       // the message contains the echo marker of a Tx CAN frame (can be disabled with ELM_DevFlagDisableTxEcho)    
+        TxEcho,       // the message contains the echo marker of a CAN Tx frame (only sent if Tx marker > 0)
         RxFrame,      // the message contains a received CAN frame from CAN bus
         Error,        // the message contains multiple error flags (same format as legacy protocol, see buf_store_error())
         String,       // the message contains an ASCII string to be displayed to the user
@@ -827,7 +827,7 @@ public class Candlelight : IDisposable
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251218 = 18.dec.2025)
-    const int MIN_FIRMWARE = 0x260528;
+    const int MIN_FIRMWARE = 0x260529;
 
     // must be equal to DFU_INTERFACE_NUMBER in usb_class.h in the firmware
     const Byte DFU_INTERFACE = 1;
@@ -855,6 +855,7 @@ public class Candlelight : IDisposable
     Int64            ms64_McuRollOver;
     List<cHeader>    mi_RxQueue;
     Int64            ms64_QueueStamp;
+    bool             mb_EnableTxEcho;
 
     public kDevInfo DeviceInfo
     {
@@ -916,6 +917,7 @@ public class Candlelight : IDisposable
         mb_InitDone       = false;
         mb_BaudFDSet      = false;
         mb_Started        = false;
+        mb_EnableTxEcho   = true;
         ms64_LastMcuStamp = -1;
         ms64_McuRollOver  =  0;
         ms64_QueueStamp   =  0;
@@ -1054,7 +1056,17 @@ public class Candlelight : IDisposable
     // -------------------------------------------------------------------------------------
 
     /// <summary>
-    /// STEP 3)
+    /// STEP 3)  (optional)
+    /// </summary>
+    public void EnableTxEcho(bool b_Enable)
+    {
+        mb_EnableTxEcho = b_Enable;
+    }
+
+    // -------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// STEP 4)
     /// Please read "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder Documentation
     /// returns the formatted baudrate and samplepoint in s_Display
     /// </summary>
@@ -1100,7 +1112,7 @@ public class Candlelight : IDisposable
     // -------------------------------------------------------------------------------------
 
     /// <summary>
-    /// STEP 4a)  (optional)
+    /// STEP 5)  (optional)
     /// Add one to eight host filters
     /// ATTENTION: If you set only an 11 bit filter, no 29 bit ID's will pass and vice versa.
     /// </summary>
@@ -1121,7 +1133,7 @@ public class Candlelight : IDisposable
     }
 
     /// <summary>
-    /// STEP 4b)  (optional)
+    /// STEP 6)  (optional)
     /// set / clear one of 20 bridge filters
     /// b_Enable = false and u8_Index == 0x13 --> clear only bridge filter Nº 0x13
     /// b_Enable = false and u8_Index == 0xFF --> clear all bridge filters
@@ -1158,7 +1170,7 @@ public class Candlelight : IDisposable
     // -------------------------------------------------------------------------------------
 
     /// <summary>
-    /// STEP 5)
+    /// STEP 7)
     /// Connect to CAN bus, turn off the Tx LED
     /// </summary>
     public void Start(eDeviceFlags e_Flags)
@@ -1463,10 +1475,14 @@ public class Candlelight : IDisposable
 
         // The STM32G431 supports to store a unique 8 bit marker for each sent frame which is returned when the frame has been acknowledged.
         // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.
-        // 256 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
+        // 255 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
         // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
-        if (mu8_EchoMarker == 0) 
-            mu8_EchoMarker = 1;  // a marker value of zero would not send an echo
+        if (mb_EnableTxEcho)
+        {
+            if (mu8_EchoMarker == 0) 
+                mu8_EchoMarker = 1;  // a marker value of zero does not send an echo
+        }
+        else mu8_EchoMarker = 0; // Tx Echo turned off
 
         cTxFrameElmue i_TxFrame = new cTxFrameElmue(i_Packet, mu8_EchoMarker);
         mi_TxEcho[mu8_EchoMarker ++] = i_Packet;

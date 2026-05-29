@@ -345,7 +345,7 @@ void can_process(uint8_t channel, uint32_t tick_now)
         // "In DAR mode (Disable Auto Retransmission) all transmissions are automatically canceled after
         // they have been started on the CAN bus." (see "STM32G4 Series - Chapter FDCAN.pdf" in subfolder "Documentation")
         // A marker of zero must not send an echo to the host! (forwarded bridge packets)
-        if ((GLB_UserFlags[channel] & USR_ReportTX) && tx_event.MessageMarker > 0)
+        if ((GLB_UserFlags[channel] & USR_TxEcho) && tx_event.MessageMarker > 0)
         {
             // convert 16 bit timestamp --> 32 bit
             tx_event.TxTimestamp = (system_get_timewrap() << 16) | tx_event.TxTimestamp;

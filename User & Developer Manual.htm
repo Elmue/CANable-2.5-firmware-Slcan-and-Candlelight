@@ -1417,7 +1417,7 @@
 <tr><td>"MI\r"</td><td>Open/Closed</td><td>100</td><td>Enable Identify mode</td><td>The Rx/Tx LED's start blinking</td></tr>
 <tr><td>"Mi\r"</td><td>Open/Closed</td><td>100</td><td>Disable Identify mode</td><td>The Rx/Tx LED's stop blinking</td></tr>
 <tr><td>"MM\r"</td><td>Open/Closed</td><td>100</td><td>Enable Tx echo report marker</td><td>Report all successfully sent packets with a marker</td></tr>
-<tr><td>"Mm\r"</td><td>Open/Closed</td><td>100</td><td>Disable Tx echo report marker</td><td>No Tx Echo report</td></tr>
+<tr><td>"Mm\r"</td><td>Open/Closed</td><td>100</td><td>Disable Tx echo report marker</td><td>No Tx Echo report (also Tx marker = 00 sends no echo)</td></tr>
 <tr><td>"MR\r"</td><td>Open/Closed</td><td>100</td><td>Enable 120 Ω Termination Resistor</td><td rowspan="2">Supported only by few boards</td></tr>
 <tr><td>"Mr\r"</td><td>Open/Closed</td><td>100</td><td>Disable 120 Ω Termination Resistor</td></tr>
 <tr><td>"MS\r"</td><td>Open/Closed</td><td>100</td><td>Enable ESI report</td><td>Report the ESI flag of received CAN FD messages</td></tr>
@@ -1620,6 +1620,7 @@
 <li><div><b><span class="Blue">Data bytes</span></b>: Classic packets: 0 to 8, CAN FD: 8 to 64 bytes.</div>
 <li><div>only for Rx packets and only if <b><span class="Red">ESI</span></b> reporting is enabled: a character 'S' if the sending node is error passive.</div>
 <li><div>only for Tx packets and only if Tx <b><span class="Red">Echo Markers</span></b> are enabled: a 2 digit marker.</div>
+<div>The marker in the Tx packet must be &gt; 0 otherwise no echo is sent.</div>
 </ul>
 
 <table class="DataTable">
@@ -1627,7 +1628,7 @@
 <tr><td>Both</td><td>18AABBCC: 11 22 33 44 55</td><td>"<span class="Magenta">T</span><span class="Green">18AABBCC</span><span class="Orange">5</span><span class="Blue">1122334455</span>\r"</td><td>Classic, 29 bit ID</td></tr>
 <tr><td>Both</td><td>7E0: 11 22 33 44 55 66 77 88 99 AA BB CC</td><td>"<span class="Magenta">d</span><span class="Green">7E0</span><span class="Orange">9</span><span class="Blue">112233445566778899AABBCC</span>\r"</td><td>CAN FD, 11 bit, FDF</td></tr>
 <tr><td>Receive</td><td>7E0: 11 22 33 44 55 66 77 88</td><td>"<span class="Magenta">b</span><span class="Green">7E0</span><span class="Orange">8</span><span class="Blue">1122334455667788</span><span class="Red">S</span>\r"</td><td>FDF, BRS, <span class="Red">ESI</span></td></tr>
-<tr><td>Transmit</td><td>7E0: 11 22 33 44 55 66</td><td>"<span class="Magenta">t</span><span class="Green">7E0</span><span class="Orange">6</span><span class="Blue">112233445566</span><span class="Red">3F</span>\r"</td><td>Marker = <span class="Red">3F</span></td></tr>
+<tr><td>Transmit</td><td>7E0: 11 22 33 44 55 66</td><td>"<span class="Magenta">t</span><span class="Green">7E0</span><span class="Orange">6</span><span class="Blue">112233445566</span><span class="Red">3F</span>\r"</td><td>Marker = <span class="Red">3F</span> (00 = no echo)</td></tr>
 <tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 1</td></tr>
 <tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Cyan">&amp;</span><span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 2</td></tr>
 <tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Cyan">$</span><span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 3</td></tr>
@@ -1909,6 +1910,7 @@
 <li><div><b>17.May.2026</b>: Support for STM32G0B1 processor and new firmware for <a href="#WeActStudioV1">WeActStudioV1</a> adapter.</div>
 <li><div><b>25.May.2026</b>: Added <a href="#Bridge">CAN Bridge</a> mode. <a href="#Echo_Marker">Marker 00</a> sends no echo.</div>
 <li><div><b>28.May.2026</b>: Improved <a href="#Speed_Comparison">USB Speed</a> by packing multiple frames into one blob. Added <code>ELM_DevFlagSendUsbBlobs</code>.</div>
+<li><div><b>29.May.2026</b>: No new feature. But <span class="Error">breaking change</span> in Candlelight <code>eDeviceFlags</code>. See <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/issues/24#issuecomment-4567629091" target="_blank">Comment</a> from Marc.</div>
 
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
