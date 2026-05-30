@@ -206,7 +206,7 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
     inst->tdc_offset = 0;
     if (can_using_FD(channel))
     {
-        // The transceiver Delay Compensation (TDC) compensates for the delay between the CAN Tx pin and the CAN Rx pin of the processor.
+        // The Transceiver Delay Compensation (TDC) compensates for the delay between the CAN Tx pin and the CAN Rx pin of the processor.
         // The processor measures the delay of the transceiver chip while a CAN FD packet with BRS is sent to CAN bus.
         // The secondary samplepoint (SSP) does not need to be the same as the primary samplepoint specified in can_bitrate_data.
         // The SSP is only used to verify that the data bits are sent without error to CAN bus.

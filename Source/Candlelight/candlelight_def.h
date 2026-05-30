@@ -99,7 +99,7 @@ typedef enum // transferred as 32 bit
 
     // Not implemented (send struct kDeviceState) because errors are reported in special error frames.
     // It is not required that the host application must poll errors. They are reported automatically when the error status changes.
-    GS_DevFlagGetState                = 0x02000, // bit 13
+//  GS_DevFlagGetState                = 0x02000, // bit 13
 
     // Switch to the new extended ElmüSoft CANable 2.5 protocol (use kHostFrameElmue instead of kHostFrameLegacy)  
     // ATTENTION: This flag enables the ElmüSoft protocol for ALL channels and it stays enabled until all channels have been closed!
