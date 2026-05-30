@@ -546,8 +546,16 @@ DWORD Candlelight::ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHA
     // Byte 1 = descriptor type = string (always 3)
     BYTE u8_ByteLen = u8_Buffer[0];
 
+    // Validate length to prevent integer underflow and out-of-bounds read
+    if (u8_ByteLen < 2 || u8_ByteLen > u32_Read)
+        return ERROR_INVALID_DATA;
+
+    // Destination is WCHAR[128] = 256 bytes; cap copy length, leave room for null terminator
+    BYTE u8_CopyLen = min((BYTE)(u8_ByteLen - 2), (BYTE)254);
+
     // skip first 2 bytes
-    memcpy(s_String, u8_Buffer + 2, u8_ByteLen - 2);
+    memcpy(s_String, u8_Buffer + 2, u8_CopyLen);
+    s_String[u8_CopyLen / sizeof(WCHAR)] = 0; // null-terminate the wide string
     return ERROR_SUCCESS;
 }
 
