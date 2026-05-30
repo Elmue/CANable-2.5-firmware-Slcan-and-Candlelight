@@ -547,6 +547,8 @@ DWORD Candlelight::ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHA
     BYTE u8_ByteLen = u8_Buffer[0];
 
     // skip first 2 bytes
+    if (u8_ByteLen < 2)
+        return ERROR_INVALID_DATA;
     memcpy(s_String, u8_Buffer + 2, u8_ByteLen - 2);
     return ERROR_SUCCESS;
 }
