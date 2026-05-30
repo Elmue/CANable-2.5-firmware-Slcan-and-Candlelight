@@ -1421,6 +1421,9 @@ public class Candlelight : IDisposable
         mi_PipeOut.Send(u8_Transmit);
     }
 
+    /// <summary>
+    /// If the packet has insufficient bytes to match one of the CAN FD DLC values, it will be padded with PAD_BYTE.
+    /// </summary>
     private Byte[] TxPacketToTxBytes(CanPacket i_Packet)
     {
         // Pad missing bytes with zeroe's
@@ -1456,6 +1459,7 @@ public class Candlelight : IDisposable
         if (i_Packet.mb_RTR && i_Packet.mi_Data.Count > 1)
             throw new Exception("Remote frames contain no data or only one byte that defines the DLC value.");
 
+        // Pad to match one of the CAN FD DLC values
         int s32_PadLen = i_Packet.mi_Data.Count;
              if (s32_PadLen > 48) s32_PadLen = 64;
         else if (s32_PadLen > 32) s32_PadLen = 48;
@@ -1465,13 +1469,13 @@ public class Candlelight : IDisposable
         else if (s32_PadLen > 12) s32_PadLen = 16;
         else if (s32_PadLen >  8) s32_PadLen = 12;
 
-        // original packet is modified here and stored in mi_TxEcho --> cloning required
-        i_Packet = i_Packet.Clone();
-
         while (i_Packet.mi_Data.Count < s32_PadLen)
         {
             i_Packet.mi_Data.Add(PAD_BYTE);
         }
+
+        // original packet must not be stored in mi_TxEcho --> cloning required
+        i_Packet = i_Packet.Clone();
 
         // The STM32G431 supports to store a unique 8 bit marker for each sent frame which is returned when the frame has been acknowledged.
         // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.

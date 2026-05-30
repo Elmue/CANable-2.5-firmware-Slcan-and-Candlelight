@@ -158,6 +158,10 @@ class Program
 
             // Report bus load every 5 seconds if it is not zero.
             mi_Candle.EnableBusLoadReport(5);
+            
+            // -----------------------------------------
+            
+            mi_Candle.EnableTxEcho(true);           
 
             // -----------------------------------------
 
@@ -211,10 +215,9 @@ class Program
             s_Action = "Error starting CAN bus.";
 
             eDeviceFlags e_DevFlags = eDeviceFlags.None;
-            // e_DevFlags |= eDeviceFlags.OneShot;       // turn off automatic re-transmission
-            // e_DevFlags |= eDeviceFlags.ListenOnly;    // silent mode
-            // e_DevFlags |= eDeviceFlags.Loopback;      // loopback mode
-            // e_DevFlags |= eDeviceFlags.DisableTxEcho; // turn off the 'echo' of sent packets
+            // e_DevFlags |= eDeviceFlags.OneShot;    // turn off automatic re-transmission
+            // e_DevFlags |= eDeviceFlags.ListenOnly; // silent mode
+            // e_DevFlags |= eDeviceFlags.Loopback;   // loopback mode
 
             // If you turn off eDeviceFlags.Timestamp, Windows timestamps will be used.
             // Firmware timestamps produce more USB traffic and are not available for sent packets.

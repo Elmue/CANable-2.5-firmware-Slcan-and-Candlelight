@@ -193,6 +193,10 @@ void CandlelightDemo()
     u32_Error = gi_Candle.EnableBusLoadReport(5);
     if (u32_Error)
         PrintConsole(RED, L"Error enabling busload report: %s\n", gi_Candle.FormatLastError(u32_Error));
+    
+    // -----------------------------------------
+    
+    gi_Candle.EnableTxEcho(true);
 
     // -----------------------------------------
 
@@ -251,8 +255,6 @@ void CandlelightDemo()
     // u32_DevFlags |= GS_DevFlagListenOnly;     // silent mode
     // u32_DevFlags |= GS_DevFlagLoopback;       // loopback mode
 
-    gi_Candle.EnableTxEcho(true);
-
     // If you turn off GS_DevFlagTimestamp, Windows timestamps will be used.
     // Firmware timestamps produce more USB traffic and are not available for sent packets.
     // Read the comment of GetWinTimestamp()
@@ -284,20 +286,19 @@ void CandlelightDemo()
 
     // -----------------------------------------
 
-    kCanPacket k_TxPacket  = {0};
-    k_TxPacket.mu32_ID     = 0x7E0 + gs32_DeviceIndex;
-    k_TxPacket.mu8_DataLen = 8;
-    memcpy(k_TxPacket.mu8_Data, "ElmuSoft", 8);
+    kCanPacket k_TxPackets[3] = {0};
 
-    kCanPacket k_TxPack2  = {0};
-    k_TxPack2.mu32_ID     = k_TxPacket.mu32_ID + 1;
-    k_TxPack2.mu8_DataLen = 8;
-    memcpy(k_TxPack2.mu8_Data, "TxBlob 2", 8);
+    k_TxPackets[0].mu32_ID     = 0x7E0 + gs32_DeviceIndex;
+    k_TxPackets[0].mu8_DataLen = 8;
+    memcpy(k_TxPackets[0].mu8_Data, "ElmuSoft", 8);
 
-    kCanPacket k_TxPack3  = {0};
-    k_TxPack3.mu32_ID     = k_TxPacket.mu32_ID + 2;
-    k_TxPack3.mu8_DataLen = 8;
-    memcpy(k_TxPack3.mu8_Data, "TxBlob 3", 8);
+    k_TxPackets[1].mu32_ID     = k_TxPackets[0].mu32_ID + 1;
+    k_TxPackets[1].mu8_DataLen = 8;
+    memcpy(k_TxPackets[1].mu8_Data, "TxBlob 2", 8);
+
+    k_TxPackets[2].mu32_ID     = k_TxPackets[0].mu32_ID + 2;
+    k_TxPackets[2].mu8_DataLen = 8;
+    memcpy(k_TxPackets[2].mu8_Data, "TxBlob 3", 8);
 
     // -----------------------------------------
 
@@ -311,18 +312,17 @@ void CandlelightDemo()
         if (s64_Now - s64_LastStamp >= 2000000)
         {
             s64_LastStamp = s64_Now;
-            kCanPacket k_BlobPackets[] = { k_TxPacket, k_TxPack2, k_TxPack3 };
 
             __int64 s64_TxStamp; // only valid if no error returned
             int     s32_PackCount;
             if (SEND_TX_BLOB)    // send blob with 3 packets at once over USB
             {
-                u32_Error = gi_Candle.SendPacketBlob(k_BlobPackets, 3, &s64_TxStamp);
+                u32_Error = gi_Candle.SendPacketBlob(k_TxPackets, 3, &s64_TxStamp);
                 s32_PackCount = 3;
             }
             else
             {
-                u32_Error = gi_Candle.SendPacket(&k_TxPacket, &s64_TxStamp);
+                u32_Error = gi_Candle.SendPacket(&k_TxPackets[0], &s64_TxStamp);
                 s32_PackCount = 1;
             }
 
@@ -342,7 +342,7 @@ void CandlelightDemo()
                     // Timestamps for sending are only available if Windows timestamps are used
                     PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
                     PrintConsole(WHITE, L" Send");
-                    PrintConsole(LIME,  L" %s", gi_Candle.FormatCanPacket(&k_BlobPackets[P]));
+                    PrintConsole(LIME,  L" %s", gi_Candle.FormatCanPacket(&k_TxPackets[P]));
 
                     if (SEND_TX_BLOB) PrintConsole(GREY, L" (Tx Blob)\n");
                     else              PrintConsole(GREY, L"\n");
@@ -350,14 +350,14 @@ void CandlelightDemo()
             }
 
             // pseudo random data
-            k_TxPacket.mu8_Data[0] ++;
-            k_TxPacket.mu8_Data[1] = k_TxPacket.mu8_Data[0] * 3;
-            k_TxPacket.mu8_Data[2] = k_TxPacket.mu8_Data[1] * 2;
-            k_TxPacket.mu8_Data[3] = k_TxPacket.mu8_Data[2] * 51;
-            k_TxPacket.mu8_Data[4] = k_TxPacket.mu8_Data[3] * 11;
-            k_TxPacket.mu8_Data[5] = k_TxPacket.mu8_Data[4] * 7;
-            k_TxPacket.mu8_Data[6] = k_TxPacket.mu8_Data[5] * 25;
-            k_TxPacket.mu8_Data[7] = k_TxPacket.mu8_Data[6] * 17;
+            k_TxPackets[0].mu8_Data[0] ++;
+            k_TxPackets[0].mu8_Data[1] = k_TxPackets[0].mu8_Data[0] * 3;
+            k_TxPackets[0].mu8_Data[2] = k_TxPackets[0].mu8_Data[1] * 2;
+            k_TxPackets[0].mu8_Data[3] = k_TxPackets[0].mu8_Data[2] * 51;
+            k_TxPackets[0].mu8_Data[4] = k_TxPackets[0].mu8_Data[3] * 11;
+            k_TxPackets[0].mu8_Data[5] = k_TxPackets[0].mu8_Data[4] * 7;
+            k_TxPackets[0].mu8_Data[6] = k_TxPackets[0].mu8_Data[5] * 25;
+            k_TxPackets[0].mu8_Data[7] = k_TxPackets[0].mu8_Data[6] * 17;
         }
 
         // Check for Rx data

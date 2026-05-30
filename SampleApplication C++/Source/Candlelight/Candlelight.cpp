@@ -772,6 +772,7 @@ DWORD Candlelight::SendPacket(kCanPacket* pk_Packet, __int64* ps64_WinTimestamp)
     return ERROR_SUCCESS;
 }
 
+// If the packet has insufficient bytes to match one of the CAN FD DLC values, it will be padded with PAD_BYTE.
 DWORD Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, BYTE* u8_TxBuf, int s32_BufSize, int* ps32_Offset)
 {
     // Pad missing bytes with zeroe's
@@ -822,6 +823,8 @@ DWORD Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, BYTE* u8_TxBuf, int 
     {
         pk_Packet->mu8_Data[i] = PAD_BYTE;
     }
+
+    // Pad to match one of the CAN FD DLC values
          if (pk_Packet->mu8_DataLen > 48) pk_Packet->mu8_DataLen = 64;
     else if (pk_Packet->mu8_DataLen > 32) pk_Packet->mu8_DataLen = 48;
     else if (pk_Packet->mu8_DataLen > 24) pk_Packet->mu8_DataLen = 32;
