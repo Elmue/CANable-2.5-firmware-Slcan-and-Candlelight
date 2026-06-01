@@ -298,6 +298,7 @@
 <h3>CANable v1.0 Adapters</h3>
 <div>The older CANable 1.0 adapters with STM32<span class="Error">F</span>xxx processors are not supported by this firmware.</div>
 <div>They are obsolete. They do not support CAN FD.</div>
+<div>You can buy a modern WeActStudio v2 adapter for $7 US. There is no reason to struggle with legacy hardware.</div>
 
 <h3>CANable v2.0 Adapters</h3>
 
@@ -341,7 +342,6 @@
 <div>The MKS Makerbase adapter ($15 US) supports CAN traffic up to <b>10 Mega baud</b>.</div>
 <div>I asked <b>MKS Makerbase</b> to send me a diagram of their adapter, but they never answer on none of their email addresses.</div>
 
-
 <a name="Jhoinrch"></a>
 <h3>Jhoinrch RH02 Plus / Elite</h3>
 <table class="TblImage">
@@ -362,7 +362,7 @@
 <div>The <a href="https://www.aliexpress.com/store/910567080" target="_blank">WeActStudio</a> USB2CANFD v1 is a cheap ($7 US) and small (4 x 2 cm) adapter with STM32G0B1 processor.</div>
 <div>They have published the <a href="Images/Diagram WeActStudio USB2CANFD v1.pdf" target="_blank">diagram</a> (PDF).</div>
 <div>The hardware is OK, but the CAN clock is only 60 MHz, which limits the available <a href="#Sample_Baud">samplepoints</a> for CAN FD.</div>
-<div class="Error">I do not recommend to buy this adapter if you plan to use CAN FD.</div>
+<div class="Error">Do not buy the v1 adapter. Buy the new v2 adapter instead.</div>
 <p>
 <div>WeActStudio installs a fix 'firmware updater' in the flash memory although the processor has a factory bootloader.</div>
 <div>They force you to use their <b>proprietary software</b> for flashing, which is only for Windows.</div>
@@ -378,21 +378,17 @@
 <div>which is a monster of of 1.5 GB and manually manipulate the <b>option bytes</b> which is risky.</div>
 <div>Cube Programmer is a garbage that mostly does not connect to the adapter without any error message.</div>
 <p>
-<div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer v5.0</a> removes all this WeAct stuff with <b>one click</b>.</div>
+<div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer</a> removes all this WeAct stuff with <b>one click</b>.</div>
 <div>To achieve this I had to write a firmware that I upload with the <b>Y-Modem</b> protocol through their firmware updater.<//div>
 <div>My 'ElmüSoft Restore Adapter' firmware removes all this crap and leaves a clean and unprotected flash memory.</div>
 <div>Just click the button <b>Enter DFU Mode</b>, then you can upload the CANable 2.5 firmware via DFU protocol.</div>
 <p>
 
-<!--
 <a name="WeActStudioV2"></a>
-<h3>USB2CANFD v2</h3>
-<div>The newer WeActStudio version 2 comes with the STM32G431 processor.</div>
-<p>
-<div>WeActStudio has published the <a href="Images/Diagram WeActStudio USB2CANFD v2.pdf" target="_blank">diagram of the USB2CANFD v2</a> (PDF).</div>
-<div>The CA-IS2062 is an isolated CAN Transceiver chip (<a href="Images/Datasheet CA-IS2062A Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>).</div>
-<div>And a SN74LVC1G125 (<a href="Images/Datasheet SN74LVC1G125 Three State Buffer.pdf" target="_blank">Datasheet</a>) assures that the processor does not go into boot mode when connecting USB power.</div>
--->
+<h3>WeActStudio USB2CANFD v2</h3>
+<div>The successor USB2CANFD version 2 is cheap ($7 US) and has a STM32G431 processor.</div>
+<div>It has a BOOT0 button and a correctly designed hardware. You will have no problems with this board.</div>
+<div>WeActStudio has published the <a href="Images/Diagram WeActStudio USB2CANFD v2.pdf" target="_blank">diagram</a> (PDF).</div>
 
 
 <a name="Oleksii"></a>
@@ -679,7 +675,6 @@
 </tr>
 <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OleksiiSolo.dfu</td></tr>
 
-<!--
 <tr>
     <td>STM32G<span class="Green">431</span>-Slcan2.5-WeActSudioV2.dfu</td>
     <td rowspan="2">WeActSudio<br>USB2CANFD v2</td>
@@ -691,7 +686,6 @@
     <td rowspan="2">OK</td>
 </tr>
 <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-WeActSudioV2.dfu</td></tr>
--->
 
 <tr>
     <td>STM32G<span class="Red">0B1</span>-Slcan2.5-WeActSudioV1.dfu</td>
@@ -727,7 +721,7 @@
 <p>
 <div>The firmware is ready for the STM32G4xx serie and the STM32G0xx serie. It can be extended for other processors.</div>
 <p>
-<table class="Warning" cellpadding=0 cellspacing=0><tr><td>
+<table class="Warning" style="border-radius:10px;" cellpadding=0 cellspacing=0><tr><td>
 <div>The HUD ECU Hacker Firmware Programmer can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
 <div>Flashing the CANable is no risk. The processor has a hard-coded bootloader that cannot be destroyed.</div>
 <div>When after connecting the USB cable the LED's are not blinking alternatingly, the firmware is not working.</div>
@@ -1907,10 +1901,11 @@
 <li><div><b>13.Jan.2026</b>: Hardware <a href="#Timestamps">timestamps</a> use precise 16 bit time from processor.</div>
 <li><div><b>04.Mar.2026</b>: Support for adapters with <a href="#Multi_Channel">multiple CAN channels</a>. Candlelight: Added <code>eBoardFlags</code>.</div>
 <li><div><b>16.Apr.2026</b>: User data can be stored in <a href="#RW_Flash">flash memory</a>.</div>
-<li><div><b>17.May.2026</b>: Support for STM32G0B1 processor and new firmware for <a href="#WeActStudioV1">WeActStudioV1</a> adapter.</div>
+<li><div><b>17.May.2026</b>: Support for STM32G0B1 processor and new firmware for <a href="#WeActStudioV1">WeActStudio v1</a> adapter.</div>
 <li><div><b>25.May.2026</b>: Added <a href="#Bridge">CAN Bridge</a> mode. <a href="#Echo_Marker">Marker 00</a> sends no echo.</div>
 <li><div><b>28.May.2026</b>: Improved <a href="#Speed_Comparison">USB Speed</a> by packing multiple frames into one blob. Added <code>ELM_DevFlagSendUsbBlobs</code>.</div>
 <li><div><b>29.May.2026</b>: No new feature. But <span class="Error">breaking change</span> in Candlelight <code>eDeviceFlags</code>. See <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/issues/28" target="_blank">Issue 28</a>.</div>
+<li><div><b>31.May.2026</b>: Support for <a href="#WeActStudioV2">WeActStudio v2</a> adapter.</div>
 
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>

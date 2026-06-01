@@ -47,7 +47,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251218 = 18.dec.2025)
-const DWORD MIN_FIRMWARE = 0x260529;
+const DWORD MIN_FIRMWARE = 0x260531;
 
 // must be equal to DFU_INTERFACE_NUMBER in usb_class.h in the firmware
 const BYTE DFU_INTERFACE = 1;
@@ -530,24 +530,27 @@ DWORD Candlelight::Open(CString s_DevicePath)
 // Read a string descriptor (private)
 DWORD Candlelight::ReadStringDescriptor(BYTE u8_Index, WORD u16_LanguageID, WCHAR s_String[128])
 {
+    s_String[0] = 0;
+
     // If the descriptor does not define a string, the index is zero. This is not an error.
     if (u8_Index == 0)
-    {
-        s_String[0] = 0;
         return ERROR_SUCCESS;
-    }
 
-    BYTE   u8_Buffer[256]; // 128 WCHARs = 256 bytes
+    // 256 bytes = 2 byte header + 127 Unicode chars
+    BYTE  u8_Buffer[256]; 
     DWORD u32_Read;
-    if (!WinUsb_GetDescriptor(mh_WinUsb, USB_STRING_DESCRIPTOR_TYPE, u8_Index, u16_LanguageID, u8_Buffer, 256, &u32_Read))
+    if (!WinUsb_GetDescriptor(mh_WinUsb, USB_STRING_DESCRIPTOR_TYPE, u8_Index, u16_LanguageID, u8_Buffer, sizeof(u8_Buffer), &u32_Read))
         return GetLastError();
 
-    // Byte 0 = length of the entire descriptor in bytes
-    // Byte 1 = descriptor type = string (always 3)
-    BYTE u8_ByteLen = u8_Buffer[0];
+    BYTE u8_Length = u8_Buffer[0];
+    BYTE u8_Descr  = u8_Buffer[1];
+    if (u8_Descr != USB_STRING_DESCRIPTOR_TYPE || u32_Read < 2 || u8_Length != u32_Read || (u32_Read & 1) > 0)
+    {
+        wcscpy_s(s_String, 128, L"*** CRIPPLED STRING ***");
+        return ERROR_INVALID_DATA;
+    }
 
-    // skip first 2 bytes
-    memcpy(s_String, u8_Buffer + 2, u8_ByteLen - 2);
+    memcpy(s_String, u8_Buffer + 2, u32_Read - 2);
     return ERROR_SUCCESS;
 }
 

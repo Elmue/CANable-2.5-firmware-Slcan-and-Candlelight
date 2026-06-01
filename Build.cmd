@@ -23,15 +23,17 @@ echo D: Build Slcan Openlightlabs
 echo E: Build Slcan OleksiiSolo
 echo F: Build Slcan OleksiiDual
 echo G: Build Slcan WeActStudioV1
-echo H: Build Candlelight Multiboard
-echo I: Build Candlelight Jhoinrch
-echo K: Build Candlelight Openlightlabs
-echo L: Build Candlelight OleksiiSolo
-echo M: Build Candlelight OleksiiDual
-echo N: Build Candlelight WeActStudioV1
+echo H: Build Slcan WeActStudioV2
+echo I: Build Candlelight Multiboard
+echo K: Build Candlelight Jhoinrch
+echo L: Build Candlelight Openlightlabs
+echo M: Build Candlelight OleksiiSolo
+echo N: Build Candlelight OleksiiDual
+echo O: Build Candlelight WeActStudioV1
+echo P: Build Candlelight WeActStudioV2
 echo X: Exit
 echo ----------------------------------
-choice /C XABCDEFGHIKLMN /N /M "Press a key: "
+choice /C XABCDEFGHIKLMNOP /N /M "Press a key: "
 
 cls
 
@@ -59,12 +61,14 @@ if %errorlevel% ==  5 call :Compile  Make_G431_Slcan_Openlightlabs
 if %errorlevel% ==  6 call :Compile  Make_G431_Slcan_OleksiiSolo
 if %errorlevel% ==  7 call :Compile  Make_G473_Slcan_OleksiiDual
 if %errorlevel% ==  8 call :Compile  Make_G0B1_Slcan_WeActStudioV1
-if %errorlevel% ==  9 call :Compile  Make_G431_Candle_Multiboard
-if %errorlevel% == 10 call :Compile  Make_G431_Candle_Jhoinrch
-if %errorlevel% == 11 call :Compile  Make_G431_Candle_Openlightlabs
-if %errorlevel% == 12 call :Compile  Make_G431_Candle_OleksiiSolo
-if %errorlevel% == 13 call :Compile  Make_G473_Candle_OleksiiDual
-if %errorlevel% == 14 call :Compile  Make_G0B1_Candle_WeActStudioV1
+if %errorlevel% ==  9 call :Compile  Make_G431_Slcan_WeActStudioV2
+if %errorlevel% == 10 call :Compile  Make_G431_Candle_Multiboard
+if %errorlevel% == 11 call :Compile  Make_G431_Candle_Jhoinrch
+if %errorlevel% == 12 call :Compile  Make_G431_Candle_Openlightlabs
+if %errorlevel% == 13 call :Compile  Make_G431_Candle_OleksiiSolo
+if %errorlevel% == 14 call :Compile  Make_G473_Candle_OleksiiDual
+if %errorlevel% == 15 call :Compile  Make_G0B1_Candle_WeActStudioV1
+if %errorlevel% == 16 call :Compile  Make_G431_Candle_WeActStudioV2
 
 rem Copy all BIN files to HUD ECU Hacker
 for /D %%i in ("Build_STM*") do (

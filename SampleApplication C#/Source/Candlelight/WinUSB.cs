@@ -989,6 +989,7 @@ public class WinUSB : IDisposable
         if (u8_Index == 0)
             return "";
 
+        // 256 bytes = 2 byte header + 127 Unicode chars
         Byte[] u8_Buffer = new Byte[256];
         int s32_Read;
         if (!WinUsb_GetDescriptor(mh_WinUSB, eDescriptor.String, u8_Index, u16_LanguageID, u8_Buffer, u8_Buffer.Length, out s32_Read))
@@ -997,7 +998,7 @@ public class WinUSB : IDisposable
         Byte      u8_Length = u8_Buffer[0];
         eDescriptor e_Descr = (eDescriptor)u8_Buffer[1];
 
-        if (e_Descr != eDescriptor.String || u8_Length != s32_Read || (s32_Read & 1) > 0)
+        if (e_Descr != eDescriptor.String || u8_Length < 2 || u8_Length != s32_Read || (s32_Read & 1) > 0)
             throw new Exception("The device returned crippled data for string descriptor " + u8_Index + ".");
 
         return Encoding.Unicode.GetString(u8_Buffer, 2, s32_Read - 2);

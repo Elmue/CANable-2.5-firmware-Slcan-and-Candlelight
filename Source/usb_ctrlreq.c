@@ -28,7 +28,11 @@ extern USBD_HandleTypeDef  USB_Handle;
 // extern uint8_t USBD_OtherSpeedDesc[];      // only for High Speed USB devices
 // extern uint8_t USBD_DeviceQualifierDesc[]; // only for High Speed USB devices
 
-#define USBD_PRODUCT_STRING  "CANable 2.5 " TARGET_FIRMWARE
+#if defined(Candlelight)
+    #define USBD_PRODUCT_STRING  "Candlelight 2.5 - " TARGET_BOARD
+#else
+    #define USBD_PRODUCT_STRING  "Slcan 2.5 - " TARGET_BOARD
+#endif
 
 // USB lang indentifier descriptor.
 __ALIGN_BEGIN uint8_t USBD_LangIDDesc[] __ALIGN_END =
@@ -625,7 +629,7 @@ void USBD_CtlError(USBD_SetupReqTypedef *req)
 
 // Gets the serial number of the processor as ASCII string.
 // STM guarantees that each procesor has a unique serial number.
-void USBD_GetSerialNumber(char s8_Serial[20])
+void USBD_GetSerialNumber(char serial_no[20])
 {
     // get the 96 bit serial number which is unique for each processor that ST Microelectrons has ever produced.
     uint32_t serial_0 = *(uint32_t*)(UID_BASE    );
@@ -638,9 +642,9 @@ void USBD_GetSerialNumber(char s8_Serial[20])
 #if defined(Candlelight)
     // Depending on the firmware that the user uploads the same device may have one or multiple Candlelight interfaces.
     // The operating system must install different drivers per interface depending on the interface count.
-    sprintf(s8_Serial, "%08lX%08lX%u", serial_0, serial_1, USBD_INTERFACES_COUNT);
+    sprintf(serial_no, "%08lX%08lX%u", serial_0, serial_1, USBD_INTERFACES_COUNT);
 #else // Slcan
-    sprintf(s8_Serial, "%08lX%08lX",   serial_0, serial_1);
+    sprintf(serial_no, "%08lX%08lX",   serial_0, serial_1);
 #endif
 }
 
