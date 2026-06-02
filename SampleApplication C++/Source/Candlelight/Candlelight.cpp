@@ -37,6 +37,8 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 #include "Candlelight.h"
 #include <assert.h>
 #include <setupapi.h>
+#include <initguid.h> // DEVPKEY_Device_BusReportedDeviceDesc
+#include <devpkey.h>  // DEVPKEY_Device_BusReportedDeviceDesc
 #pragma comment(lib, "SetupApi.lib")
 #pragma comment(lib, "WinUsb.lib")
 
@@ -125,6 +127,13 @@ DWORD Candlelight::EnumDevices(bool b_Candlelight, CArray<cUsbDevice, cUsbDevice
     if (h_DevInfo == INVALID_HANDLE_VALUE) 
         return GetLastError();
 
+    HDEVINFO h_ParentInfo = SetupDiCreateDeviceInfoList(NULL, NULL);
+    if (h_ParentInfo == INVALID_HANDLE_VALUE) 
+    {
+        SetupDiDestroyDeviceInfoList(h_DevInfo);
+        return GetLastError();
+    }
+
     DWORD u32_Error = ERROR_SUCCESS;
     SP_DEVICE_INTERFACE_DATA k_InterfaceData;
     k_InterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
@@ -136,8 +145,13 @@ DWORD Candlelight::EnumDevices(bool b_Candlelight, CArray<cUsbDevice, cUsbDevice
     SP_DEVICE_INTERFACE_DETAIL_DATA_W* pk_DetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA_W*)u8_DetailBuf;
     pk_DetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_W);
 
-    BYTE u8_NameBuf  [256];
-    BYTE u8_Container[100];
+    DEVPROPTYPE u32_PropType;
+    DWORD       u32_RequSize;
+
+    WCHAR c_Interface[128]; // USB Interface string                  (max 127 unicode chars)
+    WCHAR c_Product  [128]; // USB device descriptor product string  (max 127 unicode chars)
+    WCHAR c_Container[50];
+    WCHAR c_Parent   [256];
 
     for (int Idx=0; true; Idx++)
     {
@@ -149,38 +163,62 @@ DWORD Candlelight::EnumDevices(bool b_Candlelight, CArray<cUsbDevice, cUsbDevice
             break;
         }
 
-        // Get the NT path of the device that is required for CreateFile()
-        DWORD u32_RequSize;
-        if (!SetupDiGetDeviceInterfaceDetailW(h_DevInfo, &k_InterfaceData, pk_DetailData, sizeof(u8_DetailBuf), &u32_RequSize, &k_DevicInfo)) 
+        // Get the NT path of the device that will be passed to CreateFile()
+        if (!SetupDiGetDeviceInterfaceDetailW(h_DevInfo, &k_InterfaceData, pk_DetailData, sizeof(u8_DetailBuf), 
+                                              &u32_RequSize, &k_DevicInfo)) 
         {
             u32_Error = GetLastError();
-            break;
-        }
-
-        // Get name from USB interface descriptor "CAN FD Interface 1" (not available on Windows 7)
-        if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_FRIENDLYNAME, NULL, u8_NameBuf, sizeof(u8_NameBuf), NULL))
-        {
-            // Get generic name (Windows 7) "WinUSB Device"
-            if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_DEVICEDESC, NULL, u8_NameBuf, sizeof(u8_NameBuf), NULL))
-            {
-                u32_Error = GetLastError();
-                break;
-            }
+            continue;
         }
 
         // Get the 'ContainerID' GUID string (since Windows 7) which is identical for all interfaces of the same device
-        if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_BASE_CONTAINERID, NULL, u8_Container, sizeof(u8_Container), NULL))
+        if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, &k_DevicInfo, SPDRP_BASE_CONTAINERID, NULL, 
+                                               (BYTE*)c_Container, sizeof(c_Container), NULL))
         {
             u32_Error = GetLastError();
-            break;
+            continue;
         }
 
+        // Get the Interface string from Interface Descriptor (max USB string descriptor length = 127 Unicode chars)
+        // If a legacy interface descriptor has iInterface == 0 (no string available) this will return the product string instead.
+        if (!SetupDiGetDevicePropertyW(h_DevInfo, &k_DevicInfo, &DEVPKEY_Device_BusReportedDeviceDesc, &u32_PropType, 
+                                      (BYTE*)c_Interface, sizeof(c_Interface), &u32_RequSize, 0))
+        {
+            u32_Error = GetLastError();
+            continue;
+        }
+
+        // Go one level up from USB interface to USB device --> c_Parent = "USB\VID_1D50&PID_606F\208A347D4B4550142"
+        if (!SetupDiGetDevicePropertyW(h_DevInfo, &k_DevicInfo, &DEVPKEY_Device_Parent, &u32_PropType, 
+                                       (PBYTE)c_Parent, sizeof(c_Parent), &u32_RequSize, 0))
+        {
+            u32_Error = GetLastError();
+            continue;
+        }
+
+        if (!SetupDiOpenDeviceInfoW(h_ParentInfo, c_Parent, NULL, 0, &k_DevicInfo))
+        {
+            u32_Error = GetLastError();
+            continue;
+        }
+
+        // Get the Product string from Device Descriptor (max USB string descriptor length = 127 Unicode chars)
+        if (!SetupDiGetDevicePropertyW(h_ParentInfo, &k_DevicInfo, &DEVPKEY_Device_BusReportedDeviceDesc, &u32_PropType, 
+                                      (BYTE*)c_Product, sizeof(c_Product), &u32_RequSize, 0))
+        {
+            u32_Error = GetLastError();
+            continue;
+        }
+
+        // ---------------------
+
         cUsbDevice i_UsbDev;
-        i_UsbDev.ms_DispName = (const WCHAR*)u8_NameBuf;  // "CAN FD Interface 1"
-        i_UsbDev.ms_DevPath  = pk_DetailData->DevicePath; // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
+        i_UsbDev.ms_Product   = c_Product;   // "Candlelight 2.5 - Jhoinrch"
+        i_UsbDev.ms_Interface = c_Interface; // "CAN FD Interface 1"
+        i_UsbDev.ms_DevPath   = pk_DetailData->DevicePath; // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
         i_UsbDev.ms_DevPath.MakeUpper();
 
-        CString s_Container = (const WCHAR*)u8_Container; // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
+        CString s_Container = c_Container; // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
         s_Container.MakeUpper();
         i_Serials.Lookup(s_Container, i_UsbDev.ms_SerialNo);
 
@@ -210,7 +248,8 @@ DWORD Candlelight::EnumDevices(bool b_Candlelight, CArray<cUsbDevice, cUsbDevice
         pi_Devices->InsertAt(s32_Insert, i_UsbDev);
     }
 
-    SetupDiDestroyDeviceInfoList(h_DevInfo); // free memory
+    SetupDiDestroyDeviceInfoList(h_DevInfo);    // free memory
+    SetupDiDestroyDeviceInfoList(h_ParentInfo); // free memory
     return u32_Error;
 }
 

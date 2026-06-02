@@ -517,14 +517,19 @@ bool OpenDevice()
             for (int i=0; i<i_Devices.GetCount(); i++)
             {
                 cUsbDevice i_Dev = i_Devices[i];
-                PrintConsole(WHITE, L"%u.) Name: %s - Serial Nº: %s", i+1, i_Dev.ms_DispName, i_Dev.ms_SerialNo);
+                PrintConsole(WHITE, L"%u.) %s (%s)", i+1, i_Dev.DisplayName(), i_Dev.ms_SerialNo);
 
                 if (CANDLELIGHT_DEMO) // DFU devices have no channels
-                    PrintConsole(WHITE, L" - CAN Channel: %d", i_Dev.ms32_Channel);
+                    PrintConsole(WHITE, L" CAN Channel: %d", i_Dev.ms32_Channel);
 
                 PrintConsole(WHITE, L"\n");
             }
-            gs32_DeviceIndex = _getch() - '1';
+
+            int s32_Char = _getch();
+            if (s32_Char == 27) // ESCAPE key pressed
+                return false;
+
+            gs32_DeviceIndex = s32_Char - '1';
 
             if (gs32_DeviceIndex >= 0 && gs32_DeviceIndex < i_Devices.GetCount()) 
                 break;

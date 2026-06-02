@@ -29,7 +29,8 @@ typedef enum
 class cUsbDevice
 {
 public:
-    CString ms_DispName;
+    CString ms_Interface;
+    CString ms_Product;
     CString ms_SerialNo;
     CString ms_DevPath;
     int     ms32_Channel; // one-based
@@ -37,6 +38,16 @@ public:
     cUsbDevice()
     {
         ms32_Channel = 0; // invalid
+    }
+
+    CString DisplayName()
+    {
+        // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
+        // Windows returns the Product string instead --> both are identical
+        if (ms_Product == ms_Interface)
+            return ms_Product;
+
+        return ms_Product + L" - " + ms_Interface;
     }
 
     // Compare by Serial Number and then by Channel number for sorting

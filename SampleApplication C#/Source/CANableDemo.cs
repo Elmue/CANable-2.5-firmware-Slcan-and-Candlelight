@@ -498,15 +498,18 @@ class Program
                 for (int i=0; i<i_Devices.Count; i++)
                 {
                     cUsbDevice i_Dev = i_Devices[i];
-                    Print(ConsoleColor.White, "{0}.) Name: {1} - Serial Nº: {2}", i+1, i_Dev.ms_DispName, i_Dev.ms_SerialNo);
+                    Print(ConsoleColor.White, "{0}.) {1} ({2})", i+1, i_Dev.DisplayName, i_Dev.ms_SerialNo);
 
                     if (CANDLELIGHT_DEMO) // DFU devices have no channels
-                        Print(ConsoleColor.White, " - CAN Channel: {0}", i_Dev.ms32_Channel);
+                        Print(ConsoleColor.White, " CAN Channel: {0}", i_Dev.ms32_Channel);
 
                     Print(ConsoleColor.White, "\n");
                 }
 
                 ConsoleKeyInfo k_Key = Console.ReadKey(true);
+                if (k_Key.KeyChar == 27) // ESCAPE key pressed
+                    return false;
+
                 ms32_DeviceIndex = k_Key.KeyChar - '1';
 
                 if (ms32_DeviceIndex >= 0 && ms32_DeviceIndex < i_Devices.Count) 
