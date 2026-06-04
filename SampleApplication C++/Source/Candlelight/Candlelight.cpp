@@ -875,30 +875,30 @@ DWORD Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, BYTE* u8_TxBuf, int 
     else if (pk_Packet->mu8_DataLen > 12) pk_Packet->mu8_DataLen = 16;
     else if (pk_Packet->mu8_DataLen >  8) pk_Packet->mu8_DataLen = 12;
 
-    // The STM32G431 supports to store a unique 8 bit marker for each sent frame which is returned when the frame has been acknowledged.
-    // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.
-    // 255 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
-    // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
-    if (mb_EnableTxEcho)
-    {
-        if (mu8_EchoMarker == 0) 
-            mu8_EchoMarker = 1;  // a marker value of zero does not send an echo
-    }
-    else mu8_EchoMarker = 0; // no echo marker
-
     kTxFrameElmue k_TxFrame   = {0};
     k_TxFrame.header.size     = sizeof(kTxFrameElmue) + pk_Packet->mu8_DataLen;
     k_TxFrame.header.msg_type = MSG_TxFrame;
     k_TxFrame.can_id          = u32_ID;
     k_TxFrame.flags           = 0;
-    k_TxFrame.marker          = mu8_EchoMarker;
     if (pk_Packet->mb_FDF) k_TxFrame.flags |= FRM_FDF;
     if (pk_Packet->mb_BRS) k_TxFrame.flags |= FRM_BRS;
 
     if (*ps32_Offset + k_TxFrame.header.size >= s32_BufSize)
         return ERROR_BUFFER_OVERFLOW;
 
-    memcpy(&mk_EchoPackets[mu8_EchoMarker ++], pk_Packet, sizeof(kCanPacket));
+    // The STM32G431 supports to store a unique 8 bit marker for each sent frame which is returned when the frame has been acknowledged.
+    // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.
+    // 255 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
+    // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
+    if (mb_EnableTxEcho)
+    {
+        mu8_EchoMarker ++;
+        if (mu8_EchoMarker == 0) 
+            mu8_EchoMarker = 1;  // a marker value of zero does not send an echo
+        k_TxFrame.marker = mu8_EchoMarker;
+    }
+
+    memcpy(&mk_EchoPackets[k_TxFrame.marker], pk_Packet, sizeof(kCanPacket));
 
     memcpy(u8_TxBuf + *ps32_Offset, &k_TxFrame, sizeof(kTxFrameElmue));
     *ps32_Offset += sizeof(kTxFrameElmue);

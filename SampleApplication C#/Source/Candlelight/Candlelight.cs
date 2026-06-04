@@ -555,12 +555,11 @@ public class Candlelight : IDisposable
             return (int)Marshal.OffsetOf(GetType(), "mu8_Data");
         }
 
-        public cTxFrameElmue(CanPacket i_Packet, Byte u8_Marker)
+        public cTxFrameElmue(CanPacket i_Packet)
         {
             mu8_Size    = (Byte)(GetMinSize(false) + i_Packet.mi_Data.Count);
             me_MesgType = eMessageType.TxFrame;
             mu32_CanID  = (UInt32)i_Packet.ms32_ID;
-            mu8_Marker  = u8_Marker;
             if (i_Packet.mb_29bit) mu32_CanID |= (UInt32)eCanIdFlags.Extended;
             if (i_Packet.mb_RTR)   mu32_CanID |= (UInt32)eCanIdFlags.RTR;
             if (i_Packet.mb_FDF)   me_Flags   |= eFrameFlags.FDF;
@@ -849,8 +848,8 @@ public class Candlelight : IDisposable
     bool             mb_BaudFDSet;
     Stopwatch        mi_TxOverflow;  // firmware Tx buffer is full (64 + 3 packets sent)
     bool             mb_McuTimestamp;
-    Byte             mu8_EchoMarker; // counter 1...255
-    CanPacket[]      mi_TxEcho;      // the last 256 Tx packets
+    Byte             mu8_EchoMarker; // counter    1...255
+    CanPacket[]      mi_TxEcho;      // Tx packets 1...255
     Int64            ms64_LastMcuStamp;
     Int64            ms64_McuRollOver;
     List<cHeader>    mi_RxQueue;
@@ -1477,19 +1476,22 @@ public class Candlelight : IDisposable
         // original packet must not be stored in mi_TxEcho --> cloning required
         i_Packet = i_Packet.Clone();
 
+        cTxFrameElmue i_TxFrame = new cTxFrameElmue(i_Packet);
+
         // The STM32G431 supports to store a unique 8 bit marker for each sent frame which is returned when the frame has been acknowledged.
         // The firmware sends the marker back in kTxEchoElmue and we get the sent frame from mk_EchoFrames to display it to the user.
         // 255 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packtes and the firmware can store
         // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
         if (mb_EnableTxEcho)
         {
+            mu8_EchoMarker ++;
             if (mu8_EchoMarker == 0) 
                 mu8_EchoMarker = 1;  // a marker value of zero does not send an echo
-        }
-        else mu8_EchoMarker = 0; // Tx Echo turned off
 
-        cTxFrameElmue i_TxFrame = new cTxFrameElmue(i_Packet, mu8_EchoMarker);
-        mi_TxEcho[mu8_EchoMarker ++] = i_Packet;
+            i_TxFrame.mu8_Marker = mu8_EchoMarker;
+        }
+
+        mi_TxEcho[i_TxFrame.mu8_Marker] = i_Packet;
 
         return Utils.StructureToBytesVar(i_TxFrame, i_TxFrame.mu8_Size);
     }

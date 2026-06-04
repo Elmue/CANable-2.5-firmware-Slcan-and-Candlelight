@@ -196,7 +196,7 @@ private:
 
     // --------------- Echo -----------------
 
-    BYTE                     mu8_EchoMarker;
-    kCanPacket               mk_EchoPackets[256];
+    BYTE                     mu8_EchoMarker;      // counter    1...255
+    kCanPacket               mk_EchoPackets[256]; // Tx packets 1...255
 };
 
