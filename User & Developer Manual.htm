@@ -1406,8 +1406,8 @@
 <tr><td>"Md\r"</td><td>Open/Closed</td><td>100</td><td>Disable Debug Messages</td><td>Do not send debug messages</td></tr>
 <tr><td>"ME\r"</td><td>Open/Closed</td><td>100</td><td>Enable CAN Error reports</td><td>CAN errors are sent to the host</td></tr>
 <tr><td>"Me\r"</td><td>Open/Closed</td><td>100</td><td>Disable CAN Error reports</td><td>CAN error reporting is off (deprecated!)</td></tr>
-<tr><td>"MF\r"</td><td>Open/Closed</td><td>100</td><td>Enable Feedback mode</td><td>For each command a success/error feedback is sent</td></tr>
-<tr><td>"Mf\r"</td><td>Open/Closed</td><td>100</td><td>Disable Feedback mode</td><td>Command Feedback mode is off (deprecated!)</td></tr>
+<tr><td>"MF\r"</td><td>Open/Closed</td><td>100</td><td>Enable advanced Feedback mode</td><td>Detailed error feedback is sent (see <a href="#Slcan_Responses">next table</a>)</td></tr>
+<tr><td>"Mf\r"</td><td>Open/Closed</td><td>100</td><td>Enable legacy Feedback mode</td><td>Legacy Feedback is sent (CR / BEL)</td></tr>
 <tr><td>"MI\r"</td><td>Open/Closed</td><td>100</td><td>Enable Identify mode</td><td>The Rx/Tx LED's start blinking</td></tr>
 <tr><td>"Mi\r"</td><td>Open/Closed</td><td>100</td><td>Disable Identify mode</td><td>The Rx/Tx LED's stop blinking</td></tr>
 <tr><td>"MM\r"</td><td>Open/Closed</td><td>100</td><td>Enable Tx echo report marker</td><td>Report all successfully sent packets with a marker</td></tr>
@@ -1490,22 +1490,28 @@
 <a name="Slcan_Responses"></a>
 <h3>Slcan Responses and Events</h3>
 
+<div>If advanced feedback mode has not been enabled with command <code>MF</code> the firmware operates in legacy feedback mode.</div>
+<div>In <b>legacy feedback mode</b> the firmware returns a single character: Carriage Return (0x0D) for success or BEL (0x07) for error.</div>
+
 <table class="DataNarrow" cellspacing="1">
-<tr><th>Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"#\r"</td><td>100</td><td>The command has executed successfully</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#1\r"</td><td>100</td><td>The command is invalid</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#2\r"</td><td>100</td><td>A parameter of the command is invalid</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#3\r"</td><td>100</td><td>The command reqires the adapter to be open</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#4\r"</td><td>100</td><td>The command reqires the adapter to be closed</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#5\r"</td><td>100</td><td>The HAL from ST Microelectronics reported an error</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#6\r"</td><td>100</td><td>The feature is not supported by the board / not implemented</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#7\r"</td><td>100</td><td>The CAN Tx Buffer is full (no ACK received, 67 packets waiting)</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#8\r"</td><td>100</td><td>CAN bus is off (a severe CAN error has occurred)</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#9\r"</td><td>100</td><td>Sending packets is not possible in silent mode</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#:\r"</td><td>100</td><td>The required baudrate has not been set</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#;\r"</td><td>100</td><td>Programming the Option Bytes in flash memory failed</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#&lt;\r"</td><td>100</td><td>Please reconnect the USB cable, a hardware reset is required</td><td>Requires Feedback mode to be enabled</td></tr>
-<tr><td>"#=\r"</td><td>102</td><td>A parameter is outside the valid range</td><td>Requires Feedback mode to be enabled</td></tr>
+<tr><th>Legacy Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"\r" &nbsp; &nbsp; (CR character)</td><td>105</td><td>The command has executed successfully</td><td>Sent if advanced feedback mode is OFF</td></tr>
+<tr><td>"\x07" (BEL character)</td><td>105</td><td>The command has failed</td><td>Sent if advanced feedback mode is OFF</td></tr>
+<tr><th>Advanced Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+<tr><td>"#\r"</td><td>100</td><td>The command has executed successfully</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#1\r"</td><td>100</td><td>The command is invalid</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#2\r"</td><td>100</td><td>A parameter of the command is invalid</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#3\r"</td><td>100</td><td>The command reqires the adapter to be open</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#4\r"</td><td>100</td><td>The command reqires the adapter to be closed</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#5\r"</td><td>100</td><td>The HAL from ST Microelectronics reported an error</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#6\r"</td><td>100</td><td>The feature is not supported by the board / not implemented</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#7\r"</td><td>100</td><td>The CAN Tx Buffer is full (no ACK received, 67 packets waiting)</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#8\r"</td><td>100</td><td>CAN bus is off (a severe CAN error has occurred)</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#9\r"</td><td>100</td><td>Sending packets is not possible in silent mode</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#:\r"</td><td>100</td><td>The required baudrate has not been set</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#;\r"</td><td>100</td><td>Programming the Option Bytes in flash memory failed</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#&lt;\r"</td><td>100</td><td>Please reconnect the USB cable, a hardware reset is required</td><td>Requires advanced feedback mode (MF)</td></tr>
+<tr><td>"#=\r"</td><td>102</td><td>A parameter is outside the valid range</td><td>Requires advanced feedback mode (MF)</td></tr>
 
 <tr><th>Response</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
 <tr><td>"+Text\r"</td><td>100</td><td>The firmware sends a plain text response to a command</td><td>Used by commands "*Boot0:?\r" and "V\r"</td></tr>
@@ -1906,6 +1912,7 @@
 <li><div><b>28.May.2026</b>: Improved <a href="#Speed_Comparison">USB Speed</a> by packing multiple frames into one blob. Added <code>ELM_DevFlagSendUsbBlobs</code>.</div>
 <li><div><b>29.May.2026</b>: No new feature. But <span class="Error">breaking change</span> in Candlelight <code>eDeviceFlags</code>. See <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/issues/28" target="_blank">Issue 28</a>.</div>
 <li><div><b>31.May.2026</b>: Support for <a href="#WeActStudioV2">WeActStudio v2</a> adapter.</div>
+<li><div><b>06.Jun.2026</b>: Legacy Slcan <a href="#Slcan_Responses">feedback</a> sent by default: CR / BEL character.</div>
 
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
@@ -1920,7 +1927,7 @@
 <div>Slcan 102 (since 16.Apr.2026) allows to read/write user data from/to the <a href="#RW_Flash">flash memory</a> and returns the serial number.</div>
 <div>Slcan 103 (since 17.May.2026) adds more Slcan baudrates, reports HAL version.</div>
 <div>Slcan 104 (since 25.May.2026) adds bridge filters.</div>
-
+<div>Slcan 105 (since 06.Jun.2026) legacy Slcan feedback added: CR / BEL character.</div>
 
 <div>&nbsp;</div>
 <div>&nbsp;</div>
