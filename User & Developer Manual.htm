@@ -970,7 +970,7 @@
 <div>One bit of a CAN packet is sub-divided into multiple <b>Time Quantums</b>, in this example sixteen.</div>
 <div>The samplepoint is the exact moment when the processor measures the state of the CAN bus: High or Low.</div>
 <div>The samplepoint must be a fraction of 2 integers:</div>
-<div>1/2 = <b>50%</b>, 3/5 = <b>60%</b>, 5/8 = <b>62.5%</b>, 3/4 = <b>75%</b>, 4/5 = <b>80%</b>, 7/8 = <b>87.5%</b></div>
+<div>1/2 = <b>50%</b>, 3/5 = <b>60%</b>, 5/8 = <b>62.5%</b>, 2/3 = <b>66.7%</b>, 3/4 = <b>75%</b>, 4/5 = <b>80%</b>, 7/8 = <b>87.5%</b></div>
 <div>A later samplepoint has the advantage that it allows longer cables, to compensate for the delay of distant controllers.</div>
 <div>An earlier samplepoint has the advantage that it is more robust against cheap, unprecise oscillators and jitter.</div>
 <p>
@@ -980,9 +980,9 @@
 <p>
 <div>The processor needs 3 settings to configure baudrate and samplepoint:</div>
 <ol>
-    <li><div><b>Bitrate Prescaler</b>: the CAN clock is divided by the prescaler which gives the clock for one Time Quantum.</div>
-    <li><div><b>Segment1</b>: defines the count of time quantums before the samplepoint (in the above example = 11).</div>
-    <li><div><b>Segment2</b>: defines the count of time quantums after the samplepoint (in the above example = 4).</div>
+    <li><div><b><span class="Blue">BitRate Prescaler</span></b> (BRP): the CAN clock is divided by the prescaler which gives the clock for one Time Quantum.</div>
+    <li><div><b><span class="Orange">Segment1</span></b> (Seg1): defines the count of time quantums before the samplepoint (in the above example = 11).</div>
+    <li><div><b><span class="Green">Segment2</span></b> (Seg2): defines the count of time quantums after the samplepoint (in the above example = 4).</div>
 </ol>
 <div>The STM32 processors treat the <span class="Magenta">Synchronization segment</span> separately. Therefore you must add <span class="Magenta">1</span> to Segment 1.</div>
 <div>Example: CAN Clock = 160 MHz, Baudrate = 500 kBaud, Samplepoint = 75%, Time Quantums (TQ) per bit = 16.</div>
@@ -990,16 +990,18 @@
 <p>
 <div>Baudrate = 160 MHz / <span class="Blue">20</span> / (<span class="Magenta">1</span> + <span class="Orange">11</span> + <span class="Green">4</span>) = 500 kbaud</div>
 <div>Samplepoint = &nbsp; (<span class="Magenta">1</span> + <span class="Orange">11</span>) / (<span class="Magenta">1</span> + <span class="Orange">11</span> + <span class="Green">4</span>) = 0.75 = 75%</div>
-
 <p>
 <div>The legacy Slcan firmware gives poor options for the CAN FD baudrates: only 2 and 5 Mega baud.</div>
 <div>The legacy Candlelight firmware can theoretically set any baudrate that is possible.</div>
 <div>But for the calculation the host application must know the limits for the settings Prescaler, Segment1 and Segment2.</div>
 <div>Every processor has a different range for these values.</div>
 <div>The legacy Candlelight firmware reports <b>wrong limits</b> and so a correct calculation is impossible.</div>
-<p>
 <div>Summary: With none of the legacy firmware's can you set a precise baudrate/samplepoint as needed.</div>
-<div>Additionally the legacy firmware uses a CAN clock frequency of <b>170 Mhz</b> which is not an intelligent choice.</div>
+<p>
+<div>My firmware gives you all the information that you need: the CAN clock and the maximum values for BRP, Seg1, Seg2.</div>
+<div>See Slcan <a href="#Slcan_Version_Info">command 'V'</a> and the Candlelight structs <code>kCapabilityClassic</code> and <code>kCapabilityFD</code>.</div>
+<p>
+<div>Another wrong design in the legacy firmware is to use a CAN clock of <b>170 Mhz</b>.</div>
 <div>It is not possible to derive baudrates like 2, 4, 5 or 8 Mbaud with 50%, 62.5%, 75% or 87.5% samplepoint from 170 Mhz.</div>
 <div>Therefore the new CANable 2.5 firmware changes the CAN clock to <b>160 MHz</b>.</div>
 <p>
@@ -1586,7 +1588,9 @@
 <tr><td>Slcan</td><td>103</td><td>100</td><td>
     <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
     <div>Use the <a href="#Slcan_Versions">Slcan Version</a> to detect which features are available in the firmware.</div></td></tr>
-<tr><td>Clock</td><td>160</td><td>100</td><td>The CAN clock is 160 MHz</td></tr>
+<tr><td>Clock</td><td>160</td><td>100</td><td>
+    <div>The CAN clock is 160 MHz</div>
+    <div>You need this value to calculate <a href="#Sample_Baud">Baudrate and Samplepoint</a></div></td></tr>
 <tr><td>Channels</td><td>1</td><td>101</td><td>
     <div>The count of CAN channels (always 1, if not a multi-channel board).</div></td></tr>
 <tr><td>Quartz</td><td>No</td><td>101</td><td>
@@ -1598,7 +1602,7 @@
     <div>Each processor has different limits for Prescaler, Segment1, Segment2 and Synchr. Jump Width.</div>
     <div>Nominal baudrate: max Prescaler= 512, max Seg1 = 256, max Seg2= 128, max SJW = 128</div>
     <div>FD Data baudrate: max Prescaler= 32, max Seg1 = 32, max Seg2= 16, max SJW = 16</div>
-    <div>See <a href="#Sample_Baud">Samplepoint</a></div></td></tr>
+    <div>You need these values to calculate <a href="#Sample_Baud">Baudrate and Samplepoint</a></div></td></tr>
 <tr><td>HAL</td><td>1.2.5</td><td>103</td><td>
     <div>The version of the HAL (Hardware Abstraction Layer) that the firmware uses.</div></td></tr>
 <tr><td>Serial</td><td>206249E3946306550</td><td>102</td><td>
@@ -1752,14 +1756,14 @@
 <a name="Demo_Application"></a>
 <h3>Demo Applications C++ and C#</h3>
 <div>Therefore I wrote <b>ready-to-use C++ and C# Candlelight classes</b> that you can copy and paste into your project.</div>
-<div>This robust and well tested classes demonstrate all the features that the new firmware offers:</div>
+<div>This robust and well tested classes implement all the features that the new firmware offers:</div>
 <ul>
 <li>Detect and enumerate all connected Candlelight devices
 <li>Obtain details about the connected device: USB descriptor, board, processor, version numbers,.....
 <li>Set baudrate and samplepoint
-<li>Set mask filters
-<li>Open / Close / Start / Reset
-<li>Send packet / Receive packet / Process Tx echo marker
+<li>Set host filters / set bridge filters
+<li>Open / Close / Start / Reset / Identify / Busload Reports
+<li>Send packet / Send blob / Receive packet / Receive blob / Process Tx echo marker
 <li>Decode and display CAN bus errors
 <li>Use of multiple CAN channels
 <li>Disable boot pin / Enter DFU mode
@@ -1770,6 +1774,9 @@
 <div>The demo also shows how to <b>use WinUSB.dll correctly</b> which is more complex than it seems at the first look.</div>
 <div>For example in Cangaroo and in Candle.NET they use WinUSB wrongly which results in packet loss or wrong packet order.</div>
 <div>WinUSB requires an unusal programming that is not documented by Microsoft.</div>
+<p>
+<div>In the Candlelight C++ class the Windows operating system calls are in a separate class.</div>
+<div>If you are a <b>Linux</b> devleoper you can convert the class <code>OsLibrary</code > to Linux and send it to me.</div>
 
 <p>
 <img src="Images/Candlelight Cpp demo.png" alt="Candlelight demo project" width="722" height="572">

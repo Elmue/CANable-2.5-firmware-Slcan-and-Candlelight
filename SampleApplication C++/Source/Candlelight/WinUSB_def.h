@@ -33,11 +33,11 @@ enum eDirection // Bit 7 of WINUSB_SETUP_PACKET.RequestType, also used for endpo
 
 typedef struct _WINUSB_SETUP_PACKET 
 {
-    UCHAR   RequestType; // eSetupRecip | eSetupType | eDirection
-    UCHAR   Request;     // GS_ReqGetCapabilities,... / DFU_RequDetach, DFU_RequGetStatus,...
-    USHORT  Value;       // CAN Channel / ePinID for ELM_ReqGetPinStatus
-    USHORT  Index;       // Interface number (0 = Candlelight, 1 = DFU)
-    USHORT  Length;      // Byte count
+    UCHAR   RequestType; 
+    UCHAR   Request;     
+    USHORT  Value;       
+    USHORT  Index;       
+    USHORT  Length;      
 } WINUSB_SETUP_PACKET, *PWINUSB_SETUP_PACKET;
 
 #pragma pack()

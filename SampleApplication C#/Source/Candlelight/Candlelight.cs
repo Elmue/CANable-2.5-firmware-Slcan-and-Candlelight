@@ -431,6 +431,7 @@ public class Candlelight : IDisposable
 
         public String HalVersion
         {
+            // This version is not BCD encoded
             get { return String.Format("{0}.{1}.{2}", mu8_HAL_Version_High, mu8_HAL_Version_Mid, mu8_HAL_Version_Low); }
         }
         public String SoftVersion
@@ -1013,7 +1014,10 @@ public class Candlelight : IDisposable
 
         ms_Details.AppendFormat("Hardware Version:     {0}\n", mk_Info.mk_DeviceVersion.HardVersion);
         ms_Details.AppendFormat("Firmware Version:     {0}\n", mk_Info.mk_DeviceVersion.SoftVersion);
-        ms_Details.AppendFormat("HAL      Version:     {0}\n", mk_Info.mk_DeviceVersion.HalVersion);
+        
+        if (mk_Info.mb_IsElmueSoft)
+            ms_Details.AppendFormat("HAL      Version:     {0}\n", mk_Info.mk_DeviceVersion.HalVersion);
+
         ms_Details.AppendFormat("Firmware Type:        {0}\n", mk_Info.mb_IsElmueSoft ? "CANable 2.5" : "Legacy");
         ms_Details.AppendFormat("Supports CAN FD:      {0}\n", mk_Info.mb_SupportsFD  ? "Yes"         : "No");
 

@@ -493,7 +493,8 @@ class Program
         {
             while (true)
             {
-                Print(ConsoleColor.Green, "\nPlease select one of the devices:\n\n");
+                Print(ConsoleColor.Green, "\nPlease select one of the devices:");
+                Print(ConsoleColor.Gray,  "  (Exit with ESCAPE)\n\n");
 
                 for (int i=0; i<i_Devices.Count; i++)
                 {

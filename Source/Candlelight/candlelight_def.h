@@ -129,7 +129,7 @@ typedef enum // transferred as 32 bit
 // GS_ReqGetDeviceVersion
 typedef struct  
 {
-    uint8_t  hal_ver_high;   // The HAL version
+    uint8_t  hal_ver_high;   // The HAL version (not BCD encoded)
     uint8_t  hal_ver_mid;
     uint8_t  hal_ver_low;
     uint8_t  icount;         // Candlelight interface count - 1

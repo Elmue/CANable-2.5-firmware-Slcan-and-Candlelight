@@ -8,14 +8,6 @@
 
 #pragma once
 
-// define Linux stuff
-#define  uint8_t    BYTE
-#define  uint16_t   WORD
-#define  uint32_t   DWORD
-#define  __aligned(x)  
-#define  __packed 
-#pragma warning(disable: 4200) // warning: nonstandard extension used : zero-sized array in struct/union
-
 // ==============================================================================
 
 // Command sent from the host application in a SETUP request
@@ -185,7 +177,7 @@ typedef enum // sent as 8 bit
 // GS_ReqGetDeviceVersion
 typedef struct  
 {
-    uint8_t  hal_ver_high;   // The HAL version
+    uint8_t  hal_ver_high;   // The HAL version (not BCD encoded)
     uint8_t  hal_ver_mid;
     uint8_t  hal_ver_low;
     uint8_t  icount;         // Candlelight interface count - 1

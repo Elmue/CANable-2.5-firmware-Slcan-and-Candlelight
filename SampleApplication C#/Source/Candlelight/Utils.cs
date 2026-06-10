@@ -335,9 +335,9 @@ public class Utils
         return i_Hex.ToString();
     }
 
-    // 0x0        --> "0"
-    // 0x11       --> "11"
-    // 0x1122     --> "11.22"
+    // 0x00000000 --> "0"
+    // 0x00000011 --> "11"
+    // 0x00000105 --> "1.5"
     // 0x11223344 --> "11.22.33.44"
     // 0x00YYMMDD --> "Day.Month.Year"
     public static String FormatBcdVersion(UInt32 u32_Version)
@@ -348,37 +348,44 @@ public class Utils
         // BCD encoded 0x00YYMMDD
         if (u32_Version > 0x250101 && u32_Version < 0x991231)
         {
-            String s_Month = null;
-            switch ((Byte)(u32_Version >> 8))
+            Byte u8_Day   = (Byte)(u32_Version);
+            Byte u8_Month = (Byte)(u32_Version >> 8);
+            Byte u8_Year  = (Byte)(u32_Version >> 16);
+
+            String s_MonthName = null;
+            switch (u8_Month)
             {
-                case 0x01: s_Month = "Jan"; break;
-                case 0x02: s_Month = "Feb"; break;
-                case 0x03: s_Month = "Mar"; break;
-                case 0x04: s_Month = "Apr"; break;
-                case 0x05: s_Month = "May"; break;
-                case 0x06: s_Month = "Jun"; break;
-                case 0x07: s_Month = "Jul"; break;
-                case 0x08: s_Month = "Aug"; break;
-                case 0x09: s_Month = "Sep"; break;
-                case 0x10: s_Month = "Oct"; break;
-                case 0x11: s_Month = "Nov"; break;
-                case 0x12: s_Month = "Dec"; break;
+                case 0x01: s_MonthName = "Jan"; break;
+                case 0x02: s_MonthName = "Feb"; break;
+                case 0x03: s_MonthName = "Mar"; break;
+                case 0x04: s_MonthName = "Apr"; break;
+                case 0x05: s_MonthName = "May"; break;
+                case 0x06: s_MonthName = "Jun"; break;
+                case 0x07: s_MonthName = "Jul"; break;
+                case 0x08: s_MonthName = "Aug"; break;
+                case 0x09: s_MonthName = "Sep"; break;
+                case 0x10: s_MonthName = "Oct"; break;
+                case 0x11: s_MonthName = "Nov"; break;
+                case 0x12: s_MonthName = "Dec"; break;
             }
-            if (s_Month != null)
-                return String.Format("{0:X}.{1}.{2:X2}", (Byte)u32_Version, s_Month, (Byte)(u32_Version >> 16));
+            if (s_MonthName != null && u8_Day >= 1 && u8_Day <= 31)
+                return String.Format("{0:X}.{1}.{2:X2}", u8_Day, s_MonthName, u8_Year);
         }
 
         String s_Version = "";
-        for (int i=0; i<4; i++)
+        for (int s32_Shift = 24; s32_Shift >= 0; s32_Shift -= 8)
         {
-            if (i>0) s_Version = "." + s_Version;
-
-            s_Version = (u32_Version & 0xFF).ToString("X2") + s_Version;
-            u32_Version >>= 8;
-            if (u32_Version == 0)
-                break;
+            Byte u8_Part = (Byte)(u32_Version >> s32_Shift);
+            if (s_Version.Length > 0)
+            {
+                s_Version += "." + u8_Part.ToString("X");
+            }
+            else if (u8_Part > 0)
+            {
+                s_Version += u8_Part.ToString("X");
+            }
         }
-        return s_Version.TrimStart('0');
+        return s_Version;
     }
 } // class
 } // namespace
