@@ -89,6 +89,7 @@ OsLibrary::~OsLibrary()
 }
 
 // Called from Candlelight::Open()
+// s_DevicePath = "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
 uint32_t OsLibrary::Open(wstring s_DevicePath)
 {
     if (mh_Device)
@@ -116,7 +117,7 @@ uint32_t OsLibrary::Open(wstring s_DevicePath)
     {
         uint32_t u32_Error = GetLastError();
         if (u32_Error == ERROR_ACCESS_DENIED)
-            u32_Error =  ERR_DEVICE_IN_USE; // show a more intelligent error message than "Access denied"
+            u32_Error =  ERR_DEVICE_IN_USE; // show a more intelligent error message than "Access is denied"
         return u32_Error;
     }
 
@@ -409,6 +410,7 @@ void OsLibrary::PipeThreadMember()
 }
 
 // Get the next frame from the Rx FIFO and copy it to pk_UsbInPacket.
+// If the Rx FIFO is empty -> wait during the timeout for more data from USB.
 uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacket)
 {
     EnterCriticalSection(&mk_Critical);
@@ -456,8 +458,8 @@ uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacke
 
 // =================================== Enumerate USB Devices ==================================
 
-// Returns device name, serial and path like "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-// This function can also enumerate the devices in DFU mode using GUID_CANDLE_DFU, but only if the device has the ElmüSoft firmware.
+// Returns device name, serial number and path like "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
+// This function can also enumerate the DFU interfaces using GUID_CANDLE_DFU, but only if the device has the ElmüSoft firmware.
 // All legacy fimrware versions were buggy and unable to send the two Microsoft OS descriptors correctly, so the driver is not installed.
 uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devices)
 {

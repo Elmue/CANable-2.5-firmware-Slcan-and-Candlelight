@@ -151,6 +151,8 @@ public:
         ms32_Channel = 0; // invalid
     }
 
+    // returns "Candlelight 2.5 - OleksiiDual - CAN FD Interface 2"
+    // returns "canable gs_usb" for a legacy device
     wstring DisplayName()
     {
         // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
