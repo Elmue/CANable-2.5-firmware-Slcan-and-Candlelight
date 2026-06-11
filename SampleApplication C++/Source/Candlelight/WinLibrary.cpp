@@ -20,7 +20,7 @@ NAMING CONVENTIONS which allow to see the type of a variable immediately without
 	r_Name  for Rectangle
     s_Name  for strings
     o_Name  for objects
- 
+
    s8_Name  for   signed  8 Bit (sbyte)
   s16_Name  for   signed 16 Bit (short)
   s32_Name  for   signed 32 Bit (int)
@@ -37,6 +37,13 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 //
 //  This class contains code for Windows.
 //  Someone must re-write it for Linux
+//  The WinUSB library must be replaced with the libusb library
+//  The thread in this class can probably be removed when using lubusb
+//  NOTE: This class uses WinUSB by purpose: 
+//  The WinUSB driver is part of the orepating system and installed 100% automatically 
+//  when connecting the device for the first time.
+//  On the other hand when using libusb on Windows the user would be forced to download 
+//  and install a driver manually that has no advantage over WinUSB.
 //
 // =======================================================================================================
 
@@ -728,6 +735,7 @@ int64_t OsLibrary::GetTimestamp()
 }
 
 // Format Windows API error
+// u32_Error = ERROR_ACCESS_DENIED --> returns "Access is denied" in the language of the operating system.
 wstring OsLibrary::GetErrorMessage(uint32_t u32_Error)
 {
     const uint32_t FLAGS = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
