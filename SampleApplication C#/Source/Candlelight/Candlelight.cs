@@ -44,6 +44,7 @@ using System.Runtime.InteropServices;
 using eApiError           = CANable.Utils.eApiError;
 using cInterface          = CANable.WinUSB.cInterface;
 using cPipeIn             = CANable.WinUSB.cPipeIn;
+using cUsbInPacket        = CANable.WinUSB.cUsbInPacket;
 using cPipeOut            = CANable.WinUSB.cPipeOut;
 using ePipeType           = CANable.WinUSB.ePipeType;
 using ePipePolicy         = CANable.WinUSB.ePipePolicy;
@@ -847,15 +848,16 @@ public class Candlelight : IDisposable
     bool             mb_InitDone;
     bool             mb_Started;
     bool             mb_BaudFDSet;
-    Stopwatch        mi_TxOverflow;  // firmware Tx buffer is full (64 + 3 packets sent)
+    Stopwatch        mi_TxOverflow;     // firmware Tx buffer is full (64 + 3 packets sent)
+    Byte             mu8_EchoMarker;    // counter    1...255
+    CanPacket[]      mi_TxEcho;         // Tx packets 1...255
+    bool             mb_EnableTxEcho;
     bool             mb_McuTimestamp;
-    Byte             mu8_EchoMarker; // counter    1...255
-    CanPacket[]      mi_TxEcho;      // Tx packets 1...255
     Int64            ms64_LastMcuStamp;
     Int64            ms64_McuRollOver;
-    List<cHeader>    mi_RxQueue;
-    Int64            ms64_QueueStamp;
-    bool             mb_EnableTxEcho;
+    int              ms32_BlobOffset;   // current read position in kRxFifo.mu8_Buffer
+    int              ms32_BlobFrames;   // count of remaining frames in mk_BlobData to be read
+    cUsbInPacket     mi_UsbInPacket;    // the last received blob or single frame
 
     public kDevInfo DeviceInfo
     {
@@ -913,14 +915,14 @@ public class Candlelight : IDisposable
         mk_Info           = new kDevInfo();
         ms_Details        = new StringBuilder();
         mi_TxOverflow     = new Stopwatch();
-        mi_RxQueue        = new List<cHeader>();
         mb_InitDone       = false;
         mb_BaudFDSet      = false;
         mb_Started        = false;
         mb_EnableTxEcho   = true;
-        ms64_LastMcuStamp = -1;
-        ms64_McuRollOver  =  0;
-        ms64_QueueStamp   =  0;
+        ms64_LastMcuStamp = 0;
+        ms64_McuRollOver  = 0;
+        ms32_BlobOffset   = 0;
+        ms32_BlobFrames   = 0;
 
         // ------------- WinUSB -----------------
 
@@ -1507,8 +1509,10 @@ public class Candlelight : IDisposable
     /// returns null on timeout 
     /// If you get an IOException the device is dead --> abort and close the device and show the message to the user.
     /// </summary>
-    public cHeader ReceiveData(int s32_Timeout, out Int64 s64_RxTimestamp)
+    public cHeader ReceiveData(int s32_Timeout, out Int64 s64_RxTimestamp, out bool b_Blob)
     {
+        b_Blob = false;
+
         // This timestamp is only used in case that an error is returned
         s64_RxTimestamp = Utils.GetWinTimestamp();
 
@@ -1518,66 +1522,55 @@ public class Candlelight : IDisposable
         if (mi_PipeIn.PipeErrors > 30 || mi_PipeOut.PipeErrors > 30)
             throw new IOException("Too many errors. The CANable has a problem or has been disconnected."); // --> exit
 
-        if (mi_RxQueue.Count == 0)
+        // Get frames form the IN pipe if there is no pending data in mk_UsbInPacket
+        if (ms32_BlobFrames <= 0)
         {
-            Byte[] u8_RxData = mi_PipeIn.Receive(s32_Timeout, out ms64_QueueStamp);
-            if (u8_RxData == null)
+            ms32_BlobFrames = 0;
+            ms32_BlobOffset = 0;
+
+            mi_UsbInPacket = mi_PipeIn.ReadPipeIn(s32_Timeout);
+            if (mi_UsbInPacket == null)
                 return null; // timeout
 
-            DecodeRxData(u8_RxData); // recursive --> writes into mi_RxQueue
-        }
-
-        cHeader i_Struct = null;
-        if (mi_RxQueue.Count > 0)                
-        {
-            i_Struct = mi_RxQueue[0];
-            mi_RxQueue.RemoveAt(0);
-            s64_RxTimestamp = ms64_QueueStamp;
-        }
-        return i_Struct;
-    }
-
-    /// <summary>
-    /// recursive
-    /// </summary>
-    private void DecodeRxData(Byte[] u8_RxData)
-    {
-        if (u8_RxData.Length < 2)
-            throw new Exception("Received incomplete USB data from adapter");
-
-        cHeader i_Header = Utils.BytesToStructureVar<cHeader>(u8_RxData, 0, Marshal.SizeOf(typeof(cHeader)));
-        if (i_Header.me_MesgType == eMessageType.RxBlob)
-        {
-            cBlob i_Blob = Utils.BytesToStructureVar<cBlob>(u8_RxData, 0, Marshal.SizeOf(typeof(cBlob)));
-
-            int s32_Offset = Marshal.SizeOf(typeof(cBlob));
-            for (int F=0; F<i_Blob.mu8_FrameCount; F++)
+            cBlob i_Blob = Utils.BytesToStructureVar<cBlob>(mi_UsbInPacket.mu8_Buffer, 0, Marshal.SizeOf(typeof(cBlob)));
+            if (i_Blob.me_MesgType == eMessageType.RxBlob)
             {
-                i_Header = Utils.BytesToStructureVar<cHeader>(u8_RxData, s32_Offset, Marshal.SizeOf(typeof(cHeader)));
-
-                Byte[] u8_Frame = Utils.ExtractByteArr(u8_RxData, s32_Offset, i_Header.mu8_Size);
-                DecodeRxData(u8_Frame); // recursive
-                s32_Offset += i_Header.mu8_Size;
+                ms32_BlobFrames = i_Blob.mu8_FrameCount;
+                ms32_BlobOffset = Marshal.SizeOf(typeof(cBlob));
             }
-            return;
         }
+
+        cHeader i_Header = Utils.BytesToStructureVar<cHeader>(mi_UsbInPacket.mu8_Buffer, ms32_BlobOffset, Marshal.SizeOf(typeof(cHeader)));
+
+        if (ms32_BlobOffset + i_Header.mu8_Size > mi_UsbInPacket.ms32_BytesRead)
+        {
+            ms32_BlobFrames = 0;
+            throw new Exception("Corrupt USB IN data received");
+        }
+
+        Byte[] u8_Frame = Utils.ExtractByteArr(mi_UsbInPacket.mu8_Buffer, ms32_BlobOffset, i_Header.mu8_Size);
 
         cHeader i_Struct;
         switch (i_Header.me_MesgType)
         {
-            case eMessageType.TxEcho:  i_Struct = Utils.BytesToStructureVar<cTxEchoElmue> (u8_RxData, 0); break;
-            case eMessageType.RxFrame: i_Struct = Utils.BytesToStructureVar<cRxFrameElmue>(u8_RxData, 0); break;
-            case eMessageType.Error:   i_Struct = Utils.BytesToStructureVar<cErrorElmue>  (u8_RxData, 0); break;
-            case eMessageType.String:  i_Struct = Utils.BytesToStructureVar<cStringElmue> (u8_RxData, 0); break;
-            case eMessageType.Busload: i_Struct = Utils.BytesToStructureVar<cBusloadElmue>(u8_RxData, 0); break;
+            case eMessageType.TxEcho:  i_Struct = Utils.BytesToStructureVar<cTxEchoElmue> (u8_Frame, 0); break;
+            case eMessageType.RxFrame: i_Struct = Utils.BytesToStructureVar<cRxFrameElmue>(u8_Frame, 0); break;
+            case eMessageType.Error:   i_Struct = Utils.BytesToStructureVar<cErrorElmue>  (u8_Frame, 0); break;
+            case eMessageType.String:  i_Struct = Utils.BytesToStructureVar<cStringElmue> (u8_Frame, 0); break;
+            case eMessageType.Busload: i_Struct = Utils.BytesToStructureVar<cBusloadElmue>(u8_Frame, 0); break;
             default:
-                throw new Exception("Received invalid USB data from device (MessageType = " + u8_RxData[1] + ")");
+                throw new Exception("Received invalid USB message device (MessageType = " + u8_Frame[1] + ")");
         }
 
-        if (u8_RxData.Length < i_Struct.GetMinSize(mb_McuTimestamp))          
+        if (u8_Frame.Length < i_Struct.GetMinSize(mb_McuTimestamp))          
             throw new Exception("Received incomplete USB data from device");
 
-        mi_RxQueue.Add(i_Struct);
+        s64_RxTimestamp = mi_UsbInPacket.ms64_WinTimestamp;
+        b_Blob          = ms32_BlobFrames > 0; // FIRST
+
+        ms32_BlobFrames --;                    // AFTER
+        ms32_BlobOffset += i_Header.mu8_Size;
+        return i_Struct;
     }
 
     public CanPacket RxFrameToCanPacket(cRxFrameElmue i_Frame)

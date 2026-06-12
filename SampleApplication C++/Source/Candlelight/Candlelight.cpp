@@ -566,9 +566,9 @@ uint32_t Candlelight::ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, in
         return ERR_CORRUPT_IN_DATA;
     }
 
-    if (pb_RxBlob) *pb_RxBlob = ms32_BlobFrames > 0;
+    if (pb_RxBlob) *pb_RxBlob = ms32_BlobFrames > 0; // FIRST
 
-    ms32_BlobFrames --;
+    ms32_BlobFrames --;                              // AFTER
     mu32_BlobOffset += pk_Header->size;
 
     *ppk_Header       = pk_Header;

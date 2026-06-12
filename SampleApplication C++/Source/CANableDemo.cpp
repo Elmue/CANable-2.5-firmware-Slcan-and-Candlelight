@@ -219,13 +219,15 @@ void CandlelightDemo()
 
     OsLibrary::PrintConsole(YELLOW, L"\nThe device has been opened. Please send CAN packets now.\n");
     OsLibrary::PrintConsole(YELLOW, L"When a packet is received it is displayed in the console.\n");
-    OsLibrary::PrintConsole(YELLOW, L"Additionally classic packets with 8 data bytes are sent every 2 seconds.\n");
+    OsLibrary::PrintConsole(YELLOW, L"Additionally classic packets with 8 data bytes are sent every 2 seconds.\n\n");
+
+#if defined(_MSC_VER)
     OsLibrary::PrintConsole(RED,    L"ATTENTION:\n");
     OsLibrary::PrintConsole(YELLOW, L"The Windows console is very slow. It cannot display fast CAN bus traffic.\n");
     OsLibrary::PrintConsole(YELLOW, L"If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
     OsLibrary::PrintConsole(YELLOW, L"HUD ECU Hacker has an ultra fast speed-optimized CAN Raw Terminal.\n\n");
-    
     OsLibrary::PrintConsole(YELLOW, L"A left click into the console stops output, right click continues.\n\n");
+#endif
 
     OsLibrary::PrintConsole(LIME,   L"Lime  = Sent packets\n");
     OsLibrary::PrintConsole(GREEN,  L"Green = Echo of sent packets that have been ACKnowledged\n");
@@ -381,7 +383,7 @@ void CandlelightDemo()
                 }
             }
 
-            if (b_RxBlob) OsLibrary::PrintConsole(GREY, L" (Rx Blob)\n");
+            if (b_RxBlob) OsLibrary::PrintConsole(GREY, L"   Rx Blob\n");
             else          OsLibrary::PrintConsole(GREY, L"\n");
         }
 

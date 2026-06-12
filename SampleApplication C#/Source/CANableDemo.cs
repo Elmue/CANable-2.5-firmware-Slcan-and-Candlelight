@@ -329,10 +329,11 @@ class Program
 
             // Check for Rx data
             Int64 s64_RxTimestamp = 0;
+            bool    b_RxBlob = false;
             cHeader i_Header = null;
             try
             {
-                i_Header = mi_Candle.ReceiveData(100, out s64_RxTimestamp);
+                i_Header = mi_Candle.ReceiveData(100, out s64_RxTimestamp, out b_RxBlob);
             }
             catch (Exception Ex)
             {
@@ -354,15 +355,15 @@ class Program
                     {
                         CanPacket i_Packet = mi_Candle.RxFrameToCanPacket((cRxFrameElmue)i_Header);
                         Print(ConsoleColor.White, " Recv");
-                        Print(ConsoleColor.Cyan,  " {0}\n", i_Packet);
+                        Print(ConsoleColor.Cyan,  " {0}", i_Packet);
                         break;
                     }
                     case eMessageType.TxEcho:
                     {
                         CanPacket i_EchoPacket = mi_Candle.GetTxEchoPacket((cTxEchoElmue)i_Header);
                         Print(ConsoleColor.White, " Echo");
-                        if (i_EchoPacket == null) Print(ConsoleColor.Red, " Invalid echo marker received\n");
-                        else                      Print(ConsoleColor.DarkGreen, " {0}\n", i_EchoPacket);
+                        if (i_EchoPacket == null) Print(ConsoleColor.Red, " Invalid echo marker received");
+                        else                      Print(ConsoleColor.DarkGreen, " {0}", i_EchoPacket);
                         break;
                     }
                     case eMessageType.Error:
@@ -374,30 +375,33 @@ class Program
                         if (e_ErrLevel == eErrorLevel.Medium) e_Color = ConsoleColor.Yellow;
                         if (e_ErrLevel == eErrorLevel.High)   e_Color = ConsoleColor.Red;
                         Print(ConsoleColor.White, " Err ");
-                        Print(e_Color, " {0}\n", s_Error);
+                        Print(e_Color, " {0}", s_Error);
                         break;
                     }
                     case eMessageType.String:
                     {
                         cStringElmue i_String = (cStringElmue)i_Header;
                         Print(ConsoleColor.White, " Debg");
-                        Print(ConsoleColor.Gray,  " {0}\n", i_String.Message);
+                        Print(ConsoleColor.Gray,  " {0}", i_String.Message);
                         break;
                     }
                     case eMessageType.Busload:
                     {
                         cBusloadElmue i_Busload = (cBusloadElmue)i_Header;
                         Print(ConsoleColor.White, " Load");
-                        Print(ConsoleColor.Gray,  " Busload: {0}%\n", i_Busload.mu8_BusLoad);
+                        Print(ConsoleColor.Gray,  " Busload: {0}%", i_Busload.mu8_BusLoad);
                         break;
                     }
                     default:
                     {
                         Print(ConsoleColor.White, " Err ");
-                        Print(ConsoleColor.Red,   " Unknown USB message received: {0}\n", i_Header.me_MesgType);
+                        Print(ConsoleColor.Red,   " Unknown USB message received: {0}", i_Header.me_MesgType);
                         break;
                     }
                 }
+
+                if (b_RxBlob) Print(ConsoleColor.Gray, "   Rx Blob\n");
+                else          Print(ConsoleColor.Gray, "\n");
             }
 
             // ==================================================
