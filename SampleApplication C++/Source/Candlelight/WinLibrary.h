@@ -15,9 +15,9 @@
 //  This class contains code for Windows.
 //  Someone must re-write it for Linux
 //  The WinUSB library must be replaced with the libusb library
-//  The thread in this class can probably be removed when using lubusb
+//  The thread in this class can probably be removed when using libusb
 //  NOTE: This class uses WinUSB by purpose: 
-//  The WinUSB driver is part of the orepating system and installed 100% automatically 
+//  The WinUSB driver is part of the operating system and installed 100% automatically 
 //  when connecting the device for the first time.
 //  On the other hand when using libusb on Windows the user would be forced to download 
 //  and install a driver manually that has no advantage over WinUSB.

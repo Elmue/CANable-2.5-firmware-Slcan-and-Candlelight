@@ -38,9 +38,9 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 //  This class contains code for Windows.
 //  Someone must re-write it for Linux
 //  The WinUSB library must be replaced with the libusb library
-//  The thread in this class can probably be removed when using lubusb
+//  The thread in this class can probably be removed when using libusb
 //  NOTE: This class uses WinUSB by purpose: 
-//  The WinUSB driver is part of the orepating system and installed 100% automatically 
+//  The WinUSB driver is part of the operating system and installed 100% automatically 
 //  when connecting the device for the first time.
 //  On the other hand when using libusb on Windows the user would be forced to download 
 //  and install a driver manually that has no advantage over WinUSB.
@@ -92,9 +92,6 @@ OsLibrary::~OsLibrary()
 // s_DevicePath = "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
 uint32_t OsLibrary::Open(wstring s_DevicePath)
 {
-    if (mh_Device)
-        return ERR_OPERATION_INVALID; // Already open
-
     ms64_PerfTimeStart  = 0;
     mu32_RxPipeErrors   = 0;
     mu32_TxPipeErrors   = 0;
@@ -143,7 +140,7 @@ uint32_t OsLibrary::Open(wstring s_DevicePath)
     // Get Interface Descriptor
     // Windows uses a unique s_DevicePath for each interface. There is no need to specify an interface number here.
     // The device path defines which interface is opened with CreateFileW().
-    // "{c15b4308-04d3-11e6-b3ea-6057189e6443}" opens interface 0
+    // "{c15b4308-04d3-11e6-b3ea-6057189e6443}" opens interface 0, 2, 3
     // "{c25b4308-04d3-11e6-b3ea-6057189e6443}" opens interface 1
     if (!WinUsb_QueryInterfaceSettings(mh_WinUsb, 0, (USB_INTERFACE_DESCRIPTOR*)&mk_Info.mk_InterfDescr))
         return GetLastError();
@@ -630,7 +627,7 @@ uint32_t OsLibrary::EnumSerialNumbers(CStringMap& i_Serials)
     }
 
     RegCloseKey(h_RootKey);
-    return 0;
+    return NO_ERROR;
 }
 
 // read a string from the registry (max 1000 chars)

@@ -76,26 +76,30 @@ void Candlelight::Close()
 // Initialize WinUSB and get the Candlelight structures with board info, capabilities, etc from the firmware
 uint32_t Candlelight::Open(wstring s_DevicePath)
 {
-    uint32_t u32_Error = mi_OsLibrary.Open(s_DevicePath);
-    if (u32_Error)
-        return u32_Error;
-
-    mpk_Info            = mi_OsLibrary.DevInfo();
-    mu8_Interface       = mpk_Info->mk_InterfDescr.bInterfaceNumber;
-    mu8_EchoMarker      = 1; // counter 1...255
-    ms64_McuRollOver    = 0;
-    ms64_LastMcuStamp   = 0;
-    mu64_TxOverflow     = 0;    
-    mu32_BlobOffset     = 0;
-    ms32_BlobFrames     = 0;
-    mb_BaudFDSet        = false;
-    mb_InitDone         = false;
-    mb_Started          = false;
-    mb_EnableTxEcho     = true;
-    me_LastError        = FBK_Success;
+    if (mi_OsLibrary.IsOpen())
+        return ERR_OPERATION_INVALID; // Already open
+    
+    mu8_EchoMarker    = 1; // counter 1...255
+    ms64_McuRollOver  = 0;
+    ms64_LastMcuStamp = 0;
+    mu64_TxOverflow   = 0;    
+    mu32_BlobOffset   = 0;
+    ms32_BlobFrames   = 0;
+    mb_BaudFDSet      = false;
+    mb_InitDone       = false;
+    mb_Started        = false;
+    mb_EnableTxEcho   = true;
+    me_LastError      = FBK_Success;
     
     mi_Details.clear();
     memset(&mk_EchoPackets, 0, sizeof(mk_EchoPackets));
+    
+    uint32_t u32_Error = mi_OsLibrary.Open(s_DevicePath);
+    if (u32_Error)
+        return u32_Error;   
+    
+    mpk_Info      = mi_OsLibrary.DevInfo();
+    mu8_Interface = mpk_Info->mk_InterfDescr.bInterfaceNumber;   
 
     mi_Details.push_back(kDetail(L"USB Vendor",         cUtils::Format(L"\"%s\"", mpk_Info->mc_Vendor)));   
     mi_Details.push_back(kDetail(L"USB Product",        cUtils::Format(L"\"%s\"", mpk_Info->mc_Product)));  
@@ -114,7 +118,7 @@ uint32_t Candlelight::Open(wstring s_DevicePath)
             return ERR_INVALID_DEVICE;
 
         mb_InitDone = true;
-        return 0;
+        return NO_ERROR;
     }
 
     // ------------------------ Candlelight --------------------------
@@ -179,7 +183,7 @@ uint32_t Candlelight::Open(wstring s_DevicePath)
     if (!mpk_Info->mb_IsElmueSoft)
     {
         mi_Details.push_back(kDetail(L"CAN Clock", cUtils::Format(L"%u MHz", mpk_Info->mk_Capability.fclk_can / 1000000)));  
-        return ERR_INVALID_FIRMWARE;
+        return ERR_INVALID_FIRMWARE; // this class requires the new ElmüSoft firmware
     }
 
     // --------------- Here comes only ElmüSoft firmware ---------------
@@ -193,13 +197,13 @@ uint32_t Candlelight::Open(wstring s_DevicePath)
     if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetPinStatus, PINID_BOOT0, &u16_PinStatus, sizeof(u16_PinStatus)))
         return u32_Error;
 
-    bool b_UseQuartz = (mpk_Info->mk_BoardInfo.BoardFlags & BRD_Quartz_In_Use) > 0;
-
     mi_Details.push_back(kDetail(L"Target Board", OsLibrary::Utf8ToUnicode(mpk_Info->mk_BoardInfo.BoardName)));
     mi_Details.push_back(kDetail(L"Processor",    cUtils::Format(L"%s, CAN Clock: %u MHz, MCU DeviceID: 0x%X",
                                                                  OsLibrary::Utf8ToUnicode(mpk_Info->mk_BoardInfo.McuName).c_str(),
                                                                  mpk_Info->mk_Capability.fclk_can / 1000000,
                                                                  mpk_Info->mk_BoardInfo.McuDeviceID)));
+                                                                 
+    bool b_UseQuartz = (mpk_Info->mk_BoardInfo.BoardFlags & BRD_Quartz_In_Use) > 0;                                                                 
     mi_Details.push_back(kDetail(L"Quartz in use", b_UseQuartz ? L"Yes": L"No"));
     mi_Details.push_back(kDetail(L"CAN Channel",   cUtils::Format(L"%d of %d", mu8_Channel + 1, mpk_Info->mk_DeviceVersion.icount + 1)));
     mi_Details.push_back(kDetail(L"Pin BOOT0",     (u16_PinStatus & PINST_Enabled) ? L"Enabled" : L"Disabled"));
@@ -266,8 +270,11 @@ uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_S
          if (s32_Baud >= 1000000 && (s32_Baud % 1000000) == 0) { s32_Baud /= 1000000; c_Unit = L"M"; }
     else if (s32_Baud >= 1000    && (s32_Baud % 1000)    == 0) { s32_Baud /= 1000;    c_Unit = L"k"; }
 
-    wchar_t* c_Type = b_FD ? L"Data   " : L"Nominal";
-    *ps_Display = cUtils::Format(L"%s Baudrate: %u%s, Samplepoint: %u.%u%%", c_Type, s32_Baud, c_Unit, s32_Sample / 10, s32_Sample % 10);
+    if (ps_Display)
+    {
+        wchar_t* c_Type = b_FD ? L"Data   " : L"Nominal";
+        *ps_Display = cUtils::Format(L"%s Baudrate: %u%s, Samplepoint: %u.%u%%", c_Type, s32_Baud, c_Unit, s32_Sample / 10, s32_Sample % 10);
+    }
 
     if (b_FD) mb_BaudFDSet = true;
     return NO_ERROR;
@@ -386,10 +393,10 @@ uint32_t Candlelight::SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, int6
     pk_Blob->frame_count = s32_Count;
     pk_Blob->msg_type    = MSG_TxBlob;
 
-    int s32_TxLen = sizeof(kBlob);
+    int s32_Offset = sizeof(kBlob);
     for (int P=0; P<s32_Count; P++)
     {
-        uint32_t u32_Error = TxPacketToTxBytes(&pk_Packets[P], u8_Transmit, sizeof(u8_Transmit), &s32_TxLen);
+        uint32_t u32_Error = TxPacketToTxBytes(&pk_Packets[P], u8_Transmit, sizeof(u8_Transmit), &s32_Offset);
         if (u32_Error)
             return u32_Error;
     }
@@ -397,7 +404,7 @@ uint32_t Candlelight::SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, int6
     // Get timestamp immediately before sending the packet
     *ps64_OsTimestamp = GetOsTimestamp();
 
-    return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_TxLen);
+    return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
 }
 
 // CAN FD packets (b_FDF) can only be sent if a data baudrate has been set before.
@@ -411,15 +418,15 @@ uint32_t Candlelight::SendPacket(kCanPacket* pk_Packet, int64_t* ps64_OsTimestam
 
     uint8_t u8_Transmit[256];
 
-    int s32_TxLen = 0;
-    uint32_t u32_Error = TxPacketToTxBytes(pk_Packet, u8_Transmit, sizeof(u8_Transmit), &s32_TxLen);
+    int s32_Offset = 0;
+    uint32_t u32_Error = TxPacketToTxBytes(pk_Packet, u8_Transmit, sizeof(u8_Transmit), &s32_Offset);
     if (u32_Error)
         return u32_Error;
 
     // Get timestamp immediately before sending the packet
     *ps64_OsTimestamp = GetOsTimestamp();
 
-    return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_TxLen);
+    return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
 }
 
 // If the packet has insufficient bytes to match one of the CAN FD DLC values, it will be padded with PAD_BYTE.
@@ -649,7 +656,7 @@ uint32_t Candlelight::IsBootPinEnabled(bool* pb_Enabled)
         return u32_Error;
 
     *pb_Enabled = (u16_PinStatus & PINST_Enabled) > 0;
-    return 0;
+    return NO_ERROR;
 }
 
 // Write user data to flash memory. The firmware also stores the length of the data and returns the same data in ReadFlash()
@@ -687,8 +694,8 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
 {
     if (pu32_DataRead) *pu32_DataRead = 0;
 
-    // A Control Transfer must not exceed 4KB byte.
-    if (u32_DataSize >= 4096)
+    // A Control Transfer must not exceed 4 kB.
+    if (u32_DataSize > 4096)
         return ERR_TX_DATA_TOO_LONG;
 
     // The Candlelight interface implements Vendor requests while the DFU interface implements Class requests.
@@ -707,7 +714,7 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
     // ATTENTION: returns ERROR_NOACCESS if p_Data is not in RAM !
     uint32_t u32_CmdErr = mi_OsLibrary.ControlTransfer(&k_Setup, (uint8_t*)p_Data, u32_DataSize, &u32_CmdBytes);
 
-    // The DFU interface has no feedback
+    // The DFU interface sends no feedback
     if (mu8_Interface != DFU_INTERFACE)
     {
         // ---------- Get Feedback -------------
@@ -801,11 +808,11 @@ wstring Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp
     s64_Stamp /= 1000;
     uint32_t u32_Milli = s64_Stamp % 1000;
     s64_Stamp /= 1000;
-    uint32_t u32_Sec = s64_Stamp % 60;
+    uint32_t u32_Sec   = s64_Stamp % 60;
     s64_Stamp /= 60;
-    uint32_t u32_Min = s64_Stamp % 60;
+    uint32_t u32_Min   = s64_Stamp % 60;
     s64_Stamp /= 60;
-    uint32_t u32_Hour = s64_Stamp % 24;
+    uint32_t u32_Hour  = s64_Stamp % 24;
 
     return cUtils::Format(L"%02u:%02u:%02u.%03u.%03u", u32_Hour, u32_Min, u32_Sec, u32_Milli, u32_Micro);
 }

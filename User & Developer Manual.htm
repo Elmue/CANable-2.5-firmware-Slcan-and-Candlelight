@@ -1326,7 +1326,8 @@
 <tr><td>63</td><td>0x0801F800</td><td>0x0801FFFF</td><td>2kB</td><td>User Data Segment 00</td></tr>
 </table>
 
-<div>When you write to the flash memory the firmware first checks if the segment already contains identical data.</div>
+<div>If the processor has 128 kB flash and the firmware occupies 35 kB you have 46 flash segments available.</div>
+<div>When you write to a flash segment the firmware first checks if the segment already contains identical data.</div>
 <div>Only if you write different data the segment is erased and the new data is written.</div>
 <div>This avoids that the flash memory is wearing off when your application writes the same data over and over again.</div>
 <p>
