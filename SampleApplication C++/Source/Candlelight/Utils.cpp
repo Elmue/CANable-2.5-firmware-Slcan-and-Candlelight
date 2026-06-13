@@ -40,18 +40,18 @@ using namespace CANable;
 // ====================== Workarounds for stupid std =============================
 
 // The std library is primitive. It has no replacement for Microsoft's CString.ToUpper()
-wstring cUtils::MakeUpper(wstring s_String)
+string cUtils::MakeUpper(string s_String)
 {
-    wstring s_Copy = s_String;
+    string s_Copy = s_String;
     for (size_t i = 0; i < s_Copy.size(); i++)
     {
-        s_Copy[i] = towupper(s_Copy[i]);
+        s_Copy[i] = toupper(s_Copy[i]);
     }
     return s_Copy;
 }
 
 // The std library is primitive. It has no replacement for Microsoft's CString.TrimRight()
-wstring cUtils::TrimRight(wstring s_String, wchar_t* s_Remove) // s_Remove = L" \n\r\t"
+string cUtils::TrimRight(string s_String, char* s_Remove) // s_Remove = " \n\r\t"
 {
     int s32_Len = (int)s_String.size();
     for (int S = s32_Len - 1; S >= 0; S--)
@@ -74,19 +74,19 @@ wstring cUtils::TrimRight(wstring s_String, wchar_t* s_Remove) // s_Remove = L" 
 
 // The std library is primitive. It has no replacement for Microsoft's CString.Format()
 // This function supports max 5000 characters which will never be exceeded by this class.
-wstring cUtils::Format(wchar_t* c_Format, ...)
+string cUtils::Format(char* c_Format, ...)
 {
     va_list args;
     va_start(args, c_Format);
 
-    wchar_t s_Buffer[5000];
-    int s32_Len = vswprintf(s_Buffer, sizeof(s_Buffer) / 2, c_Format, args);
+    char s_Buffer[5000];
+    int s32_Len = vsnprintf_s(s_Buffer, sizeof(s_Buffer) / 2, c_Format, args);
     va_end(args);
 
     if (s32_Len < 0)
     {
         assert(false); // Buffer too small
-        return L"";
+        return "";
     }
 
     s_Buffer[s32_Len] = 0;
@@ -94,11 +94,11 @@ wstring cUtils::Format(wchar_t* c_Format, ...)
 }
 
 // The std library is primitive. It has no replacement for Microsoft's CMapStringToString.Lookup()
-wstring cUtils::MapLookup(CStringMap& i_Map, wstring& s_Key)
+string cUtils::MapLookup(CStringMap& i_Map, string& s_Key)
 {
     auto it = i_Map.find(s_Key);
     if (it == i_Map.end())
-        return L"";
+        return "";
 
     return it->second;
 }
@@ -112,13 +112,13 @@ uint64_t cUtils::GetTickMilli()
 }
 
 // returns "02 67 5E C7 FF "
-wstring cUtils::FormatHexBytes(uint8_t u8_Data[], int s32_DataLen)
+string cUtils::FormatHexBytes(uint8_t u8_Data[], int s32_DataLen)
 {
-    wstring s_Hex;
+    string s_Hex;
     for (int i=0; i<s32_DataLen; i++)
     {
-        wchar_t c_Buf[5];
-        swprintf_s(c_Buf, L"%02X ", u8_Data[i]);
+        char c_Buf[5];
+        sprintf_s(c_Buf, "%02X ", u8_Data[i]);
         s_Hex += c_Buf;
     }
     return s_Hex;
@@ -129,10 +129,10 @@ wstring cUtils::FormatHexBytes(uint8_t u8_Data[], int s32_DataLen)
 // 0x00000105 --> "1.5"
 // 0x11223344 --> "11.22.33.44"
 // 0x00YYMMDD --> "Day.Month.Year"
-wstring cUtils::FormatBcdVersion(uint32_t u32_Version)
+string cUtils::FormatBcdVersion(uint32_t u32_Version)
 {
     if (u32_Version == 0)
-        return L"0";
+        return "0";
 
     // BCD encoded 0x00YYMMDD
     if (u32_Version > 0x250101 && u32_Version < 0x991231)
@@ -141,40 +141,40 @@ wstring cUtils::FormatBcdVersion(uint32_t u32_Version)
         uint8_t u8_Month = (uint8_t)(u32_Version >> 8);
         uint8_t u8_Year  = (uint8_t)(u32_Version >> 16);
 
-        wchar_t* c_MonthName = NULL;
+        char* c_MonthName = NULL;
         switch (u8_Month)
         {
-            case 0x01: c_MonthName = L"Jan"; break;
-            case 0x02: c_MonthName = L"Feb"; break;
-            case 0x03: c_MonthName = L"Mar"; break;
-            case 0x04: c_MonthName = L"Apr"; break;
-            case 0x05: c_MonthName = L"May"; break;
-            case 0x06: c_MonthName = L"Jun"; break;
-            case 0x07: c_MonthName = L"Jul"; break;
-            case 0x08: c_MonthName = L"Aug"; break;
-            case 0x09: c_MonthName = L"Sep"; break;
-            case 0x10: c_MonthName = L"Oct"; break;
-            case 0x11: c_MonthName = L"Nov"; break;
-            case 0x12: c_MonthName = L"Dec"; break;
+            case 0x01: c_MonthName = "Jan"; break;
+            case 0x02: c_MonthName = "Feb"; break;
+            case 0x03: c_MonthName = "Mar"; break;
+            case 0x04: c_MonthName = "Apr"; break;
+            case 0x05: c_MonthName = "May"; break;
+            case 0x06: c_MonthName = "Jun"; break;
+            case 0x07: c_MonthName = "Jul"; break;
+            case 0x08: c_MonthName = "Aug"; break;
+            case 0x09: c_MonthName = "Sep"; break;
+            case 0x10: c_MonthName = "Oct"; break;
+            case 0x11: c_MonthName = "Nov"; break;
+            case 0x12: c_MonthName = "Dec"; break;
         }
 
         if (c_MonthName && u8_Day >= 1 && u8_Day <= 31)
-            return cUtils::Format(L"%X.%s.%02X", u8_Day, c_MonthName, u8_Year);
+            return cUtils::Format("%X.%s.%02X", u8_Day, c_MonthName, u8_Year);
     }
 
-    wchar_t c_Buf[10];
-    wstring s_Version;
+    char c_Buf[10];
+    string s_Version;
     for (int s32_Shift = 24; s32_Shift >= 0; s32_Shift -= 8)
     {
         uint8_t u8_Part = (uint8_t)(u32_Version >> s32_Shift);
         if (s_Version.length())
         {
-            swprintf_s(c_Buf, L".%X", u8_Part);
+            sprintf_s(c_Buf, ".%X", u8_Part);
             s_Version += c_Buf;
         }
         else if (u8_Part > 0)
         {
-            swprintf_s(c_Buf, L"%X", u8_Part);
+            sprintf_s(c_Buf, "%X", u8_Part);
             s_Version += c_Buf;
         }
     }

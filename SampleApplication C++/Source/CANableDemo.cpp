@@ -78,7 +78,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
     // Increase console buffer for 3000 lines output with 300 chars per line
     // Set console window to 120 chars in 60 lines
-    OsLibrary::SetUpConsole(300, 3000, 120, 60, L"ElmüSoft Candlelight C++ Demo");
+    OsLibrary::SetUpConsole(300, 3000, 120, 60, "ElmüSoft Candlelight C++ Demo");
 
     if (CANDLELIGHT_DEMO) 
     {
@@ -93,7 +93,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
     gi_Candle.Close(); // Close CAN bus, stop pipe thread
 
-    OsLibrary::PrintConsole(GREY, L"\nPress a key to exit ...");
+    OsLibrary::PrintConsole(GREY, "\nPress a key to exit ...");
     OsLibrary::WaitConsoleChar();
     ExitProcess(0);
 }
@@ -102,9 +102,9 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
 void CandlelightDemo()
 {
-    OsLibrary::PrintConsole(YELLOW, L"=============================================================================\n");
-    OsLibrary::PrintConsole(YELLOW, L"               CANable 2.5 Candlelight C++ Demo by ElmüSoft                  \n");
-    OsLibrary::PrintConsole(YELLOW, L"=============================================================================\n");
+    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
+    OsLibrary::PrintConsole(YELLOW, "               CANable 2.5 Candlelight C++ Demo by ElmüSoft                  \n");
+    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
 
     // open Candlelight interface
     if (!OpenDevice())
@@ -119,29 +119,29 @@ void CandlelightDemo()
     // -----------------------------------------
     
     uint32_t u32_Error = 0;
-    wstring s_Display;
+    string s_Display;
 
     // Set 500 kBaud and samplepoint 60%
     switch (gk_Info.mk_Capability.fclk_can / 1000000)
     {
         case  60: u32_Error = gi_Candle.SetBitrate(false, 1, 71, 48, &s_Display); break; // STM32G0B1
         case 160: u32_Error = gi_Candle.SetBitrate(false, 2, 95, 64, &s_Display); break; // STM32G431
-        default:  OsLibrary::PrintConsole(RED, L"CAN Clock not implemented.\n"); return;
+        default:  OsLibrary::PrintConsole(RED, "CAN Clock not implemented.\n"); return;
     }
 
     if (u32_Error)
     {
-        OsLibrary::PrintConsole(RED, L"Error setting nominal bitrate. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        OsLibrary::PrintConsole(RED, "Error setting nominal bitrate. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         return;
     }
-    OsLibrary::PrintConsole(BROWN, L"\nSet %s\n", s_Display.c_str());
+    OsLibrary::PrintConsole(BROWN, "\nSet %s\n", s_Display.c_str());
 
     // -----------------------------------------
 
     // Report bus load every 5 seconds if it is not zero.
     u32_Error = gi_Candle.EnableBusLoadReport(5);
     if (u32_Error)
-        OsLibrary::PrintConsole(RED, L"Error enabling busload report: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        OsLibrary::PrintConsole(RED, "Error enabling busload report: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
     
     // -----------------------------------------
     
@@ -158,15 +158,15 @@ void CandlelightDemo()
         {
             case  60: u32_Error = gi_Candle.SetBitrate(true, 1, 17, 12, &s_Display); break; // STM32G0B1
             case 160: u32_Error = gi_Candle.SetBitrate(true, 2, 23, 16, &s_Display); break; // STM32G431
-            default:  OsLibrary::PrintConsole(RED, L"CAN Clock not implemented.\n"); return;
+            default:  OsLibrary::PrintConsole(RED, "CAN Clock not implemented.\n"); return;
         }
 
         if (u32_Error)
         {
-            OsLibrary::PrintConsole(RED, L"Error setting data bitrate. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+            OsLibrary::PrintConsole(RED, "Error setting data bitrate. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
             return;
         }
-        OsLibrary::PrintConsole(BROWN, L"Set %s\n", s_Display.c_str());
+        OsLibrary::PrintConsole(BROWN, "Set %s\n", s_Display.c_str());
     }
 
     // -----------------------------------------
@@ -177,9 +177,9 @@ void CandlelightDemo()
         // Only the 11 bit CAN ID 0x7E8 will pass through the filter.
         u32_Error = gi_Candle.AddHostFilter(false, 0x7E8, 0x7FF);
         if (u32_Error)
-            OsLibrary::PrintConsole(RED, L"Error setting host filter: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+            OsLibrary::PrintConsole(RED, "Error setting host filter: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         else
-            OsLibrary::PrintConsole(BROWN, L"Set host filter 7E8\n");
+            OsLibrary::PrintConsole(BROWN, "Set host filter 7E8\n");
     }
 
     // -----------------------------------------
@@ -192,9 +192,9 @@ void CandlelightDemo()
         // Set filter Nº 08 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
         u32_Error = gi_Candle.SetBridgeFilter(8, 1, true, false, false, 0x7E5, 0x7FF);
         if (u32_Error)
-            OsLibrary::PrintConsole(RED, L"Error setting bridge filter: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+            OsLibrary::PrintConsole(RED, "Error setting bridge filter: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         else
-            OsLibrary::PrintConsole(BROWN, L"Set bridge filter 7E5\n");
+            OsLibrary::PrintConsole(BROWN, "Set bridge filter 7E5\n");
     }
 
     // -----------------------------------------
@@ -213,27 +213,27 @@ void CandlelightDemo()
     u32_Error = gi_Candle.Start((eDeviceFlags)u32_DevFlags);
     if (u32_Error)
     {
-        OsLibrary::PrintConsole(RED, L"%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        OsLibrary::PrintConsole(RED, "%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         return;
     }
 
-    OsLibrary::PrintConsole(YELLOW, L"\nThe device has been opened. Please send CAN packets now.\n");
-    OsLibrary::PrintConsole(YELLOW, L"When a packet is received it is displayed in the console.\n");
-    OsLibrary::PrintConsole(YELLOW, L"Additionally classic packets with 8 data bytes are sent every 2 seconds.\n\n");
+    OsLibrary::PrintConsole(YELLOW, "\nThe device has been opened. Please send CAN packets now.\n");
+    OsLibrary::PrintConsole(YELLOW, "When a packet is received it is displayed in the console.\n");
+    OsLibrary::PrintConsole(YELLOW, "Additionally classic packets with 8 data bytes are sent every 2 seconds.\n\n");
 
 #if defined(_MSC_VER)
-    OsLibrary::PrintConsole(RED,    L"ATTENTION:\n");
-    OsLibrary::PrintConsole(YELLOW, L"The Windows console is very slow. It cannot display fast CAN bus traffic.\n");
-    OsLibrary::PrintConsole(YELLOW, L"If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
-    OsLibrary::PrintConsole(YELLOW, L"HUD ECU Hacker has an ultra fast speed-optimized CAN Raw Terminal.\n\n");
-    OsLibrary::PrintConsole(YELLOW, L"A left click into the console stops output, right click continues.\n\n");
+    OsLibrary::PrintConsole(RED,    "ATTENTION:\n");
+    OsLibrary::PrintConsole(YELLOW, "The Windows console is very slow. It cannot display fast CAN bus traffic.\n");
+    OsLibrary::PrintConsole(YELLOW, "If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
+    OsLibrary::PrintConsole(YELLOW, "HUD ECU Hacker has an ultra fast speed-optimized CAN Raw Terminal.\n\n");
+    OsLibrary::PrintConsole(YELLOW, "A left click into the console stops output, right click continues.\n\n");
 #endif
 
-    OsLibrary::PrintConsole(LIME,   L"Lime  = Sent packets\n");
-    OsLibrary::PrintConsole(GREEN,  L"Green = Echo of sent packets that have been ACKnowledged\n");
-    OsLibrary::PrintConsole(CYAN,   L"Cyan  = Received packets\n\n");
+    OsLibrary::PrintConsole(LIME,   "Lime  = Sent packets\n");
+    OsLibrary::PrintConsole(GREEN,  "Green = Echo of sent packets that have been ACKnowledged\n");
+    OsLibrary::PrintConsole(CYAN,   "Cyan  = Received packets\n\n");
 
-    OsLibrary::PrintConsole(MAGENTA, L"Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
+    OsLibrary::PrintConsole(MAGENTA, "Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
 
     // -----------------------------------------
 
@@ -280,8 +280,8 @@ void CandlelightDemo()
             if (u32_Error)
             {
                 OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, gi_Candle.GetOsTimestamp()));
-                OsLibrary::PrintConsole(WHITE, L" Send");
-                OsLibrary::PrintConsole(RED,   L" %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+                OsLibrary::PrintConsole(WHITE, " Send");
+                OsLibrary::PrintConsole(RED,   " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
 
                 if (u32_Error == ERR_TOO_MANY_ERRORS)
                     return; // The CANable has been disconnected
@@ -292,11 +292,11 @@ void CandlelightDemo()
                 {
                     // Timestamps for sending are only available if Windows timestamps are used
                     OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
-                    OsLibrary::PrintConsole(WHITE, L" Send");
-                    OsLibrary::PrintConsole(LIME,  L" %s", gi_Candle.FormatCanPacket(&k_TxPackets[P]).c_str());
+                    OsLibrary::PrintConsole(WHITE, " Send");
+                    OsLibrary::PrintConsole(LIME,  " %s", gi_Candle.FormatCanPacket(&k_TxPackets[P]).c_str());
 
-                    if (SEND_TX_BLOB) OsLibrary::PrintConsole(GREY, L" (Tx Blob)\n");
-                    else              OsLibrary::PrintConsole(GREY, L"\n");
+                    if (SEND_TX_BLOB) OsLibrary::PrintConsole(GREY, " (Tx Blob)\n");
+                    else              OsLibrary::PrintConsole(GREY, "\n");
                 }
             }
 
@@ -323,8 +323,8 @@ void CandlelightDemo()
             {
                 // Error is not timeout (e.g. USB device has been disconnected)
                 OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_RxTimestamp));
-                OsLibrary::PrintConsole(WHITE, L" Recv");
-                OsLibrary::PrintConsole(RED,   L" %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+                OsLibrary::PrintConsole(WHITE, " Recv");
+                OsLibrary::PrintConsole(RED,   " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
             }
 
             if (u32_Error == ERR_TOO_MANY_ERRORS)
@@ -338,53 +338,53 @@ void CandlelightDemo()
                 case MSG_RxFrame:
                 {
                     kCanPacket k_RxPacket = gi_Candle.RxFrameToCanPacket((kRxFrameElmue*)pk_Header);
-                    OsLibrary::PrintConsole(WHITE, L" Recv");
-                    OsLibrary::PrintConsole(CYAN,  L" %s", gi_Candle.FormatCanPacket(&k_RxPacket).c_str());
+                    OsLibrary::PrintConsole(WHITE, " Recv");
+                    OsLibrary::PrintConsole(CYAN,  " %s", gi_Candle.FormatCanPacket(&k_RxPacket).c_str());
                     break;
                 }
                 case MSG_TxEcho:
                 {
                     kCanPacket k_EchoPacket = gi_Candle.GetTxEchoPacket((kTxEchoElmue*)pk_Header);
-                    OsLibrary::PrintConsole(WHITE, L" Echo");
-                    OsLibrary::PrintConsole(GREEN, L" %s", gi_Candle.FormatCanPacket(&k_EchoPacket).c_str());
+                    OsLibrary::PrintConsole(WHITE, " Echo");
+                    OsLibrary::PrintConsole(GREEN, " %s", gi_Candle.FormatCanPacket(&k_EchoPacket).c_str());
                     break;
                 }
                 case MSG_Error:
                 {
                     eErrorBusStatus e_BusStatus;
                     eErrorLevel     e_ErrLevel;
-                    wstring s_Error = gi_Candle.FormatCanErrors((kErrorElmue*)pk_Header, &e_BusStatus, &e_ErrLevel);
+                    string s_Error = gi_Candle.FormatCanErrors((kErrorElmue*)pk_Header, &e_BusStatus, &e_ErrLevel);
                     uint16_t u16_Color = GREY;
                     if (e_ErrLevel == LEVEL_Medium) u16_Color = YELLOW;
                     if (e_ErrLevel == LEVEL_High)   u16_Color = RED;
-                    OsLibrary::PrintConsole(WHITE,     L" Err ");
-                    OsLibrary::PrintConsole(u16_Color, L" %s", s_Error.c_str());
+                    OsLibrary::PrintConsole(WHITE,     " Err ");
+                    OsLibrary::PrintConsole(u16_Color, " %s", s_Error.c_str());
                     break;
                 }
                 case MSG_String:
                 {
                     kStringElmue* pk_String = (kStringElmue*)pk_Header;
-                    OsLibrary::PrintConsole(WHITE, L" Debg");
-                    OsLibrary::PrintConsole(GREY,  L" %s", gi_Candle.ConvertStringFrame(pk_String).c_str());
+                    OsLibrary::PrintConsole(WHITE, " Debg");
+                    OsLibrary::PrintConsole(GREY,  " %s", gi_Candle.ConvertStringFrame(pk_String).c_str());
                     break;
                 }
                 case MSG_Busload:
                 {
                     kBusloadElmue* pk_Busload = (kBusloadElmue*)pk_Header;
-                    OsLibrary::PrintConsole(WHITE, L" Load");
-                    OsLibrary::PrintConsole(GREY,  L" Busload: %u%%", pk_Busload->bus_load);
+                    OsLibrary::PrintConsole(WHITE, " Load");
+                    OsLibrary::PrintConsole(GREY,  " Busload: %u%%", pk_Busload->bus_load);
                     break;
                 }
                 default:
                 {
-                    OsLibrary::PrintConsole(WHITE, L" Err ");
-                    OsLibrary::PrintConsole(RED,   L" Unknown USB message received: %s", cUtils::FormatHexBytes((uint8_t*)pk_Header, pk_Header->size).c_str());
+                    OsLibrary::PrintConsole(WHITE, " Err ");
+                    OsLibrary::PrintConsole(RED,   " Unknown USB message received: %s", cUtils::FormatHexBytes((uint8_t*)pk_Header, pk_Header->size).c_str());
                     break;
                 }
             }
 
-            if (b_RxBlob) OsLibrary::PrintConsole(GREY, L"   Rx Blob\n");
-            else          OsLibrary::PrintConsole(GREY, L"\n");
+            if (b_RxBlob) OsLibrary::PrintConsole(GREY, "   Rx Blob\n");
+            else          OsLibrary::PrintConsole(GREY, "\n");
         }
 
         // exit if the user hits ENTER
@@ -401,9 +401,9 @@ void CandlelightDemo()
 // If the device is already in DFU mode it will fail.
 void DfuDemo()
 {
-    OsLibrary::PrintConsole(YELLOW, L"=============================================================================\n");
-    OsLibrary::PrintConsole(YELLOW, L"                 CANable 2.5 Enter DFU C++ Demo by ElmüSoft                  \n");
-    OsLibrary::PrintConsole(YELLOW, L"=============================================================================\n");
+    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
+    OsLibrary::PrintConsole(YELLOW, "                 CANable 2.5 Enter DFU C++ Demo by ElmüSoft                  \n");
+    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
 
     // Open DFU interface
     if (!OpenDevice())
@@ -412,11 +412,11 @@ void DfuDemo()
     uint32_t u32_Error = gi_Candle.EnterDfuMode();
     if (u32_Error)
     {
-        OsLibrary::PrintConsole(RED, L"\n%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        OsLibrary::PrintConsole(RED, "\n%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         return;
     }
 
-    OsLibrary::PrintConsole(LIME, L"\nDevice has been switched successfully into DFU mode.\n");
+    OsLibrary::PrintConsole(LIME, "\nDevice has been switched successfully into DFU mode.\n");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -429,15 +429,15 @@ bool OpenDevice()
     uint32_t u32_Error = OsLibrary::EnumDevices(CANDLELIGHT_DEMO, &i_Devices);
     if (u32_Error)
     {
-        OsLibrary::PrintConsole(RED, L"Error enumerating USB devices. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        OsLibrary::PrintConsole(RED, "Error enumerating USB devices. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         return false;
     }
 
     if (i_Devices.size() == 0)
     {
-        OsLibrary::PrintConsole(RED, L"\nNo Candlelight device connected or in wrong operatiom mode or WinUSB driver not installed correctly.\n"
-                          L"Legacy Candlelight firmware has bugs that prevent the correct driver installation.\n"
-                          L"Make sure you have the new CANable 2.5 firmware from ElmüSoft.\n");
+        OsLibrary::PrintConsole(RED, "\nNo Candlelight device connected or in wrong operatiom mode or WinUSB driver not installed correctly.\n"
+                          "Legacy Candlelight firmware has bugs that prevent the correct driver installation.\n"
+                          "Make sure you have the new CANable 2.5 firmware from ElmüSoft.\n");
         return false;
     }
 
@@ -448,18 +448,18 @@ bool OpenDevice()
     {
         while (true)
         {
-            OsLibrary::PrintConsole(LIME, L"\nPlease select one of the devices:");
-            OsLibrary::PrintConsole(GREY, L"  (Exit with ESCAPE)\n\n");
+            OsLibrary::PrintConsole(LIME, "\nPlease select one of the devices:");
+            OsLibrary::PrintConsole(GREY, "  (Exit with ESCAPE)\n\n");
 
             for (size_t i=0; i<i_Devices.size(); i++)
             {
                 kUsbDevice k_Device = i_Devices[i];
-                OsLibrary::PrintConsole(WHITE, L"%u.) %s (%s)", i+1, k_Device.DisplayName().c_str(), k_Device.ms_SerialNo.c_str());
+                OsLibrary::PrintConsole(WHITE, "%u.) %s (%s)", i+1, k_Device.DisplayName().c_str(), k_Device.ms_SerialNo.c_str());
 
                 if (CANDLELIGHT_DEMO) // DFU devices have no channels
-                    OsLibrary::PrintConsole(WHITE, L" CAN Channel: %d", k_Device.ms32_Channel);
+                    OsLibrary::PrintConsole(WHITE, " CAN Channel: %d", k_Device.ms32_Channel);
 
-                OsLibrary::PrintConsole(WHITE, L"\n");
+                OsLibrary::PrintConsole(WHITE, "\n");
             }
 
             int s32_Char = OsLibrary::WaitConsoleChar();
@@ -471,11 +471,11 @@ bool OpenDevice()
             if (gs32_DeviceIndex >= 0 && gs32_DeviceIndex < (int)i_Devices.size()) 
                 break;
             
-            OsLibrary::PrintConsole(RED, L"\nInvalid key!\n");
+            OsLibrary::PrintConsole(RED, "\nInvalid key!\n");
         }
     }
    
-    OsLibrary::PrintConsole(GREY, L"\nDevice Path: \"%s\"\n", i_Devices[gs32_DeviceIndex].ms_DevPath.c_str());
+    OsLibrary::PrintConsole(GREY, "\nDevice Path: \"%s\"\n", i_Devices[gs32_DeviceIndex].ms_DevPath.c_str());
 
     // -----------------------------------------
 
@@ -485,12 +485,12 @@ bool OpenDevice()
     vector<kDetail> i_Details = gi_Candle.GetDetails();
     for (size_t i=0; i<i_Details.size(); i++)
     {
-        OsLibrary::PrintConsole(GREY, L"%s\n", i_Details[i].Format(22).c_str());
+        OsLibrary::PrintConsole(GREY, "%s\n", i_Details[i].Format(22).c_str());
     }
 
     if (u32_Error)
     {
-        OsLibrary::PrintConsole(RED, L"\n%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        OsLibrary::PrintConsole(RED, "\n%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         return false;
     }
     return true;
@@ -531,7 +531,7 @@ void FlashMemoryTest()
 
     if (u32_Read != u32_LenHello || memcmp(u8_Hello, u8_FlashData, u32_Read) != 0)
     {
-        OsLibrary::PrintConsole(RED, L"\nFlash memory test 1 failed!\n");
+        OsLibrary::PrintConsole(RED, "\nFlash memory test 1 failed!\n");
         return;
     }
 
@@ -542,16 +542,16 @@ void FlashMemoryTest()
 
     if (u32_Read != u32_LenRandom || memcmp(&u64_Random, u8_FlashData, u32_Read) != 0)
     {
-        OsLibrary::PrintConsole(RED, L"\nFlash memory test 2 failed!\n");
+        OsLibrary::PrintConsole(RED, "\nFlash memory test 2 failed!\n");
         return;
     }
 
     // --------------------
 
-    OsLibrary::PrintConsole(LIME, L"\nFlash memory test: Success\n");
+    OsLibrary::PrintConsole(LIME, "\nFlash memory test: Success\n");
     return;
 
 _Error:
-    OsLibrary::PrintConsole(RED,  L"\nFlash memory test Error: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+    OsLibrary::PrintConsole(RED,  "\nFlash memory test Error: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
 }
 

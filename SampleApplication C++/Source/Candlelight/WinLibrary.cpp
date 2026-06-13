@@ -90,7 +90,7 @@ OsLibrary::~OsLibrary()
 
 // Called from Candlelight::Open()
 // s_DevicePath = "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-uint32_t OsLibrary::Open(wstring s_DevicePath)
+uint32_t OsLibrary::Open(string s_DevicePath)
 {
     ms64_PerfTimeStart  = 0;
     mu32_RxPipeErrors   = 0;
@@ -99,7 +99,7 @@ uint32_t OsLibrary::Open(wstring s_DevicePath)
     ms32_FifoReadIdx    = 0;
     mb_FifoOverflow     = false;
     mb_AbortThread      = false;
-    memset(&mk_Info, 0, sizeof(mk_Info));
+    mk_Info.Clear();
 
     // IMPORTANT:
     // Do NOT set FILE_SHARE_READ or FILE_SHARE_WRITE here!
@@ -107,7 +107,7 @@ uint32_t OsLibrary::Open(wstring s_DevicePath)
     // NOTE:
     // Here we enable Overlapped mode although we do not use a OVERLAPPED structure. This is unusual.
     // But it works here because we set a timeout with WinUsb_SetPipePolicy(PIPE_TRANSFER_TIMEOUT)
-    mh_Device = CreateFileW(s_DevicePath.c_str(), GENERIC_READ | GENERIC_WRITE, 
+    mh_Device = CreateFileA(s_DevicePath.c_str(), GENERIC_READ | GENERIC_WRITE, 
                             0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
 
     if (mh_Device == INVALID_HANDLE_VALUE)
@@ -139,7 +139,7 @@ uint32_t OsLibrary::Open(wstring s_DevicePath)
 
     // Get Interface Descriptor
     // Windows uses a unique s_DevicePath for each interface. There is no need to specify an interface number here.
-    // The device path defines which interface is opened with CreateFileW().
+    // The device path defines which interface is opened with CreateFile().
     // "{c15b4308-04d3-11e6-b3ea-6057189e6443}" opens interface 0, 2, 3
     // "{c25b4308-04d3-11e6-b3ea-6057189e6443}" opens interface 1
     if (!WinUsb_QueryInterfaceSettings(mh_WinUsb, 0, (USB_INTERFACE_DESCRIPTOR*)&mk_Info.mk_InterfDescr))
@@ -152,10 +152,10 @@ uint32_t OsLibrary::Open(wstring s_DevicePath)
     if (mk_Info.mk_DeviceDescr.iManufacturer == 1 && mk_Info.mk_DeviceDescr.iSerialNumber == 3)
         mk_Info.mk_DeviceDescr.iProduct = 2;
 
-    ReadStringDescriptor(mk_Info.mk_DeviceDescr.iManufacturer, LANGUAGE_ENGLISH_USA, mk_Info.mc_Vendor);
-    ReadStringDescriptor(mk_Info.mk_DeviceDescr.iProduct,      LANGUAGE_ENGLISH_USA, mk_Info.mc_Product);
-    ReadStringDescriptor(mk_Info.mk_DeviceDescr.iSerialNumber, LANGUAGE_ENGLISH_USA, mk_Info.mc_Serial);
-    ReadStringDescriptor(mk_Info.mk_InterfDescr.iInterface,    LANGUAGE_ENGLISH_USA, mk_Info.mc_Interface);
+    ReadStringDescriptor(mk_Info.mk_DeviceDescr.iManufacturer, LANGUAGE_ENGLISH_USA, &mk_Info.ms_Vendor);
+    ReadStringDescriptor(mk_Info.mk_DeviceDescr.iProduct,      LANGUAGE_ENGLISH_USA, &mk_Info.ms_Product);
+    ReadStringDescriptor(mk_Info.mk_DeviceDescr.iSerialNumber, LANGUAGE_ENGLISH_USA, &mk_Info.ms_Serial);
+    ReadStringDescriptor(mk_Info.mk_InterfDescr.iInterface,    LANGUAGE_ENGLISH_USA, &mk_Info.ms_Interface);
 
     // Get the 2 pipes of the Candlelight interface (the DFU interface has bNumEndpoints == 0)
     for (uint8_t P=0; P<mk_Info.mk_InterfDescr.bNumEndpoints; P++)
@@ -239,10 +239,8 @@ void OsLibrary::Close()
 // --------------------------------------------------------------------
 
 // Read a string descriptor
-uint32_t OsLibrary::ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_LanguageID, wchar_t s_String[128])
+uint32_t OsLibrary::ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_LanguageID, string* ps_String)
 {
-    s_String[0] = 0;
-
     // If the descriptor does not define a string, the index is zero. This is not an error.
     if (u8_Index == 0)
         return NO_ERROR;
@@ -257,11 +255,11 @@ uint32_t OsLibrary::ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_Language
     uint8_t u8_Descr  = u8_Buffer[1];
     if (u8_Descr != USB_STRING_DESCRIPTOR_TYPE || u32_Read < 2 || u8_Length != u32_Read || (u32_Read & 1) > 0)
     {
-        wcscpy_s(s_String, 128, L"*** CRIPPLED STRING ***");
+        *ps_String = "*** CRIPPLED STRING ***";
         return ERR_INVALID_RX_DATA;
     }
 
-    memcpy(s_String, u8_Buffer + 2, u32_Read - 2);
+    *ps_String = ToUtf8((wchar_t*)(u8_Buffer + 2), (u32_Read - 2) / 2);
     return NO_ERROR;
 }
 
@@ -461,7 +459,9 @@ uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacke
 uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devices)
 {
     CStringMap i_Serials;
-    EnumSerialNumbers(i_Serials); // ignore error
+    uint32_t u32_Error = EnumSerialNumbers(i_Serials);
+    if (u32_Error)
+        return u32_Error;
 
     GUID* pk_Guid = b_Candlelight ? &GUID_CANDLELIGHT : &GUID_CANDLE_DFU;
 
@@ -477,7 +477,6 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
         return GetLastError();
     }
 
-    uint32_t u32_Error = NO_ERROR;
     SP_DEVICE_INTERFACE_DATA k_InterfaceData;
     k_InterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
 
@@ -485,16 +484,16 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
     k_DevicInfo.cbSize = sizeof(SP_DEVINFO_DATA);
 
     uint8_t u8_DetailBuf[2000];
-    SP_DEVICE_INTERFACE_DETAIL_DATA_W* pk_DetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA_W*)u8_DetailBuf;
-    pk_DetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_W);
+    SP_DEVICE_INTERFACE_DETAIL_DATA_A* pk_DetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA_A*)u8_DetailBuf;
+    pk_DetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_A);
 
     DEVPROPTYPE u32_PropType;
     uint32_t    u32_RequSize;
 
-    wchar_t c_Interface[128]; // USB Interface string                  (max 127 unicode chars)
-    wchar_t c_Product  [128]; // USB device descriptor product string  (max 127 unicode chars)
-    wchar_t c_Container[50];
-    wchar_t c_Parent   [256];
+    WCHAR c_Interface[128]; // USB Interface string                  (max 127 unicode chars)
+    WCHAR c_Product  [128]; // USB device descriptor product string  (max 127 unicode chars)
+    WCHAR c_Parent   [256];
+    WCHAR c_Container[ 50];
 
     for (int Idx=0; true; Idx++)
     {
@@ -507,11 +506,11 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
         }
 
         // Get the NT path of the device that will be passed to CreateFile()
-        if (!SetupDiGetDeviceInterfaceDetailW(h_DevInfo, &k_InterfaceData, pk_DetailData, sizeof(u8_DetailBuf), 
+        if (!SetupDiGetDeviceInterfaceDetailA(h_DevInfo, &k_InterfaceData, pk_DetailData, sizeof(u8_DetailBuf), 
                                               &u32_RequSize, &k_DevicInfo)) 
         {
             u32_Error = GetLastError();
-            continue;
+            break;
         }
 
         // Get the 'ContainerID' GUID string (since Windows 7) which is identical for all interfaces of the same device
@@ -519,7 +518,7 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
                                                (uint8_t*)c_Container, sizeof(c_Container), NULL))
         {
             u32_Error = GetLastError();
-            continue;
+            break;
         }
 
         // Get the Interface string from Interface Descriptor (max USB string descriptor length = 127 Unicode chars)
@@ -528,7 +527,7 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
                                       (uint8_t*)c_Interface, sizeof(c_Interface), &u32_RequSize, 0))
         {
             u32_Error = GetLastError();
-            continue;
+            break;
         }
 
         // Go one level up from USB interface to USB device --> c_Parent = "USB\VID_1D50&PID_606F\208A347D4B4550142"
@@ -536,13 +535,13 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
                                        (PBYTE)c_Parent, sizeof(c_Parent), &u32_RequSize, 0))
         {
             u32_Error = GetLastError();
-            continue;
+            break;
         }
 
         if (!SetupDiOpenDeviceInfoW(h_ParentInfo, c_Parent, NULL, 0, &k_DevicInfo))
         {
             u32_Error = GetLastError();
-            continue;
+            break;
         }
 
         // Get the Product string from Device Descriptor (max USB string descriptor length = 127 Unicode chars)
@@ -550,27 +549,27 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
                                       (uint8_t*)c_Product, sizeof(c_Product), &u32_RequSize, 0))
         {
             u32_Error = GetLastError();
-            continue;
+            break;
         }
 
         // ---------------------
 
         kUsbDevice k_UsbDev;
-        k_UsbDev.ms_Product   = c_Product;   // "Candlelight 2.5 - OleksiiDual"
-        k_UsbDev.ms_Interface = c_Interface; // "CAN FD Interface 2"
+        k_UsbDev.ms_Product   = ToUtf8(c_Product);   // "Candlelight 2.5 - OleksiiDual"
+        k_UsbDev.ms_Interface = ToUtf8(c_Interface); // "CAN FD Interface 2"
+        string   s_Container  = ToUtf8(c_Container); // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
         k_UsbDev.ms_DevPath   = cUtils::MakeUpper(pk_DetailData->DevicePath); // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-        wstring  s_Container  = cUtils::MakeUpper(c_Container); // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
-        k_UsbDev.ms_SerialNo  = cUtils::MapLookup(i_Serials, s_Container);
+        k_UsbDev.ms_SerialNo  = cUtils::MapLookup(i_Serials, cUtils::MakeUpper(s_Container));
 
         // Append interface number for multi-interface (MI) adapters
-        int s32_Pos = (int)k_UsbDev.ms_DevPath.find(L"&MI_0");
+        int s32_Pos = (int)k_UsbDev.ms_DevPath.find("&MI_0");
         if (s32_Pos > 0)
         {
             // MI_00 --> Candlelight 1
             // MI_01 --> DFU
             // MI_02 --> Candlelight 2
             // MI_03 --> Candlelight 3
-            k_UsbDev.ms32_Channel = _wtoi(k_UsbDev.ms_DevPath.substr(s32_Pos + 5, 1).c_str());
+            k_UsbDev.ms32_Channel = atoi(k_UsbDev.ms_DevPath.substr(s32_Pos + 5, 1).c_str());
             if (k_UsbDev.ms32_Channel == 0)
                 k_UsbDev.ms32_Channel = 1;  // display one-based interface number           
         }
@@ -592,18 +591,18 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
 // return a Map with ContainerID --> Serial Number
 uint32_t OsLibrary::EnumSerialNumbers(CStringMap& i_Serials)
 {
-    wstring s_RootPath = L"System\\CurrentControlSet\\Enum\\USB\\VID_1D50&PID_606F";
+    string s_RootPath = "System\\CurrentControlSet\\Enum\\USB\\VID_1D50&PID_606F";
 
     HKEY  h_RootKey = 0;
-    uint32_t u32_Error = RegOpenKeyExW(HKEY_LOCAL_MACHINE, s_RootPath.c_str(), 0, KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS, &h_RootKey);
+    uint32_t u32_Error = RegOpenKeyExA(HKEY_LOCAL_MACHINE, s_RootPath.c_str(), 0, KEY_QUERY_VALUE | KEY_ENUMERATE_SUB_KEYS, &h_RootKey);
     if (u32_Error != NO_ERROR) 
         return u32_Error;
 
-    wchar_t c_Serial[100];
+    char c_Serial[100];
     for (uint32_t i=0; TRUE; i++)
     {
         c_Serial[0] = 0;
-        u32_Error = RegEnumKeyW(h_RootKey, i, c_Serial, sizeof(c_Serial) / 2);
+        u32_Error = RegEnumKeyA(h_RootKey, i, c_Serial, sizeof(c_Serial));
         if (u32_Error == ERROR_NO_MORE_ITEMS)
             break;
 
@@ -614,8 +613,8 @@ uint32_t OsLibrary::EnumSerialNumbers(CStringMap& i_Serials)
         }
         
         // All interfaces of a multi-interface device have the same ContainerID
-        wstring s_Container;
-        u32_Error = RegReadString(HKEY_LOCAL_MACHINE, (s_RootPath + L"\\" + c_Serial).c_str(), L"ContainerID", &s_Container);
+        string s_Container;
+        u32_Error = RegReadString(HKEY_LOCAL_MACHINE, (s_RootPath + "\\" + c_Serial).c_str(), "ContainerID", &s_Container);
         if (u32_Error != NO_ERROR)
         {
             assert(false);
@@ -631,33 +630,33 @@ uint32_t OsLibrary::EnumSerialNumbers(CStringMap& i_Serials)
 }
 
 // read a string from the registry (max 1000 chars)
-uint32_t OsLibrary::RegReadString(HKEY h_Class, const wchar_t* u16_Path, const wchar_t* u16_Entry, wstring* ps_Value)
+uint32_t OsLibrary::RegReadString(HKEY h_Class, const char* s8_Path, const char* s8_Entry, string* ps_Value)
 {
-    *ps_Value = L"";
+    *ps_Value = "";
 
     HKEY h_Key; 
-    uint32_t u32_Error = RegOpenKeyExW(h_Class, u16_Path, 0, KEY_QUERY_VALUE, &h_Key);
+    uint32_t u32_Error = RegOpenKeyExA(h_Class, s8_Path, 0, KEY_QUERY_VALUE, &h_Key);
     if (u32_Error)
         return u32_Error;
 
-    wchar_t  u16_Buffer[1000];
+    char s8_Buffer[1000];
     uint32_t u32_Type;                      // OUT
-    uint32_t u32_Size = sizeof(u16_Buffer); // IN = 2000 --> OUT = count of bytes read
-    u32_Error = RegQueryValueExW(h_Key, u16_Entry, 0, &u32_Type, (uint8_t*)u16_Buffer, &u32_Size);
+    uint32_t u32_Size = sizeof(s8_Buffer); // IN = 2000 --> OUT = count of bytes read
+    u32_Error = RegQueryValueExA(h_Key, s8_Entry, 0, &u32_Type, (uint8_t*)s8_Buffer, &u32_Size);
 
     RegCloseKey(h_Key);
 
-    u16_Buffer[u32_Size / 2] = 0;
-    *ps_Value = u16_Buffer;
+    s8_Buffer[u32_Size] = 0;
+    *ps_Value = s8_Buffer;
     return u32_Error;
 }
 
 // ===================================== Console =====================================
 
 // Set console title, buffer size and window size
-void OsLibrary::SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, wstring s_Title)
+void OsLibrary::SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, string s_Title)
 {
-    SetConsoleTitle(s_Title.c_str());
+    SetConsoleTitleA(s_Title.c_str());
 
     COORD k_Size = {s16_BufWidth, s16_BufHeight}; 
     SetConsoleScreenBufferSize(gh_ConsoleOut, k_Size);
@@ -671,18 +670,18 @@ void OsLibrary::SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_
 }
 
 // Print coloured console output (max 2000 chars!)
-void OsLibrary::PrintConsole(uint16_t u16_Color, wstring s_Format, ...)
+void OsLibrary::PrintConsole(uint16_t u16_Color, string s_Format, ...)
 {
     SetConsoleTextAttribute(gh_ConsoleOut, u16_Color); 
     va_list  args;
     va_start(args, s_Format);
 
-    WCHAR u16_Buffer[2000];
-    uint32_t u32_Len = vswprintf(u16_Buffer, 2000, s_Format.c_str(), args);
+    char s8_Buffer[2000];
+    uint32_t u32_Len = vsnprintf_s(s8_Buffer, 2000, s_Format.c_str(), args);
 
     // WriteConsole() is significantly faster than wprinf() or vwprintf(), which need 10 ms per line!
     uint32_t u32_Written;
-    WriteConsoleW(gh_ConsoleOut, u16_Buffer, u32_Len, &u32_Written, NULL);
+    WriteConsoleA(gh_ConsoleOut, s8_Buffer, u32_Len, &u32_Written, NULL);
 }
 
 // Check if the user has pressed the ENTER key in the console (non-blocking function)
@@ -735,22 +734,21 @@ int64_t OsLibrary::GetTimestamp()
 
 // Format Windows API error
 // u32_Error = ERROR_ACCESS_DENIED --> returns "Access is denied" in the language of the operating system.
-wstring OsLibrary::GetErrorMessage(uint32_t u32_Error)
+string OsLibrary::GetErrorMessage(uint32_t u32_Error)
 {
     const uint32_t FLAGS = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
-    wchar_t c_Buffer[1000];
-    FormatMessageW(FLAGS, 0, u32_Error, 0, c_Buffer, 1000, 0);
+    char c_Buffer[1000];
+    FormatMessageA(FLAGS, 0, u32_Error, 0, c_Buffer, 1000, 0);
     return cUtils::TrimRight(c_Buffer);
 }
 
-// Strings longer than 1000 characters are not supported. This will never happen.
-wstring OsLibrary::Utf8ToUnicode(const char* s8_UTF8, int s32_StrLen) // s32_StrLen = - 1
+string OsLibrary::ToUtf8(wchar_t* s_Unicode, int s32_StrLen) // s32_StrLen = - 1
 {
     if (s32_StrLen < 0)
-        s32_StrLen = strlen(s8_UTF8);
+        s32_StrLen = wcslen(s_Unicode);
 
-    wchar_t c_Unicode[1000];
-    int s32_Written = MultiByteToWideChar(CP_UTF8, 0, s8_UTF8, s32_StrLen, c_Unicode, sizeof(c_Unicode) / 2);
-    c_Unicode[s32_Written] = 0;
-    return c_Unicode;
+    string s_Utf8;
+    s_Utf8.resize(s32_StrLen * 5);
+    int s32_Written = WideCharToMultiByte(CP_UTF8, 0, s_Unicode, s32_StrLen, (LPSTR)s_Utf8.data(), s32_StrLen, NULL, NULL);
+    return s_Utf8.substr(0, s32_Written);
 }

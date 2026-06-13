@@ -36,7 +36,7 @@ using namespace std;
 
 // ---------------------------------
 
-#define CStringMap unordered_map<wstring, wstring>
+#define CStringMap unordered_map<string, string>
 
 // Windows error codes are far below 50000
 // Define proprietary error codes here that are used also for Linux:
@@ -109,10 +109,10 @@ struct kSetup
 
 struct kDevInfo
 {
-    wchar_t                  mc_Vendor   [128];
-    wchar_t                  mc_Product  [128];
-    wchar_t                  mc_Serial   [128];
-    wchar_t                  mc_Interface[128];
+    string                   ms_Vendor;
+    string                   ms_Product;
+    string                   ms_Serial;
+    string                   ms_Interface;
     uint8_t                  mu8_EndpointIN;
     uint8_t                  mu8_EndpointOUT;
     uint8_t                  mu8_Channel;
@@ -126,6 +126,27 @@ struct kDevInfo
     kCapabilityFD            mk_CapabilityFD;
     kDeviceVersion           mk_DeviceVersion;
     kBoardInfo               mk_BoardInfo;
+
+    void Clear()
+    {
+        ms_Vendor           = "";
+        ms_Product          = "";
+        ms_Serial           = "";
+        ms_Interface        = "";
+        mu8_EndpointIN      = 0;
+        mu8_EndpointOUT     = 0;
+        mu8_Channel         = 0;
+        mu16_MaxPackSizeIN  = 0;
+        mu16_MaxPackSizeOUT = 0;
+        mb_IsElmueSoft      = false;
+        mb_SupportsFD       = false;
+        memset(&mk_DeviceDescr,   0, sizeof(mk_DeviceDescr));
+        memset(&mk_InterfDescr,   0, sizeof(mk_InterfDescr));
+        memset(&mk_Capability,    0, sizeof(mk_Capability));
+        memset(&mk_CapabilityFD,  0, sizeof(mk_CapabilityFD));
+        memset(&mk_DeviceVersion, 0, sizeof(mk_DeviceVersion));
+        memset(&mk_BoardInfo,     0, sizeof(mk_BoardInfo));
+    }
 };
 
 // A USB frame that was received on th IN pipe and is stored in the Rx FIFO
@@ -140,11 +161,11 @@ struct kUsbInPacket
 struct kUsbDevice
 {
 public:
-    wstring  ms_Product;   // from Device Descriptor
-    wstring  ms_SerialNo;  // from Device Descriptor
-    wstring  ms_Interface; // from Interface Descriptor
-    wstring  ms_DevPath;   // Operating System path to open the device
-    int      ms32_Channel; // one-based channel (always 1 for devices that have only one CAN channel)
+    string  ms_Product;   // from Device Descriptor
+    string  ms_SerialNo;  // from Device Descriptor
+    string  ms_Interface; // from Interface Descriptor
+    string  ms_DevPath;   // Operating System path to open the device
+    int     ms32_Channel; // one-based channel (always 1 for devices that have only one CAN channel)
 
     kUsbDevice()
     {
@@ -153,14 +174,14 @@ public:
 
     // returns "Candlelight 2.5 - OleksiiDual - CAN FD Interface 2"
     // returns "canable gs_usb" for a legacy device
-    wstring DisplayName()
+    string DisplayName()
     {
         // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
         // Windows returns the Product string instead --> both are identical
         if (ms_Product == ms_Interface)
             return ms_Product;
 
-        return ms_Product + L" - " + ms_Interface;
+        return ms_Product + " - " + ms_Interface;
     }
 
     // Sort by by Serial Number and then by Channel number
@@ -178,12 +199,12 @@ public:
 class cUtils
 {
 public:
-    static wstring  MakeUpper(wstring s_String);
-    static wstring  TrimRight(wstring s_String, wchar_t* s_Remove = L" \n\r\t");
-    static wstring  Format   (wchar_t* c_Format, ...);
-    static wstring  MapLookup(CStringMap& i_Map, wstring& s_Key);
-    static wstring  FormatHexBytes(uint8_t u8_Data[], int s32_DataLen);
-    static wstring  FormatBcdVersion(uint32_t u32_Version);
+    static string   MakeUpper(string s_String);
+    static string   TrimRight(string s_String, char* s_Remove = " \n\r\t");
+    static string   Format   (char* c_Format, ...);
+    static string   MapLookup(CStringMap& i_Map, string& s_Key);
+    static string   FormatHexBytes(uint8_t u8_Data[], int s32_DataLen);
+    static string   FormatBcdVersion(uint32_t u32_Version);
     static uint64_t GetTickMilli();
 };
 

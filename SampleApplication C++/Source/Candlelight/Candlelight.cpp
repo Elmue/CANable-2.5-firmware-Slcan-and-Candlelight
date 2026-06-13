@@ -74,7 +74,7 @@ void Candlelight::Close()
 
 // STEP 1)
 // Initialize WinUSB and get the Candlelight structures with board info, capabilities, etc from the firmware
-uint32_t Candlelight::Open(wstring s_DevicePath)
+uint32_t Candlelight::Open(string s_DevicePath)
 {
     if (mi_OsLibrary.IsOpen())
         return ERR_OPERATION_INVALID; // Already open
@@ -101,13 +101,13 @@ uint32_t Candlelight::Open(wstring s_DevicePath)
     mpk_Info      = mi_OsLibrary.DevInfo();
     mu8_Interface = mpk_Info->mk_InterfDescr.bInterfaceNumber;   
 
-    mi_Details.push_back(kDetail(L"USB Vendor",         cUtils::Format(L"\"%s\"", mpk_Info->mc_Vendor)));   
-    mi_Details.push_back(kDetail(L"USB Product",        cUtils::Format(L"\"%s\"", mpk_Info->mc_Product)));  
-    mi_Details.push_back(kDetail(L"USB Serial  Nº",     cUtils::Format(L"\"%s\"", mpk_Info->mc_Serial)));   
-    mi_Details.push_back(kDetail(L"USB Interface Name", cUtils::Format(L"\"%s\"", mpk_Info->mc_Interface)));
-    mi_Details.push_back(kDetail(L"USB Vendor  ID",     cUtils::Format(L"%04X",   mpk_Info->mk_DeviceDescr.idVendor)));
-    mi_Details.push_back(kDetail(L"USB Product ID",     cUtils::Format(L"%04X",   mpk_Info->mk_DeviceDescr.idProduct)));
-    mi_Details.push_back(kDetail(L"USB Device Version", cUtils::FormatBcdVersion (mpk_Info->mk_DeviceDescr.bcdDevice)));  
+    mi_Details.push_back(kDetail("USB Vendor",         cUtils::Format("\"%s\"", mpk_Info->ms_Vendor   .c_str())));   
+    mi_Details.push_back(kDetail("USB Product",        cUtils::Format("\"%s\"", mpk_Info->ms_Product  .c_str())));  
+    mi_Details.push_back(kDetail("USB Serial  Nº",     cUtils::Format("\"%s\"", mpk_Info->ms_Serial   .c_str())));   
+    mi_Details.push_back(kDetail("USB Interface Name", cUtils::Format("\"%s\"", mpk_Info->ms_Interface.c_str())));
+    mi_Details.push_back(kDetail("USB Vendor  ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idVendor)));
+    mi_Details.push_back(kDetail("USB Product ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idProduct)));
+    mi_Details.push_back(kDetail("USB Device Version", cUtils::FormatBcdVersion (mpk_Info->mk_DeviceDescr.bcdDevice)));  
 
     // -------------------------- DFU --------------------------------
 
@@ -137,9 +137,9 @@ uint32_t Candlelight::Open(wstring s_DevicePath)
 
     mpk_Info->mu8_Channel = mu8_Channel;
     
-    mi_Details.push_back(kDetail(L"USB Endpoint CTRL", cUtils::Format(  L"00,  max packet size: %u byte", mpk_Info->mk_DeviceDescr.bMaxPacketSize0)));
-    mi_Details.push_back(kDetail(L"USB Endpoint IN",   cUtils::Format(L"%02X,  max packet size: %u byte", mpk_Info->mu8_EndpointIN,  mpk_Info->mu16_MaxPackSizeIN)));
-    mi_Details.push_back(kDetail(L"USB Endpoint OUT",  cUtils::Format(L"%02X,  max packet size: %u byte", mpk_Info->mu8_EndpointOUT, mpk_Info->mu16_MaxPackSizeOUT)));  
+    mi_Details.push_back(kDetail("USB Endpoint CTRL", cUtils::Format(  "00,  max packet size: %u byte", mpk_Info->mk_DeviceDescr.bMaxPacketSize0)));
+    mi_Details.push_back(kDetail("USB Endpoint IN",   cUtils::Format("%02X,  max packet size: %u byte", mpk_Info->mu8_EndpointIN,  mpk_Info->mu16_MaxPackSizeIN)));
+    mi_Details.push_back(kDetail("USB Endpoint OUT",  cUtils::Format("%02X,  max packet size: %u byte", mpk_Info->mu8_EndpointOUT, mpk_Info->mu16_MaxPackSizeOUT)));  
 
     // --------------------------------------------------------------------
 
@@ -169,20 +169,20 @@ uint32_t Candlelight::Open(wstring s_DevicePath)
     if (u32_Error = CtrlTransfer(DIR_In, GS_ReqGetDeviceVersion, mu8_Channel, &mpk_Info->mk_DeviceVersion, sizeof(kDeviceVersion)))
         return u32_Error;
 
-    mi_Details.push_back(kDetail(L"Hardware Version", cUtils::FormatBcdVersion(mpk_Info->mk_DeviceVersion.hw_version_bcd)));  
-    mi_Details.push_back(kDetail(L"Firmware Version", cUtils::FormatBcdVersion(mpk_Info->mk_DeviceVersion.sw_version_bcd)));  
+    mi_Details.push_back(kDetail("Hardware Version", cUtils::FormatBcdVersion(mpk_Info->mk_DeviceVersion.hw_version_bcd)));  
+    mi_Details.push_back(kDetail("Firmware Version", cUtils::FormatBcdVersion(mpk_Info->mk_DeviceVersion.sw_version_bcd)));  
 
     if (mpk_Info->mb_IsElmueSoft) // not BCD encoded
-        mi_Details.push_back(kDetail(L"HAL Version", cUtils::Format(L"%u.%u.%u", mpk_Info->mk_DeviceVersion.hal_ver_high,
+        mi_Details.push_back(kDetail("HAL Version", cUtils::Format("%u.%u.%u", mpk_Info->mk_DeviceVersion.hal_ver_high,
                                                                                  mpk_Info->mk_DeviceVersion.hal_ver_mid,
                                                                                  mpk_Info->mk_DeviceVersion.hal_ver_low)));
 
-    mi_Details.push_back(kDetail(L"Firmware Type",   mpk_Info->mb_IsElmueSoft ? L"CANable 2.5" : L"Legacy"));        
-    mi_Details.push_back(kDetail(L"Supports CAN FD", mpk_Info->mb_SupportsFD  ? L"Yes"         : L"No"));            
+    mi_Details.push_back(kDetail("Firmware Type",   mpk_Info->mb_IsElmueSoft ? "CANable 2.5" : "Legacy"));        
+    mi_Details.push_back(kDetail("Supports CAN FD", mpk_Info->mb_SupportsFD  ? "Yes"         : "No"));            
 
     if (!mpk_Info->mb_IsElmueSoft)
     {
-        mi_Details.push_back(kDetail(L"CAN Clock", cUtils::Format(L"%u MHz", mpk_Info->mk_Capability.fclk_can / 1000000)));  
+        mi_Details.push_back(kDetail("CAN Clock", cUtils::Format("%u MHz", mpk_Info->mk_Capability.fclk_can / 1000000)));  
         return ERR_INVALID_FIRMWARE; // this class requires the new ElmüSoft firmware
     }
 
@@ -197,16 +197,16 @@ uint32_t Candlelight::Open(wstring s_DevicePath)
     if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetPinStatus, PINID_BOOT0, &u16_PinStatus, sizeof(u16_PinStatus)))
         return u32_Error;
 
-    mi_Details.push_back(kDetail(L"Target Board", OsLibrary::Utf8ToUnicode(mpk_Info->mk_BoardInfo.BoardName)));
-    mi_Details.push_back(kDetail(L"Processor",    cUtils::Format(L"%s, CAN Clock: %u MHz, MCU DeviceID: 0x%X",
-                                                                 OsLibrary::Utf8ToUnicode(mpk_Info->mk_BoardInfo.McuName).c_str(),
-                                                                 mpk_Info->mk_Capability.fclk_can / 1000000,
-                                                                 mpk_Info->mk_BoardInfo.McuDeviceID)));
+    mi_Details.push_back(kDetail("Target Board", mpk_Info->mk_BoardInfo.BoardName));
+    mi_Details.push_back(kDetail("Processor",    cUtils::Format("%s, CAN Clock: %u MHz, MCU DeviceID: 0x%X",
+                                                                mpk_Info->mk_BoardInfo.McuName,
+                                                                mpk_Info->mk_Capability.fclk_can / 1000000,
+                                                                mpk_Info->mk_BoardInfo.McuDeviceID)));
                                                                  
     bool b_UseQuartz = (mpk_Info->mk_BoardInfo.BoardFlags & BRD_Quartz_In_Use) > 0;                                                                 
-    mi_Details.push_back(kDetail(L"Quartz in use", b_UseQuartz ? L"Yes": L"No"));
-    mi_Details.push_back(kDetail(L"CAN Channel",   cUtils::Format(L"%d of %d", mu8_Channel + 1, mpk_Info->mk_DeviceVersion.icount + 1)));
-    mi_Details.push_back(kDetail(L"Pin BOOT0",     (u16_PinStatus & PINST_Enabled) ? L"Enabled" : L"Disabled"));
+    mi_Details.push_back(kDetail("Quartz in use", b_UseQuartz ? "Yes": "No"));
+    mi_Details.push_back(kDetail("CAN Channel",   cUtils::Format("%d of %d", mu8_Channel + 1, mpk_Info->mk_DeviceVersion.icount + 1)));
+    mi_Details.push_back(kDetail("Pin BOOT0",     (u16_PinStatus & PINST_Enabled) ? "Enabled" : "Disabled"));
 
     if (mpk_Info->mk_DeviceVersion.sw_version_bcd < MIN_FIRMWARE)
         return ERR_UPDATE_FIRMWARE;
@@ -235,7 +235,7 @@ void Candlelight::EnableTxEcho(bool b_Enable)
 // STEP 3)
 // Please read "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder Documentation
 // returns the formatted baudrate and samplepoint in s_Display
-uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, wstring* ps_Display)
+uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, string* ps_Display)
 {
     if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
         return ERR_OPERATION_INVALID;
@@ -266,14 +266,14 @@ uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_S
     int s32_Sample = 1000 * (1 + s32_Seg1)  / s32_TotTQ;
 
     // Do not display 83333 baud as "83k"
-    wchar_t* c_Unit = L"";
-         if (s32_Baud >= 1000000 && (s32_Baud % 1000000) == 0) { s32_Baud /= 1000000; c_Unit = L"M"; }
-    else if (s32_Baud >= 1000    && (s32_Baud % 1000)    == 0) { s32_Baud /= 1000;    c_Unit = L"k"; }
+    char* c_Unit = "";
+         if (s32_Baud >= 1000000 && (s32_Baud % 1000000) == 0) { s32_Baud /= 1000000; c_Unit = "M"; }
+    else if (s32_Baud >= 1000    && (s32_Baud % 1000)    == 0) { s32_Baud /= 1000;    c_Unit = "k"; }
 
     if (ps_Display)
     {
-        wchar_t* c_Type = b_FD ? L"Data   " : L"Nominal";
-        *ps_Display = cUtils::Format(L"%s Baudrate: %u%s, Samplepoint: %u.%u%%", c_Type, s32_Baud, c_Unit, s32_Sample / 10, s32_Sample % 10);
+        char* c_Type = b_FD ? "Data   " : "Nominal";
+        *ps_Display = cUtils::Format("%s Baudrate: %u%s, Samplepoint: %u.%u%%", c_Type, s32_Baud, c_Unit, s32_Sample / 10, s32_Sample % 10);
     }
 
     if (b_FD) mb_BaudFDSet = true;
@@ -600,11 +600,11 @@ kCanPacket Candlelight::GetTxEchoPacket(kTxEchoElmue* pk_TxEcho)
     return mk_EchoPackets[pk_TxEcho->marker];
 }
 
-// Convert UFT8 string to Unicode
-wstring Candlelight::ConvertStringFrame(kStringElmue* pk_String)
+// Get the content of a debug message from the adapter
+string Candlelight::ConvertStringFrame(kStringElmue* pk_String)
 {
     int s32_StrLen = pk_String->header.size - sizeof(kHeader);
-    return OsLibrary::Utf8ToUnicode(pk_String->ascii_msg, s32_StrLen);
+    return string(pk_String->ascii_msg, s32_StrLen);
 }
 
 // ==========================================================================================
@@ -762,10 +762,10 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
 // returns "HH:MM:SS.mmm.µµµ"
 // pk_Header may contain a timestamp if GS_DevFlagTimestamp is set --> mb_McuTimestamp = true
 // otherwise use s64_OsTimestamp which comes from GetOsTimestamp() at packet reception
-wstring Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
+string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
 {
     if (!mb_Started) // the variable mb_McuTimestamp is not yet valid
-        return L"Not Initialized ";
+        return "Not Initialized ";
 
     int64_t s64_Stamp = -1;
     if (mb_McuTimestamp)
@@ -802,7 +802,7 @@ wstring Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp
     }
 
     if (s64_Stamp < 0)
-        return L"No Timestamp    ";
+        return "No Timestamp    ";
 
     uint32_t u32_Micro = s64_Stamp % 1000;
     s64_Stamp /= 1000;
@@ -814,34 +814,34 @@ wstring Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp
     s64_Stamp /= 60;
     uint32_t u32_Hour  = s64_Stamp % 24;
 
-    return cUtils::Format(L"%02u:%02u:%02u.%03u.%03u", u32_Hour, u32_Min, u32_Sec, u32_Milli, u32_Micro);
+    return cUtils::Format("%02u:%02u:%02u.%03u.%03u", u32_Hour, u32_Min, u32_Sec, u32_Milli, u32_Micro);
 }
 
 
-wstring Candlelight::FormatCanPacket(kCanPacket* pk_Packet)
+string Candlelight::FormatCanPacket(kCanPacket* pk_Packet)
 {
-    wstring s_Frame;
-    if (pk_Packet->mb_29bit) s_Frame = cUtils::Format(L"%08X: ", pk_Packet->mu32_ID & CAN_MASK_29);
-    else                     s_Frame = cUtils::Format(L"%03X: ", pk_Packet->mu32_ID & CAN_MASK_11);
+    string s_Frame;
+    if (pk_Packet->mb_29bit) s_Frame = cUtils::Format("%08X: ", pk_Packet->mu32_ID & CAN_MASK_29);
+    else                     s_Frame = cUtils::Format("%03X: ", pk_Packet->mu32_ID & CAN_MASK_11);
 
     // For remote frames the DLC (0...8) may be transmitted in the first data byte.
     // The display of "7E8: RTR [5]" means that a remote request with DLC = 5 has been sent/received
     if (pk_Packet->mb_RTR)
     {
-        s_Frame += L"RTR ["; // Remote Transmission Request
-        if (pk_Packet->mu8_DataLen > 0) s_Frame += (wchar_t)(pk_Packet->mu8_Data[0] + '0');
-        else                            s_Frame += L"0";
-        s_Frame += L"]";
+        s_Frame += "RTR ["; // Remote Transmission Request
+        if (pk_Packet->mu8_DataLen > 0) s_Frame += (char)(pk_Packet->mu8_Data[0] + '0');
+        else                            s_Frame += "0";
+        s_Frame += "]";
     }
     else
     {
         s_Frame += cUtils::FormatHexBytes(pk_Packet->mu8_Data, pk_Packet->mu8_DataLen);
 
-        if (pk_Packet->mb_FDF || pk_Packet->mb_BRS || pk_Packet->mb_ESI) s_Frame += L"-";
+        if (pk_Packet->mb_FDF || pk_Packet->mb_BRS || pk_Packet->mb_ESI) s_Frame += "-";
 
-        if (pk_Packet->mb_FDF) s_Frame += L" FDF"; // Flexible Datarate Frame
-        if (pk_Packet->mb_BRS) s_Frame += L" BRS"; // Bitrate Switch
-        if (pk_Packet->mb_ESI) s_Frame += L" ESI"; // Error Indicator
+        if (pk_Packet->mb_FDF) s_Frame += " FDF"; // Flexible Datarate Frame
+        if (pk_Packet->mb_BRS) s_Frame += " BRS"; // Bitrate Switch
+        if (pk_Packet->mb_ESI) s_Frame += " ESI"; // Error Indicator
     }
     return s_Frame;
 }
@@ -850,7 +850,7 @@ wstring Candlelight::FormatCanPacket(kCanPacket* pk_Packet)
 // From the multiple flags that have been defined by previous programmers we check only those which the CANable 2.5 firmware sets.
 // pe_BusStatus returns the current bus status (active, warning, passive, off)
 // pe_Level return the error level (low, ledium, high)
-wstring Candlelight::FormatCanErrors(kErrorElmue* pk_Error, eErrorBusStatus* pe_BusStatus, eErrorLevel* pe_Level)
+string Candlelight::FormatCanErrors(kErrorElmue* pk_Error, eErrorBusStatus* pe_BusStatus, eErrorLevel* pe_Level)
 {
     eErrFlagsCanID e_ID    = (eErrFlagsCanID)pk_Error->err_id;
     eErrFlagsByte1 e_Byte1 = (eErrFlagsByte1)pk_Error->err_data[1];
@@ -863,99 +863,99 @@ wstring Candlelight::FormatCanErrors(kErrorElmue* pk_Error, eErrorBusStatus* pe_
     *pe_BusStatus = BUS_StatusActive;
     *pe_Level     = LEVEL_Low;
 
-    wstring s_Mesg;
+    string s_Mesg;
     if (e_ID & ERID_Bus_is_off) 
     {
         *pe_BusStatus = BUS_StatusOff;
         *pe_Level     = LEVEL_High;
-        s_Mesg += L"Bus Off, ";
+        s_Mesg += "Bus Off, ";
     }
     else if (e_Byte1 & (ER1_Rx_Passive_status_reached  | ER1_Tx_Passive_status_reached))
     {
         *pe_BusStatus = BUS_StatusPassive;
         *pe_Level     = LEVEL_High;
-        s_Mesg += L"Bus Passive, ";
+        s_Mesg += "Bus Passive, ";
     }
     else if (e_Byte1 & (ER1_Rx_Errors_at_warning_level | ER1_Tx_Errors_at_warning_level))
     {
         *pe_BusStatus = BUS_StatusWarning;
         *pe_Level     = LEVEL_Medium;
-        s_Mesg += L"Bus Warning, ";
+        s_Mesg += "Bus Warning, ";
     }
     else // Active
     {
-        if (e_Byte1 & ER1_Bus_is_back_active) s_Mesg += L"Back to Active, ";
-        else                                  s_Mesg += L"Bus Active, ";
+        if (e_Byte1 & ER1_Bus_is_back_active) s_Mesg += "Back to Active, ";
+        else                                  s_Mesg += "Bus Active, ";
     }
 
     // all errors generated by the firmware are bigger problems (Level High)
     if (e_App > 0) *pe_Level = LEVEL_High;
-    if (e_App & APP_CanRxFail)      s_Mesg += L"Rx Failed, ";
-    if (e_App & APP_CanTxFail)      s_Mesg += L"Tx Failed, ";
-    if (e_App & APP_CanTxTimeout)   s_Mesg += L"Tx Timeout, ";
-    if (e_App & APP_CanTxOverflow)  s_Mesg += L"CAN Tx Overflow, ";
-    if (e_App & APP_UsbInOverflow)  s_Mesg += L"USB IN Overflow, ";
+    if (e_App & APP_CanRxFail)      s_Mesg += "Rx Failed, ";
+    if (e_App & APP_CanTxFail)      s_Mesg += "Tx Failed, ";
+    if (e_App & APP_CanTxTimeout)   s_Mesg += "Tx Timeout, ";
+    if (e_App & APP_CanTxOverflow)  s_Mesg += "CAN Tx Overflow, ";
+    if (e_App & APP_UsbInOverflow)  s_Mesg += "USB IN Overflow, ";
 
     // Error cause
-    if (e_ID    & ERID_No_ACK_received)             s_Mesg += L"No ACK received, ";
-    if (e_ID    & ERID_CRC_Error)                   s_Mesg += L"CRC Error, ";
-    if (e_Byte2 & ER2_Bit_stuffing_error)           s_Mesg += L"Bit Stuffing Error, ";
-    if (e_Byte2 & ER2_Frame_format_error)           s_Mesg += L"Frame Format Error, ";    // e.g. CAN FD frame received in classic mode
-    if (e_Byte2 & ER2_Unable_to_send_dominant_bit)  s_Mesg += L"Dominant Bit Error, ";
-    if (e_Byte2 & ER2_Unable_to_send_recessive_bit) s_Mesg += L"Recessive Bit Error, ";
+    if (e_ID    & ERID_No_ACK_received)             s_Mesg += "No ACK received, ";
+    if (e_ID    & ERID_CRC_Error)                   s_Mesg += "CRC Error, ";
+    if (e_Byte2 & ER2_Bit_stuffing_error)           s_Mesg += "Bit Stuffing Error, ";
+    if (e_Byte2 & ER2_Frame_format_error)           s_Mesg += "Frame Format Error, ";    // e.g. CAN FD frame received in classic mode
+    if (e_Byte2 & ER2_Unable_to_send_dominant_bit)  s_Mesg += "Dominant Bit Error, ";
+    if (e_Byte2 & ER2_Unable_to_send_recessive_bit) s_Mesg += "Recessive Bit Error, ";
 
-    wchar_t c_Buf[50];
+    char c_Buf[50];
     if (pk_Error->err_data[6] > 0) 
     {
-        swprintf_s(c_Buf, L"Tx Errors: %u, ", pk_Error->err_data[6]);
+        sprintf_s(c_Buf, "Tx Errors: %u, ", pk_Error->err_data[6]);
         s_Mesg += c_Buf;
     }
     if (pk_Error->err_data[7] > 0) 
     {
-        swprintf_s(c_Buf, L"Rx Errors: %u, ", pk_Error->err_data[7]);
+        sprintf_s(c_Buf, "Rx Errors: %u, ", pk_Error->err_data[7]);
         s_Mesg += c_Buf;
     }
-    return cUtils::TrimRight(s_Mesg, L", ");
+    return cUtils::TrimRight(s_Mesg, ", ");
 }
 
-wstring Candlelight::FormatLastError(uint32_t u32_Error)
+string Candlelight::FormatLastError(uint32_t u32_Error)
 {
     assert(u32_Error != NO_ERROR); // calling this function without an error code make no sense
 
     switch (u32_Error)
     {
-        case ERR_DEVICE_IN_USE:     return L"Access denied. Probably the device is already open elsewhere.";
-        case ERR_INVALID_DEVICE:    return L"The device is not a Candlelight adapter.";
-        case ERR_INVALID_FIRMWARE:  return L"This demo supports only devices that have the CANable 2.5 firmware from ElmüSoft.";
-        case ERR_RX_FIFO_OVERFLOW:  return L"USB Rx FIFO overflow. Polling is too slow."; // in the demo app the reason is the slow Windows console.
-        case ERR_CORRUPT_IN_DATA:   return L"Corrupt USB IN data received.";
-        case ERR_UPDATE_FIRMWARE:   return L"Please upload the latest firmware to the device.";
-        case ERR_TOO_MANY_ERRORS:   return L"Too many errors. The CANable has a problem or was disconnected.";
-        case ERR_TX_DATA_TOO_LONG:  return L"The Tx data is too long.";
-        case ERR_OPERATION_INVALID: return L"Invalid operation.";
-        case ERR_PARAM_INVALID:     return L"Invalid parameter.";
-        case ERR_INVALID_RX_DATA:   return L"Invalid Rx data was received from the device";
-        case ERR_TIMEOUT:           return L"Timeout waiting for data";
-        case ERR_NO_DRIVER:         return L"The driver is not installed correctly";
+        case ERR_DEVICE_IN_USE:     return "Access denied. Probably the device is already open elsewhere.";
+        case ERR_INVALID_DEVICE:    return "The device is not a Candlelight adapter.";
+        case ERR_INVALID_FIRMWARE:  return "This demo supports only devices that have the CANable 2.5 firmware from ElmüSoft.";
+        case ERR_RX_FIFO_OVERFLOW:  return "USB Rx FIFO overflow. Polling is too slow."; // in the demo app the reason is the slow Windows console.
+        case ERR_CORRUPT_IN_DATA:   return "Corrupt USB IN data received.";
+        case ERR_UPDATE_FIRMWARE:   return "Please upload the latest firmware to the device.";
+        case ERR_TOO_MANY_ERRORS:   return "Too many errors. The CANable has a problem or was disconnected.";
+        case ERR_TX_DATA_TOO_LONG:  return "The Tx data is too long.";
+        case ERR_OPERATION_INVALID: return "Invalid operation.";
+        case ERR_PARAM_INVALID:     return "Invalid parameter.";
+        case ERR_INVALID_RX_DATA:   return "Invalid Rx data was received from the device";
+        case ERR_TIMEOUT:           return "Timeout waiting for data";
+        case ERR_NO_DRIVER:         return "The driver is not installed correctly";
 
         case ERR_CODE_IN_FEEDBACK:
         {
             switch (me_LastError)
             {
-                case FBK_InvalidCommand:      return L"The command is invalid.";
-                case FBK_InvalidParameter:    return L"One of the parameters is invalid.";
-                case FBK_AdapterMustBeOpen:   return L"This command cannot be executed before opening the adapter.";
-                case FBK_AdapterMustBeClosed: return L"This command cannot be executed after  opening the adapter.";
-                case FBK_ErrorFromHAL:        return L"The HAL from ST Microelectronics has reported an error.";
-                case FBK_UnsupportedFeature:  return L"The feature is not implemented or not supported by the board.";
-                case FBK_TxBufferFull:        return L"Sending is not possible because the Tx buffer is full.";
-                case FBK_BusIsOff:            return L"Sending is not possible because the processor is blocked in BusOff state.";
-                case FBK_NoTxInSilentMode:    return L"Sending is not possible because the adapter is in bus monitoring mode.";
-                case FBK_BaudrateNotSet:      return L"The baudrate has not been set.";
-                case FBK_OptBytesProgrFailed: return L"Programming the Option Bytes failed.";
-                case FBK_ResetRequired:       return L"Please reconnect the USB cable.";
-                case FBK_ParamOutOfRange:     return L"A paramter is outside the valid range.";
-                default:       return cUtils::Format(L"Unknown feedback code %d received from the device.", me_LastError);
+                case FBK_InvalidCommand:      return "The command is invalid.";
+                case FBK_InvalidParameter:    return "One of the parameters is invalid.";
+                case FBK_AdapterMustBeOpen:   return "This command cannot be executed before opening the adapter.";
+                case FBK_AdapterMustBeClosed: return "This command cannot be executed after  opening the adapter.";
+                case FBK_ErrorFromHAL:        return "The HAL from ST Microelectronics has reported an error.";
+                case FBK_UnsupportedFeature:  return "The feature is not implemented or not supported by the board.";
+                case FBK_TxBufferFull:        return "Sending is not possible because the Tx buffer is full.";
+                case FBK_BusIsOff:            return "Sending is not possible because the processor is blocked in BusOff state.";
+                case FBK_NoTxInSilentMode:    return "Sending is not possible because the adapter is in bus monitoring mode.";
+                case FBK_BaudrateNotSet:      return "The baudrate has not been set.";
+                case FBK_OptBytesProgrFailed: return "Programming the Option Bytes failed.";
+                case FBK_ResetRequired:       return "Please reconnect the USB cable.";
+                case FBK_ParamOutOfRange:     return "A paramter is outside the valid range.";
+                default:       return cUtils::Format("Unknown feedback code %d received from the device.", me_LastError);
             }
         }
     }

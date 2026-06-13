@@ -46,16 +46,16 @@ class OsLibrary
 {
 public:
     static uint32_t EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devices);
-    static wstring  GetErrorMessage(uint32_t u32_Error);
-    static wstring  Utf8ToUnicode(const char* s8_UTF8, int s32_StrLen = -1);
-    static void     SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, wstring s_Title);
-    static void     PrintConsole(uint16_t u16_Color, wstring s_Format, ...);
+    static string   GetErrorMessage(uint32_t u32_Error);
+    static string   ToUtf8(wchar_t* s_Unicode, int s32_StrLen = -1);
+    static void     SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, string s_Title);
+    static void     PrintConsole(uint16_t u16_Color, string s_Format, ...);
     static bool     CheckConsoleEnterPressed();
     static int      WaitConsoleChar();
 
      OsLibrary();
     ~OsLibrary();
-    uint32_t    Open(wstring s_DevicePath);
+    uint32_t    Open(string s_DevicePath);
     uint32_t    StartPipes();
     void        Close();
     uint32_t    ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t u32_BufLen, uint32_t* pu32_Transferred);
@@ -69,11 +69,11 @@ public:
 
 private:
     static uint32_t        EnumSerialNumbers(CStringMap& i_Serials);
-    static uint32_t        RegReadString(HKEY h_Class, const wchar_t* u16_Path, const wchar_t* u16_Entry, wstring* ps_Value);
+    static uint32_t        RegReadString(HKEY h_Class, const char* s8_Path, const char* s8_Entry, string* ps_Value);
     static uint32_t WINAPI PipeThreadStatic(void* p_This);
 
     void      PipeThreadMember();
-    uint32_t  ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_LanguageID, wchar_t s_String[128]);
+    uint32_t  ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_LanguageID, string* ps_String);
 
     HANDLE                   mh_Device;
     WINUSB_INTERFACE_HANDLE  mh_WinUsb;

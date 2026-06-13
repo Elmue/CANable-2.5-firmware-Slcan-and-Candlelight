@@ -38,20 +38,20 @@ struct kCanPacket
 
 struct kDetail
 {
-    wstring ms_Name;
-    wstring ms_Value;
+    string ms_Name;
+    string ms_Value;
 
-    kDetail(wstring s_Name, wstring s_Value)
+    kDetail(string s_Name, string s_Value)
     {
         ms_Name  = s_Name;
         ms_Value = s_Value;
     }
 
     // returns "USB Product:            Candlelight 2.5 - Multiboard"
-    wstring Format(int s32_ColumnWidth)
+    string Format(int s32_ColumnWidth)
     {
-        wstring s_Out = ms_Name;
-        s_Out += L":";
+        string s_Out = ms_Name;
+        s_Out += ":";
         s_Out.append(max(1, s32_ColumnWidth - s_Out.length()), ' ');
         s_Out += ms_Value;
         return s_Out;
@@ -64,10 +64,10 @@ public:
      Candlelight();
     ~Candlelight();
     // ------------------------------------
-    uint32_t   Open(wstring s_DevicePath);
+    uint32_t   Open(string s_DevicePath);
     void       Close();
     void       EnableTxEcho(bool b_Enable);
-    uint32_t   SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, wstring* ps_Display);
+    uint32_t   SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, string* ps_Display);
     uint32_t   AddHostFilter(bool b_29bit, uint32_t u32_Filter, uint32_t u32_Mask);
     uint32_t   SetBridgeFilter(uint8_t u8_FilterIndex, uint8_t u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, uint32_t u32_Filter, uint32_t u32_Mask);
     uint32_t   Start(eDeviceFlags e_Flags);
@@ -77,12 +77,12 @@ public:
     uint32_t   ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, int64_t* ps64_RxTimestamp, bool* pb_Blob = NULL);
     kCanPacket RxFrameToCanPacket(kRxFrameElmue* pk_RxFrame);
     kCanPacket GetTxEchoPacket   (kTxEchoElmue*  pk_TxEcho);
-    wstring    ConvertStringFrame(kStringElmue*  pk_String);
+    string    ConvertStringFrame(kStringElmue*  pk_String);
     // ------------------------------------
-    wstring    FormatCanPacket(kCanPacket* pk_Packet);
-    wstring    FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp);
-    wstring    FormatCanErrors(kErrorElmue*   pk_Error, eErrorBusStatus* pe_BusStatus, eErrorLevel* pe_Level);
-    wstring    FormatLastError(uint32_t u32_Error);
+    string    FormatCanPacket(kCanPacket* pk_Packet);
+    string    FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp);
+    string    FormatCanErrors(kErrorElmue*   pk_Error, eErrorBusStatus* pe_BusStatus, eErrorLevel* pe_Level);
+    string    FormatLastError(uint32_t u32_Error);
     // ------------------------------------
     uint32_t   Identify(bool b_Blink);
     uint32_t   EnableBusLoadReport(uint8_t u8_Interval);
