@@ -9,10 +9,10 @@
     <meta http-equiv="MSThemeCompatible" content="Yes">
     <meta http-equiv="Language" content="en">
     <meta name="Author" content="ElmüSoft">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="index, follow">
     <style>
-    body          { font-family:Verdana; font-size:13px; background-color:#F9F8F1; }
+    body          { font-family:Verdana; font-size:13px; background-color:#F9F8F1; position:relative; max-width:100%; overflow-x:hidden; }
     h1            { font-size:25px; font-weight:bold; background-color:#007799; color:white; padding:8px 8px 8px 16px; margin-top:35px; border:solid 2px #77CCDD; border-radius: 10px; }
     h2            { font-size:20px; font-weight:bold; background-color:#007799; color:white; padding:5px 3px 5px 8px; margin-top:10px; border:solid 1px #77CCDD; border-radius: 10px; width:75%; }
     h3            { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:22px; margin-bottom:5px; }
@@ -23,12 +23,14 @@
     code          { color:brown; font-size:14px; }
     img           { max-width: 100%; height: auto;}
     a:hover       { color: #AA00FF; }
-    pre           { border:1px solid #AAAAAA; padding:2px; font-family:Courier New; font-size:13px; background-color:#FFFFDD; width:690px; }
-    .Pre          { border:1px solid #AAAAAA; padding:2px; font-family:Courier New; font-size:13px; background-color:white; }
+    pre           { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:#FFFFDD; width:690px; }
+    .Pre          { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:white; }
+    .WhiteSpace   { white-space:pre; nowrap; }
     .Link:hover   { color: #AA00FF; }
     .Link, a      { color: blue; cursor:pointer; font-family:Verdana; font-size:12px; font-weight:bold; text-decoration:none; }
-    .DivFullSize  { position:absolute; visibility:hidden; background-color:#DDDDDD; padding:0px 10px 10px 10px; border:1px solid black; box-shadow: 5px 5px 5px #777; }
+    .DivFullSize  { position:absolute; max-width:100%; display:none; background-color:#DDDDDD; padding:0px 10px 10px 10px; border:1px solid black; box-shadow:5px 5px 5px #777; overflow-x:auto; -webkit-overflow-scrolling:touch; }
     .Warning      { border:2px solid red; padding:5px; font-weight:bold; }
+    .WarningTable { border:2px solid red; padding:5px; font-weight:bold; border-radius:10px; }
     .Error        { color:red; font-weight:bold; }
     .TblImage     { border:1px solid #CCCCCC; border-spacing: 0px; margin-top:15px; margin-bottom:15px; }
     .TblImage td  { padding:0px; }
@@ -66,12 +68,20 @@
     .DataTable h3 { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:8px; margin-bottom:0px; }
 
     .PopupMenu { position:fixed; top:0px; right:0px; border:2px solid #77CCDD; z-index: 999; padding:5px; background-color:#007799; color:white; font-weight:bold; font-family:Arial,Helvetica,Sans-serif; font-size:13px; cursor:default; }
-    .Menu     { color:white; text-decoration:none; font-family:Verdana; }
+    .Menu      { color:white; text-decoration:none; font-family:Verdana; line-height:1.1; }
     .MenuLink { color:white; text-decoration:none; font-family:Verdana; }
     .MenuLink:hover { color:#CCCCFF; }
 
-    .TimeBk { padding-left:3px; padding-right:3px; margin-right:5px; font-family:Courier New; font-size:13px; background-color:#EEEEEE; }
-    .TimeWt { padding-left:3px; padding-right:3px; margin-right:5px; font-family:Courier New; font-size:13px; }
+    .TableContainer { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+
+    .ContentTable { width:100%; }
+    @media (min-width:1000px)
+    {
+        .ContentTable { width:60%; }
+    }
+
+    .TimeBk { padding-left:3px; padding-right:3px; margin-right:5px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:#EEEEEE; }
+    .TimeWt { padding-left:3px; padding-right:3px; margin-right:5px; font-family:"Courier New", Courier, monospace; font-size:13px; }
     .Grey { color:#888888; }
     .Info { color: #000000; }
     .InfoBold { color: #000000; font-weight:bold; font-size:14px; }
@@ -79,19 +89,19 @@
     .Warn { color: #FF8C00; font-weight:bold; }
     .Success { color: #00AA00; font-weight:bold; }
     .Command { color: #000000; }
-    .TxData { color: #0000FF; font-family:Courier New; font-size:14px; }
-    .RxData { color: #008000; font-family:Courier New; font-size:14px; }
-    .RxDataInvalid { color: #FF0000; font-family:Courier New; font-size:14px; }
-    .TxSecnd { color: #A52A2A; font-family:Courier New; font-size:14px; }
-    .RxSecnd { color: #808000; font-family:Courier New; font-size:14px; }
+    .TxData { color: #0000FF; font-family:"Courier New", Courier, monospace; font-size:14px; }
+    .RxData { color: #008000; font-family:"Courier New", Courier, monospace; font-size:14px; }
+    .RxDataInvalid { color: #FF0000; font-family:"Courier New", Courier, monospace; font-size:14px; }
+    .TxSecnd { color: #A52A2A; font-family:"Courier New", Courier, monospace; font-size:14px; }
+    .RxSecnd { color: #808000; font-family:"Courier New", Courier, monospace; font-size:14px; }
     .Detail { color: #BB00DD; }
     .Timing { color: #FF8C00; }
     .TimingDataRx { color: #A52A2A; }
     .TimingDataTx { color: #808000; }
-    .Debug { color: #808080; font-family:Courier New; font-size:14px; }
-    .DebugDark { color: #444444; font-family:Courier New; font-size:14px; }
+    .Debug { color: #808080; font-family:"Courier New", Courier, monospace; font-size:14px; }
+    .DebugDark { color: #444444; font-family:"Courier New", Courier, monospace; font-size:14px; }
     .Comment { color: #8B4513; font-weight:bold; text-decoration:underline; }
-    .Macro { color: #4B0082; font-family:Courier New; font-size:14px; }
+    .Macro { color: #4B0082; font-family:"Courier New", Courier, monospace; font-size:14px; }
 
     .DataNarrow    { background-color:#AAAAAA; margin-top:10px; margin-bottom:10px; }
     .DataNarrow th { background-color:#777777; color:#FFFFFF; padding:1px 5px 1px 5px; font-weight:bold; }
@@ -118,14 +128,15 @@
         var Img = document.getElementById("ImgFullSize");
         var Scr = document.getElementById("DivScrollable");
 
-        Scr.style.overflow = "auto";
-        Scr.scrollLeft = 0;
-        Scr.scrollTop  = 0;
-
         var Top = Math.max(document.body.scrollTop, document.documentElement.scrollTop) + 15;
         Div.style.top  = Top + "px";
         Div.style.left = "20px";
-        Div.style.visibility = "visible";
+        Div.style.display = "block";
+
+        // AFTER Div
+        Scr.style.overflow = "auto";
+        Scr.scrollLeft = 0;
+        Scr.scrollTop  = 0;
 
         Link.innerHTML = "Hide Full Size";
         LastLink = Link;
@@ -151,29 +162,31 @@
             if (VScroll) Scr.style.height = MaxHeight + "px";
             else         Scr.style.height = ImgHeight + "px";
         }
+
         Img.src = ImgFile;
     }
     function HideFullSize()
     {
         if (LastLink != null)
         {
-            LastDiv.style.visibility = "hidden";
+            LastDiv.style.display = "none";
             LastLink.innerHTML = "Show Full Size";
             LastDiv  = null;
             LastLink = null;
         }
         ShowMenu(false);
     }
+
     function ShowMenu(bShow)
     {
         MenuHead = document.getElementById("MenuHead");
         MenuCont = document.getElementById("MenuContent");
-        if (MenuHead != null && MenuCont != null)
-        {
+        if (MenuHead == null || MenuCont == null)
+            return;
             MenuHead.style.display = bShow ? "none"  : "block";
             MenuCont.style.display = bShow ? "block" : "none";
         }
-    }
+
     try
     {
         window.addEventListener('scroll', function(e)
@@ -183,6 +196,7 @@
             {
                 if (LastUrl == window.location.href)
                     HideFullSize(); // also hide menu
+
                 LastTop = Top;
                 LastUrl = window.location.href;
             }
@@ -202,7 +216,7 @@
 
 <div id="MenuTop" class="PopupMenu" >
     <div id="MenuHead" style="display:none;" onMouseover="ShowMenu(true)">Menu</div>
-    <div id="MenuContent">
+    <div id="MenuContent" class="Menu">
         <div><a href="#User_Manual"                   class="MenuLink" onClick="ShowMenu(false)">1.) User Manual</a></div>
         <div>— &nbsp; <a href="#Adapters"             class="MenuLink" onClick="ShowMenu(false)">CANable Adapters</a></div>
         <div>— &nbsp; <a href="#Hardware"             class="MenuLink" onClick="ShowMenu(false)">Hardware Misdesign</a></div>
@@ -501,16 +515,20 @@
 <div>The following table compares the efficiency of different firmware versions receiving a CAN FD packet.</div>
 <div>The payload in this example consists of a 29 bit CAN ID + 16 data bytes + flags = 21 byte.</div>
 <p>
-<table class="Pre" style="white-space: nowrap;">
-<tr><td class="Green">19F50C02: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F (FDF, BRS)</td></tr>
-</table>
-<table class="DataTable">
-<tr><th>Firmware</th><th>Payload</th><th>Transferred over USB</th><th>Efficiency</th></tr>
-<tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
-<tr><td>ElmüSoft Slcan 2.5</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
-<tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td align="right"><span style="color:#FF0000"><b>0 %</b></span></td></tr>
-<tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td>21 / 23 = <span style="color:#00AA00"><b>91 %</b></span></td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace">
+    <tr><td class="Green">19F50C02: 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F (FDF, BRS)</td></tr>
+    </table>
+</div>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>Firmware</th><th>Payload</th><th>Transferred over USB</th><th>Efficiency</th></tr>
+    <tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
+    <tr><td>ElmüSoft Slcan 2.5</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
+    <tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td align="right"><span style="color:#FF0000"><b>0 %</b></span></td></tr>
+    <tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td>21 / 23 = <span style="color:#00AA00"><b>91 %</b></span></td></tr>
+    </table>
+</div>
 <div>Additionally the Candlelight 2.5 protocol supports packing multiple frames into one USB packet.</div>
 <table class="TblImage">
     <tr><td align="center"><b>USB Full Speed Transfer</b></td></tr>
@@ -549,31 +567,31 @@
 <p>
 <div><b>1.)</b></div>
 <div>Here you see the correct response of the CANable 2.5 firmware:</div>
-<table class="Pre" style="white-space: nowrap;">
-<tr><td>
-<div>String ID: 0xEE, Signature: "MSFT100", VendorCode: 0x20</div>
-<div>Interface: 0, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
-<div>Interface: 1, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
-<div>Interface: 0, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c15b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</div>
-<div>Interface: 1, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c25b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</div>
-</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
+    <tr><td>String ID: 0xEE, Signature: "MSFT100", VendorCode: 0x20</td></tr>
+    <tr><td>Interface: 0, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</td></tr>
+    <tr><td>Interface: 1, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</td></tr>
+    <tr><td>Interface: 0, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c15b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</td></tr>
+    <tr><td>Interface: 1, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c25b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</td></tr>
+    </table>
+</div>
 <div><b>Interface 0</b> is the Candlelight interface and <b>Interface 1</b> is the DFU Firmware Update interface.</div>
 <div>Both interfaces need a unique identifier (GUID) so Windows can install a driver for each interface.</div>
 
 <p>
 <div><b>2.)</b></div>
 <div>This is the response of a legacy Candlelight 1.0 firmware that does not have a version number:</div>
-<table class="Pre" style="white-space: nowrap;">
-<tr><td>
-<div>String ID: 0xEE, Signature: "MSFT100", VendorCode: 0x20</div>
-<div>Interface: 0, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
-<div>Interface: 1, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</div>
-<div>Interface: 0, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c15b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</div>
-<div class="Red">Interface: 1, Error requesting MS OS Extended Properties descriptor.</div>
-<div class="Red">The device has a buggy firmware. The driver for the firmware update (DFU) interface cannot be installed automatically.</div>
-</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
+    <tr><td>String ID: 0xEE, Signature: "MSFT100", VendorCode: 0x20</td></tr>
+    <tr><td>Interface: 0, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</td></tr>
+    <tr><td>Interface: 1, Version: 1.00, MS Compatible ID: "USB\MS_COMP_WINUSB"</td></tr>
+    <tr><td>Interface: 0, Property: "DeviceInterfaceGUIDs", Type: MultiString, Data: "{c15b4308-04d3-11e6-b3ea-6057189e6443}\0\0"</td></tr>
+    <tr><td class="Red">Interface: 1, Error requesting MS OS Extended Properties descriptor.</td></tr>
+    <tr><td class="Red">The device has a buggy firmware. The driver for the firmware update (DFU) interface cannot be installed automatically.</td></tr>
+    </table>
+</div>
 
 <p>
 <div><b>3.)</b></div>
@@ -626,91 +644,93 @@
 <a name="FirmwareVersions"></a>
 <div>After installing HUD ECU Hacker you can chose between the following CANable 2.5 firmware versions:</div>
 
-<table class="DataTable">
-<tr><th>File Name</th><th>Adapters</th><th>Quartz</th><th>Clock</th><th>Channels</th><th>LED Pins</th><th>USB Speed</th><th>BOOT0</th></tr>
-<tr>
-    <td>STM32G<span class="Green">431</span>-Slcan2.5-Multiboard.dfu</td>
-    <td rowspan="2">MKS Makerbase<br>DSD Tech, Walfront</td>
-    <td rowspan="2">None</td>
-    <td rowspan="2">160 MHz</td>
-    <td rowspan="2">Single</td>
-    <td rowspan="2">A0,A15</td>
-    <td rowspan="2">Full Speed<br>12 MBit</td>
-    <td rowspan="2">Bad</td>
-</tr>
-<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-Multiboard.dfu</td></tr>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>File Name</th><th>Adapters</th><th>Quartz</th><th>Clock</th><th>Channels</th><th>LED Pins</th><th>USB Speed</th><th>BOOT0</th></tr>
+    <tr>
+        <td>STM32G<span class="Green">431</span>-Slcan2.5-Multiboard.dfu</td>
+        <td rowspan="2">MKS Makerbase<br>DSD Tech, Walfront</td>
+        <td rowspan="2">None</td>
+        <td rowspan="2">160 MHz</td>
+        <td rowspan="2">Single</td>
+        <td rowspan="2">A0,A15</td>
+        <td rowspan="2">Full Speed<br>12 MBit</td>
+        <td rowspan="2">Bad</td>
+    </tr>
+    <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-Multiboard.dfu</td></tr>
 
-<tr>
-    <td>STM32G<span class="Green">431</span>-Slcan2.5-OpenlightLabs.dfu</td>
-    <td rowspan="2">Openlight Labs</td>
-    <td rowspan="2">None</td>
-    <td rowspan="2">160 MHz</td>
-    <td rowspan="2">Single</td>
-    <td rowspan="2">B11,A15</td>
-    <td rowspan="2">Full Speed<br>12 MBit</td>
-    <td rowspan="2">Bad</td>
-</tr>
-<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OpenlightLabs.dfu</td></tr>
+    <tr>
+        <td>STM32G<span class="Green">431</span>-Slcan2.5-OpenlightLabs.dfu</td>
+        <td rowspan="2">Openlight Labs</td>
+        <td rowspan="2">None</td>
+        <td rowspan="2">160 MHz</td>
+        <td rowspan="2">Single</td>
+        <td rowspan="2">B11,A15</td>
+        <td rowspan="2">Full Speed<br>12 MBit</td>
+        <td rowspan="2">Bad</td>
+    </tr>
+    <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OpenlightLabs.dfu</td></tr>
 
-<tr><td>STM32G<span class="Green">431</span>-Slcan2.5-Jhoinrch.dfu</td>
-    <td rowspan="2">Jhoinrch RH02 Plus<br>Jhoinrch RH02 Elite</td>
-    <td rowspan="2">25 MHz<br>since 2026</td>
-    <td rowspan="2">160 MHz</td>
-    <td rowspan="2">Single</td>
-    <td rowspan="2">A0,A15</td>
-    <td rowspan="2">Full Speed<br>12 MBit</td>
-    <td rowspan="2">OK</td>
-</tr>
-<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-Jhoinrch.dfu</td></tr>
+    <tr><td>STM32G<span class="Green">431</span>-Slcan2.5-Jhoinrch.dfu</td>
+        <td rowspan="2">Jhoinrch RH02 Plus<br>Jhoinrch RH02 Elite</td>
+        <td rowspan="2">25 MHz<br>since 2026</td>
+        <td rowspan="2">160 MHz</td>
+        <td rowspan="2">Single</td>
+        <td rowspan="2">A0,A15</td>
+        <td rowspan="2">Full Speed<br>12 MBit</td>
+        <td rowspan="2">OK</td>
+    </tr>
+    <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-Jhoinrch.dfu</td></tr>
 
-<tr>
-    <td>STM32G<span class="Green">431</span>-Slcan2.5-OleksiiSolo.dfu</td>
-    <td rowspan="2">Oleksii Solo</td>
-    <td rowspan="2">8 MHz</td>
-    <td rowspan="2">160 MHz</td>
-    <td rowspan="2">Single</td>
-    <td rowspan="2">A5,A6</td>
-    <td rowspan="2">Full Speed<br>12 MBit</td>
-    <td rowspan="2">Worst</td>
-</tr>
-<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OleksiiSolo.dfu</td></tr>
+    <tr>
+        <td>STM32G<span class="Green">431</span>-Slcan2.5-OleksiiSolo.dfu</td>
+        <td rowspan="2">Oleksii Solo</td>
+        <td rowspan="2">8 MHz</td>
+        <td rowspan="2">160 MHz</td>
+        <td rowspan="2">Single</td>
+        <td rowspan="2">A5,A6</td>
+        <td rowspan="2">Full Speed<br>12 MBit</td>
+        <td rowspan="2">Worst</td>
+    </tr>
+    <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OleksiiSolo.dfu</td></tr>
 
-<tr>
-    <td>STM32G<span class="Green">431</span>-Slcan2.5-WeActSudioV2.dfu</td>
-    <td rowspan="2">WeActSudio<br>USB2CANFD v2</td>
-    <td rowspan="2">16 MHz</td>
-    <td rowspan="2">160 MHz</td>
-    <td rowspan="2">Single</td>
-    <td rowspan="2">A1,A0</td>
-    <td rowspan="2">Full Speed<br>12 MBit</td>
-    <td rowspan="2">OK</td>
-</tr>
-<tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-WeActSudioV2.dfu</td></tr>
+    <tr>
+        <td>STM32G<span class="Green">431</span>-Slcan2.5-WeActSudioV2.dfu</td>
+        <td rowspan="2">WeActSudio<br>USB2CANFD v2</td>
+        <td rowspan="2">16 MHz</td>
+        <td rowspan="2">160 MHz</td>
+        <td rowspan="2">Single</td>
+        <td rowspan="2">A1,A0</td>
+        <td rowspan="2">Full Speed<br>12 MBit</td>
+        <td rowspan="2">OK</td>
+    </tr>
+    <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-WeActSudioV2.dfu</td></tr>
 
-<tr>
-    <td>STM32G<span class="Red">0B1</span>-Slcan2.5-WeActSudioV1.dfu</td>
-    <td rowspan="2">WeActSudio<br>USB2CANFD v1</td>
-    <td rowspan="2">16 MHz</td>
-    <td rowspan="2" align="right">60 MHz</td>
-    <td rowspan="2">Single</td>
-    <td rowspan="2">A1,A0</td>
-    <td rowspan="2">Full Speed<br>12 MBit</td>
-    <td rowspan="2">OK</td>
-</tr>
-<tr><td>STM32G<span class="Red">0B1</span>-Candlelight2.5-WeActSudioV1.dfu</td></tr>
+    <tr>
+        <td>STM32G<span class="Red">0B1</span>-Slcan2.5-WeActSudioV1.dfu</td>
+        <td rowspan="2">WeActSudio<br>USB2CANFD v1</td>
+        <td rowspan="2">16 MHz</td>
+        <td rowspan="2" align="right">60 MHz</td>
+        <td rowspan="2">Single</td>
+        <td rowspan="2">A1,A0</td>
+        <td rowspan="2">Full Speed<br>12 MBit</td>
+        <td rowspan="2">OK</td>
+    </tr>
+    <tr><td>STM32G<span class="Red">0B1</span>-Candlelight2.5-WeActSudioV1.dfu</td></tr>
 
-<tr>
-    <td>STM32G<span class="Blue">473</span>-Slcan2.5-OleksiiDual.dfu</td>
-    <td rowspan="2">Oleksii Dual</td>
-    <td rowspan="2">8 MHz</td>
-    <td rowspan="2">160 MHz</td>
-    <td rowspan="2">Dual</td>
-    <td rowspan="2">A5,A6<br>A3,A4</td>
-    <td rowspan="2">Full Speed<br>12 MBit</td>
-    <td rowspan="2">Worst</td>
-</tr>
-<tr><td>STM32G<span class="Blue">473</span>-Candlelight2.5-OleksiiDual.dfu</td></tr>
-</table>
+    <tr>
+        <td>STM32G<span class="Blue">473</span>-Slcan2.5-OleksiiDual.dfu</td>
+        <td rowspan="2">Oleksii Dual</td>
+        <td rowspan="2">8 MHz</td>
+        <td rowspan="2">160 MHz</td>
+        <td rowspan="2">Dual</td>
+        <td rowspan="2">A5,A6<br>A3,A4</td>
+        <td rowspan="2">Full Speed<br>12 MBit</td>
+        <td rowspan="2">Worst</td>
+    </tr>
+    <tr><td>STM32G<span class="Blue">473</span>-Candlelight2.5-OleksiiDual.dfu</td></tr>
+    </table>
+</div>
 
 <div><b>BOOT0 = OK</b> means that the hardware design does not require to disable pin BOOT0.</div>
 <div><b>BOOT0 = Bad</b> means that pin BOOT0 must be disabled to avoid that the board goes into boot mode alone.</div>
@@ -721,7 +741,7 @@
 <p>
 <div>The firmware is ready for the STM32G4xx serie and the STM32G0xx serie. It can be extended for other processors.</div>
 <p>
-<table class="Warning" style="border-radius:10px;" cellpadding=0 cellspacing=0><tr><td>
+<table class="WarningTable" cellpadding=0 cellspacing=0><tr><td>
 <div>The HUD ECU Hacker Firmware Programmer can flash any STM32 processor, also in older CANable 1.0 adapters.</div>
 <div>Flashing the CANable is no risk. The processor has a hard-coded bootloader that cannot be destroyed.</div>
 <div>When after connecting the USB cable the LED's are not blinking alternatingly, the firmware is not working.</div>
@@ -755,30 +775,32 @@
 <h3>Meaning of the LED's</h3>
 <div>The <b>red Power LED</b> is connected to 5 Volt from USB. It cannot be controlled by the firmware. It is always On.</div>
 
-<table class="DataTable">
-<tr><th>LED's</th><th>Meaning</th><th>LED's</th><th>Meaning</th></tr>
-<tr>
-    <td><img src="Images/LED RG.gif" width="101" height="54"></td><td>The adapter is ready and closed.</td>
-    <td><img src="Images/LED R.gif" width="101" height="54"></td><td><div>1.) The adapter is open: No CAN bus traffic.</div>
-                                                              <div>2.) The adapter is in Firmware Update mode.</div>
-                                                              <div>3.) The USB bus is suspended in sleep mode.</div></td>
-</tr>
-<tr>
-    <td><img src="Images/LED RxTraffic.gif" width="101" height="34"></td><td><div>1.) The adapter is open: RX CAN bus traffic.</div>
-                                                                      <div>2.) The adapter is closed: USB command received.</div></td>
-    <td><img src="Images/LED RGB.gif" width="101" height="34"></td><td><div>The adapter is blocked after a severe error</div>
-                                                                <div>buffer overflow or bus off.</div></td>
-</tr>
-<tr>
-    <td><img src="Images/LED TxTraffic.gif" width="101" height="34"></td><td>The adapter is open: TX CAN bus traffic.</td>
-    <td><img src="Images/LED Blink.gif"     width="101" height="34"></td><td><div>1.) After Power-On both LED's flash alternatingly.</div>
-                                                                      <div>2.) Also when you click the button 'Identify'.</div></td>
-</tr>
-<tr>
-    <td><img src="Images/LED RxTxTraffic.gif" width="101" height="34"></td><td>The adapter is open: RX+TX CAN bus traffic.</td>
-    <td colspan="2"></td>
-</tr>
-</table>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>LED's</th><th>Meaning</th><th>LED's</th><th>Meaning</th></tr>
+    <tr>
+        <td><img src="Images/LED RG.gif" width="101" height="54"></td><td>The adapter is ready and closed.</td>
+        <td><img src="Images/LED R.gif" width="101" height="54"></td><td><div>1.) The adapter is open: No CAN bus traffic.</div>
+                                                                  <div>2.) The adapter is in Firmware Update mode.</div>
+                                                                  <div>3.) The USB bus is suspended in sleep mode.</div></td>
+    </tr>
+    <tr>
+        <td><img src="Images/LED RxTraffic.gif" width="101" height="34"></td><td><div>1.) The adapter is open: RX CAN bus traffic.</div>
+                                                                          <div>2.) The adapter is closed: USB command received.</div></td>
+        <td><img src="Images/LED RGB.gif" width="101" height="34"></td><td><div>The adapter is blocked after a severe error</div>
+                                                                    <div>buffer overflow or bus off.</div></td>
+    </tr>
+    <tr>
+        <td><img src="Images/LED TxTraffic.gif" width="101" height="34"></td><td>The adapter is open: TX CAN bus traffic.</td>
+        <td><img src="Images/LED Blink.gif"     width="101" height="34"></td><td><div>1.) After Power-On both LED's flash alternatingly.</div>
+                                                                          <div>2.) Also when you click the button 'Identify'.</div></td>
+    </tr>
+    <tr>
+        <td><img src="Images/LED RxTxTraffic.gif" width="101" height="34"></td><td>The adapter is open: RX+TX CAN bus traffic.</td>
+        <td colspan="2"></td>
+    </tr>
+    </table>
+</div>
 
 <div><b>NOTE:</b> The behaviour of the LED's has been fixed by ElmüSoft.</div>
 <div>The legacy Slcan firmware did not show TX CAN bus traffic at all.</div>
@@ -807,7 +829,7 @@
 <div>If you like the software the author asks you to give a donation to a charity organization of your choice.</div>
 
 <table>
-<tr><td>
+<tr><td valign="top">
     <table class="TblImage">
         <tr><td align="center"><b>CAN Raw Terminal</b></td></tr>
         <tr><td><img src="Images/CAN Raw Terminal.png" alt="HUD ECU Hacker - CAN Raw Terminal" width="180" height="150"></td></tr>
@@ -815,7 +837,7 @@
     </table>
 </td>
 <td>&nbsp;</td>
-<td>
+<td valign="top">
     <table class="TblImage">
         <tr><td align="center"><b>J1939 Protocol</b></td></tr>
         <tr><td><img src="Images/J1939 Protocol.png" alt="HUD ECU Hacker - J1939 Protocol" width="154" height="150"></td></tr>
@@ -823,7 +845,7 @@
     </table>
 </td>
 <td>&nbsp;</td>
-<td>
+<td valign="top">
     <table class="TblImage">
         <tr><td align="center"><b>NMEA 2000 Protocol</b></td></tr>
         <tr><td align="center"><img src="Images/NMEA 2000 Protocol.png" alt="HUD ECU Hacker - J1939 Protocol" width="93" height="150"></td></tr>
@@ -1023,9 +1045,11 @@
 <div>And the firmware calculates the exact values and reports them in a debug message back to the host application.</div>
 <div>When you open the adapter you see this debug message from the firmware:</div>
 <p>
-<table class="Pre">
-    <tr><td>Nominal: 500k baud, 87.5%; Data: 2M baud, 75.0%; Perfect match: Yes</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace">
+        <tr><td>Nominal: 500k baud, 87.5%; Data: 2M baud, 75.0%; Perfect match: Yes</td></tr>
+    </table>
+</div>
 <p>
 <div>When you see <b>Perfect Match: Yes</b>, this means that Nominal and Data use the same prescaler as recommended.</div>
 <p>
@@ -1119,22 +1143,22 @@
     <li><div>If the same error stays present for a long time, it is reported again in intervals of <b>3 seconds</b>.</div>
 </ol>
 
-<table class="Pre">
-<tr><td style="white-space: nowrap;">
-<div><span class='TimeBk'>21:20:14.788</span><span class='InfoBold'>Send Packet</span></div>
-<div><span class='TimeBk'>21:20:14.788</span><span class='TxData'>18EEFF01: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this packet was sent successfully</span></div>
-<div><span class='TimeBk'>21:20:14.790</span><span class='RxSecnd'>18EEFF01: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this is the Tx echo</span></div>
-<div><span class='TimeBk'>21:20:18.119</span><span class='InfoBold'>Send Packet</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— send with auto-retransmission ON</span></div>
-<div><span class='TimeBk'>21:20:18.119</span><span class='TxData'>14A90022: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this packet was not acknowledged</span></div>
-<div><span class='TimeBk'>21:20:18.120</span><span class='Debug'>Bus Active, Tx Errors: 8</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;—— first error immediately</span></div>
-<div><span class='TimeBk'>21:20:18.220</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>&nbsp; &lt;—— second error after 100 ms</span></div>
-<div><span class='TimeBk'>21:20:18.738</span><span class='InfoBold'>Send Packet</span></div>
-<div><span class='TimeBk'>21:20:18.738</span><span class='TxData'>14A90022: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;&lt;—— this packet was not acknowledged</span></div>
-<div><span class='TimeBk'>21:20:21.216</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></div>
-<div><span class='TimeBk'>21:20:24.212</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>&nbsp; &lt;—— same error repeated every 3 seconds</span></div>
-<div><span class='TimeBk'>21:20:27.208</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></div>
-</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
+    <tr><td><span class='TimeBk'>21:20:14.788</span><span class='InfoBold'>Send Packet</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:14.788</span><span class='TxData'>18EEFF01: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>             &lt;—— this packet was sent successfully</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:14.790</span><span class='RxSecnd'>18EEFF01: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>             &lt;—— this is the Tx echo</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:18.119</span><span class='InfoBold'>Send Packet</span><span class='DebugDark'>                                   &lt;—— send with auto-retransmission ON</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:18.119</span><span class='TxData'>14A90022: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>             &lt;—— this packet was not acknowledged</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:18.120</span><span class='Debug'>Bus Active, Tx Errors: 8</span><span class='DebugDark'>                      &lt;—— first error immediately</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:18.220</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>  &lt;—— second error after 100 ms</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:18.738</span><span class='InfoBold'>Send Packet</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:18.738</span><span class='TxData'>14A90022: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>             &lt;—— this packet was not acknowledged</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:21.216</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:24.212</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>  &lt;—— same error repeated every 3 seconds</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:27.208</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></td></tr>
+    </table>
+</div>
 <p>
 <div>All controllers on CAN bus share the same two data wires.</div>
 <div>If only one controller has a bug and breaks the rules of CAN bus, it will screw up the traffic of all the others.</div>
@@ -1153,15 +1177,15 @@
 <div>If the processor detects a case of a severe data corruption it immediately stops transmitting and goes into <b>Bus Off</b> state.</div>
 <div>Bus Off is a severe error that you can create by sending packets between two adapters configured for different baudrates.</div>
 <p>
-<table class="Pre">
-<tr><td style="white-space: nowrap;">
-<div><span class='TimeBk'>22:21:24.187</span><span class='InfoBold'>Send Packet</span></div>
-<div><span class='TimeBk'>22:21:24.187</span><span class='TxData'>170AA3CB: 01 02 03 04 05 06 07 08</span></div>
-<div><span class='TimeBk'>22:21:24.623</span><span class='RxDataInvalid'>Bus Passive, Bit stuffing error, &nbsp;Tx Errors: 128, Rx Errors: 8</span><span class='DebugDark'>&nbsp;&lt;—— corruption while sending</span></div>
-<div><span class='TimeBk'>22:21:27.618</span><span class='RxDataInvalid'>Bus Passive, Recessive bit error, Tx Errors: 128, Rx Errors: 8</span></div>
-<div><span class='TimeBk'>22:21:30.367</span><span class='RxDataInvalid'>Bus Off, Frame format error, Tx Errors: 248, Rx Errors: 127</span><span class='DebugDark'>&nbsp; &nbsp; &lt;—— corrupt packet received</span></div>
-</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
+    <tr><td><span class='TimeBk'>22:21:24.187</span><span class='InfoBold'>Send Packet</span></td></tr>
+    <tr><td><span class='TimeBk'>22:21:24.187</span><span class='TxData'>170AA3CB: 01 02 03 04 05 06 07 08</span></td></tr>
+    <tr><td><span class='TimeBk'>22:21:24.623</span><span class='RxDataInvalid'>Bus Passive, Bit stuffing error, &nbsp;Tx Errors: 128, Rx Errors: 8</span><span class='DebugDark'> &lt;—— corruption while sending</span></td></tr>
+    <tr><td><span class='TimeBk'>22:21:27.618</span><span class='RxDataInvalid'>Bus Passive, Recessive bit error, Tx Errors: 128, Rx Errors: 8</span></td></tr>
+    <tr><td><span class='TimeBk'>22:21:30.367</span><span class='RxDataInvalid'>Bus Off, Frame format error, Tx Errors: 248, Rx Errors: 127</span><span class='DebugDark'>    &lt;—— corrupt packet received</span></td></tr>
+    </table>
+</div>
 <p>
 <div>With a little experience you can deduce what is wrong on CAN bus by understanding what these errors mean.</div>
 <div><b><u>NOTE</u>:</b> If the CAN bus is not <b>terminated</b> with at least one 120 Ohm resistor you will get Bus Off errors.</div>
@@ -1179,11 +1203,11 @@
 <div>Therefore I implemented a Tx timeout. Pending Tx requests are cancelled after <b>500 ms</b>.</div>
 <div>You see an error report:</div>
 <p>
-<table class="Pre">
-<tr><td style="white-space: nowrap;">
-<div class="RxDataInvalid">Bus Passive, Tx Timeout, No ACK received, Tx Errors: 128</div>
-</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace">
+    <tr><td class="RxDataInvalid">Bus Passive, Tx Timeout, No ACK received, Tx Errors: 128</td></tr>
+    </table>
+</div>
 <p>
 <div>The error counter stops counting at 128, but without a timeout there may be <b>thousands</b> of failed transmit attempts.</div>
 
@@ -1276,12 +1300,14 @@
 <div>The <b>legacy</b> Geschwister Schneider protocol uses only the first USB interface and ignores the others.</div>
 <div>Instead it addresses the CAN channel via <code>kHostFrameLegacy.channel</code>.</div>
 <div>On endpoint 0 the channel number is transmitted in <code>Setup.wValue</code>.</div>
-<table class="DataNarrow" cellspacing="1">
-<tr><th>CAN channel</th><th>Control Requests</th><th>Packets via ElmüSoft</th><th>Packets via Legacy</th></tr>
-<tr><td>1</td><td>Setup.wValue = 0</td><td>USB interface 0<br>Endpoints 81 (IN), 02 (OUT)</td><td>USB interface 0<br>kHostFrameLegacy.channel = 0</td></tr>
-<tr><td>2</td><td>Setup.wValue = 1</td><td>USB interface 2<br>Endpoints 83 (IN), 04 (OUT)</td><td>USB interface 0<br>kHostFrameLegacy.channel = 1</td></tr>
-<tr><td>3</td><td>Setup.wValue = 2</td><td>USB interface 3<br>Endpoints 85 (IN), 06 (OUT)</td><td>USB interface 0<br>kHostFrameLegacy.channel = 2</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="DataNarrow" cellspacing="1">
+    <tr><th>CAN channel</th><th>Control Requests</th><th>Packets via ElmüSoft</th><th>Packets via Legacy</th></tr>
+    <tr><td>1</td><td>Setup.wValue = 0</td><td>USB interface 0<br>Endpoints 81 (IN), 02 (OUT)</td><td>USB interface 0<br>kHostFrameLegacy.channel = 0</td></tr>
+    <tr><td>2</td><td>Setup.wValue = 1</td><td>USB interface 2<br>Endpoints 83 (IN), 04 (OUT)</td><td>USB interface 0<br>kHostFrameLegacy.channel = 1</td></tr>
+    <tr><td>3</td><td>Setup.wValue = 2</td><td>USB interface 3<br>Endpoints 85 (IN), 06 (OUT)</td><td>USB interface 0<br>kHostFrameLegacy.channel = 2</td></tr>
+    </table>
+</div>
 <div>The <b>Slcan</b> firmware prepends a '&amp;' character before each command/response for CAN channel 2 and a '$' for channel 3.</div>
 <p>
 <div><span class="Error">ATTENTION:</span></div>
@@ -1310,21 +1336,23 @@
 <p>
 <div>Example for 4 user segments stored in a 128 kB flash memory:</div>
 
-<table class="DataNarrow" cellspacing="1">
-<tr><th>Sector</th><th>Start Address</th><th>End Address</th><th>Size</th><th>Content</th></tr>
-<tr><td>0</td><td>0x08000000</td><td>0x080007FF</td><td>2kB</td><td rowspan="3" align="center">Firmware<br>35 kB</td></tr>
-<tr><td colspan=4>etc...</td></tr>
-<tr><td>17</td><td>0x08008800</td><td>0x08008FFF</td><td>2kB</td></tr>
-<tr><td colspan=5 style="border-bottom:1px solid black"></td></tr>
-<tr><td>18</td><td>0x08009000</td><td>0x080097FF</td><td>2kB</td><td rowspan="3" align="center">unused<br>empty</td></tr>
-<tr><td colspan=4>etc...</td></tr>
-<tr><td>59</td><td>0x0801D800</td><td>0x0801DFFF</td><td>2kB</td></tr>
-<tr><td colspan=5 style="border-bottom:1px solid black"></td></tr>
-<tr><td>60</td><td>0x0801E000</td><td>0x0801E7FF</td><td>2kB</td><td>User Data Segment 03</td></tr>
-<tr><td>61</td><td>0x0801E800</td><td>0x0801EFFF</td><td>2kB</td><td>User Data Segment 02</td></tr>
-<tr><td>62</td><td>0x0801F000</td><td>0x0801F7FF</td><td>2kB</td><td>User Data Segment 01</td></tr>
-<tr><td>63</td><td>0x0801F800</td><td>0x0801FFFF</td><td>2kB</td><td>User Data Segment 00</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="DataNarrow" cellspacing="1">
+    <tr><th>Sector</th><th>Start Address</th><th>End Address</th><th>Size</th><th>Content</th></tr>
+    <tr><td>0</td><td>0x08000000</td><td>0x080007FF</td><td>2kB</td><td rowspan="3" align="center">Firmware<br>35 kB</td></tr>
+    <tr><td colspan=4>etc...</td></tr>
+    <tr><td>17</td><td>0x08008800</td><td>0x08008FFF</td><td>2kB</td></tr>
+    <tr><td colspan=5 style="border-bottom:1px solid black"></td></tr>
+    <tr><td>18</td><td>0x08009000</td><td>0x080097FF</td><td>2kB</td><td rowspan="3" align="center">unused<br>empty</td></tr>
+    <tr><td colspan=4>etc...</td></tr>
+    <tr><td>59</td><td>0x0801D800</td><td>0x0801DFFF</td><td>2kB</td></tr>
+    <tr><td colspan=5 style="border-bottom:1px solid black"></td></tr>
+    <tr><td>60</td><td>0x0801E000</td><td>0x0801E7FF</td><td>2kB</td><td>User Data Segment 03</td></tr>
+    <tr><td>61</td><td>0x0801E800</td><td>0x0801EFFF</td><td>2kB</td><td>User Data Segment 02</td></tr>
+    <tr><td>62</td><td>0x0801F000</td><td>0x0801F7FF</td><td>2kB</td><td>User Data Segment 01</td></tr>
+    <tr><td>63</td><td>0x0801F800</td><td>0x0801FFFF</td><td>2kB</td><td>User Data Segment 00</td></tr>
+    </table>
+</div>
 
 <div>If the processor has 128 kB flash and the firmware occupies 35 kB you have 46 flash segments available.</div>
 <div>When you write to a flash segment the firmware first checks if the segment already contains identical data.</div>
@@ -1348,13 +1376,13 @@
 <div>The processor automatically <b>measures the delay</b> and the firmware reports it.</div>
 <div>You see a debug message after the first CAN FD packet that you send with the <b>BRS</b> flag set:</div>
 <p>
-<table class="Pre">
-<tr><td style="white-space: nowrap;">
-<div><span class='TimeBk'>23:32:21.069</span><span class='TxData'>19858A01: 0C 00 00 00 F0 18 51 0E (FDF, BRS)</span></div>
-<div><span class='TimeBk'>23:32:21.073</span><span class='Debug'>Measured transceiver chip delay: 131 ns</span></div>
-<div><span class='TimeBk'>23:32:21.073</span><span class='RxSecnd'>19858A01: 0C 00 00 00 F0 18 51 0E (FDF, BRS)</span></div>
-</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
+    <tr><td><span class='TimeBk'>23:32:21.069</span><span class='TxData'>19858A01: 0C 00 00 00 F0 18 51 0E (FDF, BRS)</span></td></tr>
+    <tr><td><span class='TimeBk'>23:32:21.073</span><span class='Debug'>Measured transceiver chip delay: 131 ns</span></td></tr>
+    <tr><td><span class='TimeBk'>23:32:21.073</span><span class='RxSecnd'>19858A01: 0C 00 00 00 F0 18 51 0E (FDF, BRS)</span></td></tr>
+    </table>
+</div>
 <p>
 <div>Normally transceiver chips have a delay around 50 ns.</div>
 <div>But the isolated chip in the MKS Makerbase that you see here is slower. (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>).</div>
@@ -1383,105 +1411,107 @@
 <a name="Slcan_Commands"></a>
 <h3>Slcan Commands</h3>
 
-<table class="DataNarrow" cellspacing="1">
-<tr><th>Command</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"A1\r"</td><td>Closed</td><td>legacy</td><td>Enable Auto Retransmission</td><td>Retransmit packets until they are acknowledged</td></tr>
-<tr><td>"A0\r"</td><td>Closed</td><td>legacy</td><td>Disable Auto Retransmission</td><td>Enable one shot mode</td></tr>
-<tr><td>"C\r"</td><td>Open/Closed</td><td>legacy</td><td>Close the adapter</td><td>Shut down CAN connection, reset to default settings</td></tr>
-<tr><td>"L7\r"</td><td>Open/Closed</td><td>100</td><td>Enable bus load reports every 700 ms</td><td rowspan="2">
-    <div>L1: Report interval= 100 ms, L50: Interval= 5 seconds</div>
-    <div>Valid range of interval: 0 ... 100 (max 10 seconds)</div>
-    </td></tr>
-<tr><td>"L0\r"</td><td>Open/Closed</td><td>100</td><td>Disable bus load reports</td></tr>
-<tr><td>"O\r"</td><td>Closed</td><td>legacy</td><td>Open adapter</td><td>Connect to CAN bus with the mode set by M0 / M1</td></tr>
-<tr><td>"ON\r"</td><td>Closed</td><td>100</td><td>Open in normal mode</td><td>Ignore settings with M0 / M1</td></tr>
-<tr><td>"OS\r"</td><td>Closed</td><td>100</td><td>Open in silent mode</td><td>Ignore settings with M0 / M1</td></tr>
-<tr><td>"OI\r"</td><td>Closed</td><td>100</td><td>Open in internal loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
-<tr><td>"OE\r"</td><td>Closed</td><td>100</td><td>Open in external loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
-<tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns seven key/value pairs. See <a href="#Slcan_Version_Info">Version Info</a></td></tr>
+<div class="TableContainer">
+    <table class="DataNarrow" cellspacing="1">
+    <tr><th>Command</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"A1\r"</td><td>Closed</td><td>legacy</td><td>Enable Auto Retransmission</td><td>Retransmit packets until they are acknowledged</td></tr>
+    <tr><td>"A0\r"</td><td>Closed</td><td>legacy</td><td>Disable Auto Retransmission</td><td>Enable one shot mode</td></tr>
+    <tr><td>"C\r"</td><td>Open/Closed</td><td>legacy</td><td>Close the adapter</td><td>Shut down CAN connection, reset to default settings</td></tr>
+    <tr><td>"L7\r"</td><td>Open/Closed</td><td>100</td><td>Enable bus load reports every 700 ms</td><td rowspan="2">
+        <div>L1: Report interval= 100 ms, L50: Interval= 5 seconds</div>
+        <div>Valid range of interval: 0 ... 100 (max 10 seconds)</div>
+        </td></tr>
+    <tr><td>"L0\r"</td><td>Open/Closed</td><td>100</td><td>Disable bus load reports</td></tr>
+    <tr><td>"O\r"</td><td>Closed</td><td>legacy</td><td>Open adapter</td><td>Connect to CAN bus with the mode set by M0 / M1</td></tr>
+    <tr><td>"ON\r"</td><td>Closed</td><td>100</td><td>Open in normal mode</td><td>Ignore settings with M0 / M1</td></tr>
+    <tr><td>"OS\r"</td><td>Closed</td><td>100</td><td>Open in silent mode</td><td>Ignore settings with M0 / M1</td></tr>
+    <tr><td>"OI\r"</td><td>Closed</td><td>100</td><td>Open in internal loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
+    <tr><td>"OE\r"</td><td>Closed</td><td>100</td><td>Open in external loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
+    <tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns seven key/value pairs. See <a href="#Slcan_Version_Info">Version Info</a></td></tr>
 
-<tr><th>Set Modes</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"M1\r"</td><td>Closed</td><td>legacy</td><td>Enable silent mode</td><td>The next command "O\r" will open in bus monitoring mode</td></tr>
-<tr><td>"M0\r"</td><td>Closed</td><td>legacy</td><td>Disable silent mode</td><td>The next command "O\r" will open in normal mode</td></tr>
-<tr><td>"MA\r"</td><td>Closed</td><td>100</td><td>Enable Auto Retransmission mode (same as A1)</td><td>Retransmit packets until they are acknowledged</td></tr>
-<tr><td>"Ma\r"</td><td>Closed</td><td>100</td><td>Disable Auto Retransmission mode (same as A0)</td><td>Enable one-shot mode</td></tr>
-<tr><td>"MD\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug Messages</td><td>Firmware sends string messages to the host</td></tr>
-<tr><td>"Md\r"</td><td>Open/Closed</td><td>100</td><td>Disable Debug Messages</td><td>Do not send debug messages</td></tr>
-<tr><td>"ME\r"</td><td>Open/Closed</td><td>100</td><td>Enable CAN Error reports</td><td>CAN errors are sent to the host</td></tr>
-<tr><td>"Me\r"</td><td>Open/Closed</td><td>100</td><td>Disable CAN Error reports</td><td>CAN error reporting is off (deprecated!)</td></tr>
-<tr><td>"MF\r"</td><td>Open/Closed</td><td>100</td><td>Enable advanced Feedback mode</td><td>Detailed error feedback is sent (see <a href="#Slcan_Responses">next table</a>)</td></tr>
-<tr><td>"Mf\r"</td><td>Open/Closed</td><td>100</td><td>Enable legacy Feedback mode</td><td>Legacy Feedback is sent (CR / BEL)</td></tr>
-<tr><td>"MI\r"</td><td>Open/Closed</td><td>100</td><td>Enable Identify mode</td><td>The Rx/Tx LED's start blinking</td></tr>
-<tr><td>"Mi\r"</td><td>Open/Closed</td><td>100</td><td>Disable Identify mode</td><td>The Rx/Tx LED's stop blinking</td></tr>
-<tr><td>"MM\r"</td><td>Open/Closed</td><td>100</td><td>Enable Tx echo report marker</td><td>Report all successfully sent packets with a marker</td></tr>
-<tr><td>"Mm\r"</td><td>Open/Closed</td><td>100</td><td>Disable Tx echo report marker</td><td>No Tx Echo report (also Tx marker = 00 sends no echo)</td></tr>
-<tr><td>"MR\r"</td><td>Open/Closed</td><td>100</td><td>Enable 120 Ω Termination Resistor</td><td rowspan="2">Supported only by few boards</td></tr>
-<tr><td>"Mr\r"</td><td>Open/Closed</td><td>100</td><td>Disable 120 Ω Termination Resistor</td></tr>
-<tr><td>"MS\r"</td><td>Open/Closed</td><td>100</td><td>Enable ESI report</td><td>Report the ESI flag of received CAN FD messages</td></tr>
-<tr><td>"Ms\r"</td><td>Open/Closed</td><td>100</td><td>Disable ESI report</td><td>No ESI report</td></tr>
-<tr><td>"MDEFMS\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug, Error, Feedback, Echo, ESI reports</td><td>You can set all modes at once in one command</td></tr>
+    <tr><th>Set Modes</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"M1\r"</td><td>Closed</td><td>legacy</td><td>Enable silent mode</td><td>The next command "O\r" will open in bus monitoring mode</td></tr>
+    <tr><td>"M0\r"</td><td>Closed</td><td>legacy</td><td>Disable silent mode</td><td>The next command "O\r" will open in normal mode</td></tr>
+    <tr><td>"MA\r"</td><td>Closed</td><td>100</td><td>Enable Auto Retransmission mode (same as A1)</td><td>Retransmit packets until they are acknowledged</td></tr>
+    <tr><td>"Ma\r"</td><td>Closed</td><td>100</td><td>Disable Auto Retransmission mode (same as A0)</td><td>Enable one-shot mode</td></tr>
+    <tr><td>"MD\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug Messages</td><td>Firmware sends string messages to the host</td></tr>
+    <tr><td>"Md\r"</td><td>Open/Closed</td><td>100</td><td>Disable Debug Messages</td><td>Do not send debug messages</td></tr>
+    <tr><td>"ME\r"</td><td>Open/Closed</td><td>100</td><td>Enable CAN Error reports</td><td>CAN errors are sent to the host</td></tr>
+    <tr><td>"Me\r"</td><td>Open/Closed</td><td>100</td><td>Disable CAN Error reports</td><td>CAN error reporting is off (deprecated!)</td></tr>
+    <tr><td>"MF\r"</td><td>Open/Closed</td><td>100</td><td>Enable advanced Feedback mode</td><td>Detailed error feedback is sent (see <a href="#Slcan_Responses">next table</a>)</td></tr>
+    <tr><td>"Mf\r"</td><td>Open/Closed</td><td>100</td><td>Enable legacy Feedback mode</td><td>Legacy Feedback is sent (CR / BEL)</td></tr>
+    <tr><td>"MI\r"</td><td>Open/Closed</td><td>100</td><td>Enable Identify mode</td><td>The Rx/Tx LED's start blinking</td></tr>
+    <tr><td>"Mi\r"</td><td>Open/Closed</td><td>100</td><td>Disable Identify mode</td><td>The Rx/Tx LED's stop blinking</td></tr>
+    <tr><td>"MM\r"</td><td>Open/Closed</td><td>100</td><td>Enable Tx echo report marker</td><td>Report all successfully sent packets with a marker</td></tr>
+    <tr><td>"Mm\r"</td><td>Open/Closed</td><td>100</td><td>Disable Tx echo report marker</td><td>No Tx Echo report (also Tx marker = 00 sends no echo)</td></tr>
+    <tr><td>"MR\r"</td><td>Open/Closed</td><td>100</td><td>Enable 120 Ω Termination Resistor</td><td rowspan="2">Supported only by few boards</td></tr>
+    <tr><td>"Mr\r"</td><td>Open/Closed</td><td>100</td><td>Disable 120 Ω Termination Resistor</td></tr>
+    <tr><td>"MS\r"</td><td>Open/Closed</td><td>100</td><td>Enable ESI report</td><td>Report the ESI flag of received CAN FD messages</td></tr>
+    <tr><td>"Ms\r"</td><td>Open/Closed</td><td>100</td><td>Disable ESI report</td><td>No ESI report</td></tr>
+    <tr><td>"MDEFMS\r"</td><td>Open/Closed</td><td>100</td><td>Enable Debug, Error, Feedback, Echo, ESI reports</td><td>You can set all modes at once in one command</td></tr>
 
-<tr><th>Set Baudrates</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 75% (may not be precise)</td></tr>
-<tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"SA\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 75 kbaud</td><td>Samplepoint 75% (may not be precise)</td></tr>
-<tr><td>"SB\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 62.5 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"SC\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 33.333 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"SD\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 5 kbaud</td><td>Samplepoint 75%</td></tr>
-<tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"Y4\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 4 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"Y5\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 5 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
-<tr><td>"Y8\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 8 Mbaud</td><td>Samplepoint 50% (75% does not work) <span class="Red">deprecated</span></td></tr>
-<tr><td>"s4,69,10,7\r"</td><td>Closed</td><td>100</td><td>Set nominal bitrate: Prescaler=4,<br>Seg1=69, Seg2=10, Synchr. Jump Width=7</td><td>Set 500 kbaud, Samplepoint 87.5%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
-<tr><td>"y4,9,10,7\r"</td><td>Closed</td><td>100</td><td>Set data bitrate: Prescaler=4,<br>Seg1=9, Seg2=10, Synchr. Jump Width=7</td><td>Set 2 Mbaud, Samplepoint 50%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
+    <tr><th>Set Baudrates</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"S0\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 10 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S1\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 20 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S2\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 50 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S3\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 100 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S4\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 125 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S5\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 250 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S6\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 500 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S7\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 800 kbaud</td><td>Samplepoint 75% (may not be precise)</td></tr>
+    <tr><td>"S8\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 1 Mbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"S9\r"</td><td>Closed</td><td>legacy</td><td>Set nominal baudrate 83.333 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"SA\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 75 kbaud</td><td>Samplepoint 75% (may not be precise)</td></tr>
+    <tr><td>"SB\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 62.5 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"SC\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 33.333 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"SD\r"</td><td>Closed</td><td>103</td><td>Set nominal baudrate 5 kbaud</td><td>Samplepoint 75%</td></tr>
+    <tr><td>"Y0\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 500 kbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+    <tr><td>"Y1\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 1 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+    <tr><td>"Y2\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 2 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+    <tr><td>"Y4\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 4 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+    <tr><td>"Y5\r"</td><td>Closed</td><td>legacy</td><td>Set CAN FD data baudrate 5 Mbaud</td><td>Samplepoint 75% <span class="Red">&nbsp; deprecated</span></td></tr>
+    <tr><td>"Y8\r"</td><td>Closed</td><td>100</td><td>Set CAN FD data baudrate 8 Mbaud</td><td>Samplepoint 50% (75% does not work) <span class="Red">deprecated</span></td></tr>
+    <tr><td>"s4,69,10,7\r"</td><td>Closed</td><td>100</td><td>Set nominal bitrate: Prescaler=4,<br>Seg1=69, Seg2=10, Synchr. Jump Width=7</td><td>Set 500 kbaud, Samplepoint 87.5%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
+    <tr><td>"y4,9,10,7\r"</td><td>Closed</td><td>100</td><td>Set data bitrate: Prescaler=4,<br>Seg1=9, Seg2=10, Synchr. Jump Width=7</td><td>Set 2 Mbaud, Samplepoint 50%<br>See <a href="#Sample_Baud">Samplepoint</a></td></tr>
 
-<tr><th>Host Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Host mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
-    <div>You can set up to <b>8 mask filters</b> separated by semicolons.</div>
-    <div>11 bit and 29 bit filters can be mixed.</div>
-    </td></tr>
-<tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Host mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
-<tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>3 host filters for 16 IDs each: 7EX, 72X and 73X</td></tr>
-<tr><td>"f\r"</td><td>Closed</td><td>100</td><td>Clear all <a href="#Filter">host filters</a></td><td>Remove all host filters</td></tr>
+    <tr><th>Host Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"F7E8,7FF\r"</td><td>Closed</td><td>100</td><td>Host mask filter for only one ID: 7E8 (11 bit)</td><td rowspan="3">
+        <div>You can set up to <b>8 mask filters</b> separated by semicolons.</div>
+        <div>11 bit and 29 bit filters can be mixed.</div>
+        </td></tr>
+    <tr><td>"F18DA00F1,1FFF00FF\r"</td><td>Closed</td><td>100</td><td>Host mask filter for 256 IDs: 18DAXXF1 (29 bit)</td></tr>
+    <tr><td>"F7E0,7F0;720,7F0;730,7F0\r"</td><td>Closed</td><td>100</td><td>3 host filters for 16 IDs each: 7EX, 72X and 73X</td></tr>
+    <tr><td>"f\r"</td><td>Closed</td><td>100</td><td>Clear all <a href="#Filter">host filters</a></td><td>Remove all host filters</td></tr>
 
-<tr><th>Bridge Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"F:P0A=7E0,7F0&gt;1\r"</td><td>Open/Closed</td><td>104</td><td>Set Pass filter Nº 0x0A = forward to channel 1</td><td>Forward CAN ID's 7E0 ... 7EF</td></tr>
-<tr><td>"F:B12=7E5,7FF&gt;1\r"</td><td>Open/Closed</td><td>104</td><td>Set Block filter Nº 0x12 = block on channel 1</td><td>Block CAN ID 7E5</td></tr>
-<tr><td>"f:07\r"</td><td>Open/Closed</td><td>104</td><td>Clear filter Nº 0x07 (Pass or Block)</td><td>Remove current filter at index 7</td></tr>
-<tr><td>"f:FF\r"</td><td>Open/Closed</td><td>104</td><td>Clear all <a href="#Bridge">bridge filters</a></td><td>Turn off bridge mode</td></tr>
+    <tr><th>Bridge Filters</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"F:P0A=7E0,7F0&gt;1\r"</td><td>Open/Closed</td><td>104</td><td>Set Pass filter Nº 0x0A = forward to channel 1</td><td>Forward CAN ID's 7E0 ... 7EF</td></tr>
+    <tr><td>"F:B12=7E5,7FF&gt;1\r"</td><td>Open/Closed</td><td>104</td><td>Set Block filter Nº 0x12 = block on channel 1</td><td>Block CAN ID 7E5</td></tr>
+    <tr><td>"f:07\r"</td><td>Open/Closed</td><td>104</td><td>Clear filter Nº 0x07 (Pass or Block)</td><td>Remove current filter at index 7</td></tr>
+    <tr><td>"f:FF\r"</td><td>Open/Closed</td><td>104</td><td>Clear all <a href="#Bridge">bridge filters</a></td><td>Turn off bridge mode</td></tr>
 
-<tr><th>Special Commands</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"*Boot0:Off\r"</td><td>Closed</td><td>100</td><td>Disable pin BOOT0 of STM32<b>G4</b>xx processors</td><td>See <a href="#Hardware">Hardware Misdesign</a></td></tr>
-<tr><td>"*Boot0:?\r"</td><td>Open/Closed</td><td>100</td><td>Request status of pin BOOT0</td><td>returns "+1\r" if enabled or "+0\r" if disabled</td></tr>
-<tr><td>"*DFU\r"</td><td>Open/Closed</td><td>100</td><td>Enable pin BOOT0 and enter DFU mode</td><td>If feedback = <code>FBK_ResetRequired</code>: Reconnect USB cable!</td></tr>
-<tr><td>"*Flash:XX=Data\r"</td><td>Open/Closed</td><td>102</td><td>Writes data to <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00=48656C6C6F\r" writes "Hello" to segment 0</td></tr>
-<tr><td>"*Flash:XX?\r"</td><td>Open/Closed</td><td>102</td><td>Reads data from <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00?\r" returns "+48656C6C6F\r"</td></tr>
+    <tr><th>Special Commands</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"*Boot0:Off\r"</td><td>Closed</td><td>100</td><td>Disable pin BOOT0 of STM32<b>G4</b>xx processors</td><td>See <a href="#Hardware">Hardware Misdesign</a></td></tr>
+    <tr><td>"*Boot0:?\r"</td><td>Open/Closed</td><td>100</td><td>Request status of pin BOOT0</td><td>returns "+1\r" if enabled or "+0\r" if disabled</td></tr>
+    <tr><td>"*DFU\r"</td><td>Open/Closed</td><td>100</td><td>Enable pin BOOT0 and enter DFU mode</td><td>If feedback = <code>FBK_ResetRequired</code>: Reconnect USB cable!</td></tr>
+    <tr><td>"*Flash:XX=Data\r"</td><td>Open/Closed</td><td>102</td><td>Writes data to <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00=48656C6C6F\r" writes "Hello" to segment 0</td></tr>
+    <tr><td>"*Flash:XX?\r"</td><td>Open/Closed</td><td>102</td><td>Reads data from <a href="#RW_Flash">flash memory</a> user segment XX</td><td>"*Flash:00?\r" returns "+48656C6C6F\r"</td></tr>
 
-<tr><th>Transmit Packets</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp; See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
-<tr><td>"Txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
-<tr><td>"rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
-<tr><td>"Rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
-<tr><td>"dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
-<tr><td>"Dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
-<tr><td>"bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
-<tr><td>"Bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+    <tr><th>Transmit Packets</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp; See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
+    <tr><td>"Txxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
+    <tr><td>"rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
+    <tr><td>"Rxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
+    <tr><td>"dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
+    <tr><td>"Dxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
+    <tr><td>"bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
+    <tr><td>"Bxxxxxxxxx\r"</td><td>Open</td><td>legacy</td><td>Send CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
 
-<tr><th>CAN Channel</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"command\r"</td><td>----</td><td>legacy</td><td>Destination is CAN channel 1</td><td>All adapters</td></tr>
-<tr><td>"&amp;command\r"</td><td>----</td><td>101</td><td>Destination is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
-<tr><td>"$command\r"</td><td>----</td><td>101</td><td>Destination is CAN channel 3</td><td>Only for multi-channel adapters</td></tr>
-</table>
+    <tr><th>CAN Channel</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"command\r"</td><td>----</td><td>legacy</td><td>Destination is CAN channel 1</td><td>All adapters</td></tr>
+    <tr><td>"&amp;command\r"</td><td>----</td><td>101</td><td>Destination is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
+    <tr><td>"$command\r"</td><td>----</td><td>101</td><td>Destination is CAN channel 3</td><td>Only for multi-channel adapters</td></tr>
+    </table>
+</div>
 
 <div><span class="Error">ATTENTION:</span> Do not use the commands <code>S</code> and <code>Y</code> for CAN FD. They do not allow to chose the correct sameplpoint.</div>
 <div>You can use them to make tests between 2 adapters on your desk, but not if you want to connect to a <b>real CAN FD bus</b>.</div>
@@ -1496,119 +1526,121 @@
 <div>If advanced feedback mode has not been enabled with command <code>MF</code> the firmware operates in legacy feedback mode.</div>
 <div>In <b>legacy feedback mode</b> the firmware returns a single character: Carriage Return (0x0D) for success or BEL (0x07) for error.</div>
 
-<table class="DataNarrow" cellspacing="1">
-<tr><th>Legacy Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"\r" &nbsp; &nbsp; (CR character)</td><td>105</td><td>The command has executed successfully</td><td>Sent if advanced feedback mode is OFF</td></tr>
-<tr><td>"\x07" (BEL character)</td><td>105</td><td>The command has failed</td><td>Sent if advanced feedback mode is OFF</td></tr>
-<tr><th>Advanced Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"#\r"</td><td>100</td><td>The command has executed successfully</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#1\r"</td><td>100</td><td>The command is invalid</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#2\r"</td><td>100</td><td>A parameter of the command is invalid</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#3\r"</td><td>100</td><td>The command reqires the adapter to be open</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#4\r"</td><td>100</td><td>The command reqires the adapter to be closed</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#5\r"</td><td>100</td><td>The HAL from ST Microelectronics reported an error</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#6\r"</td><td>100</td><td>The feature is not supported by the board / not implemented</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#7\r"</td><td>100</td><td>The CAN Tx Buffer is full (no ACK received, 67 packets waiting)</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#8\r"</td><td>100</td><td>CAN bus is off (a severe CAN error has occurred)</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#9\r"</td><td>100</td><td>Sending packets is not possible in silent mode</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#:\r"</td><td>100</td><td>The required baudrate has not been set</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#;\r"</td><td>100</td><td>Programming the Option Bytes in flash memory failed</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#&lt;\r"</td><td>100</td><td>Please reconnect the USB cable, a hardware reset is required</td><td>Requires advanced feedback mode (MF)</td></tr>
-<tr><td>"#=\r"</td><td>102</td><td>A parameter is outside the valid range</td><td>Requires advanced feedback mode (MF)</td></tr>
+<div class="TableContainer">
+    <table class="DataNarrow" cellspacing="1">
+    <tr><th>Legacy Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"\r" &nbsp; &nbsp; (CR character)</td><td>105</td><td>The command has executed successfully</td><td>Sent if advanced feedback mode is OFF</td></tr>
+    <tr><td>"\x07" (BEL character)</td><td>105</td><td>The command has failed</td><td>Sent if advanced feedback mode is OFF</td></tr>
+    <tr><th>Advanced Feedback</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"#\r"</td><td>100</td><td>The command has executed successfully</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#1\r"</td><td>100</td><td>The command is invalid</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#2\r"</td><td>100</td><td>A parameter of the command is invalid</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#3\r"</td><td>100</td><td>The command reqires the adapter to be open</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#4\r"</td><td>100</td><td>The command reqires the adapter to be closed</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#5\r"</td><td>100</td><td>The HAL from ST Microelectronics reported an error</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#6\r"</td><td>100</td><td>The feature is not supported by the board / not implemented</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#7\r"</td><td>100</td><td>The CAN Tx Buffer is full (no ACK received, 67 packets waiting)</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#8\r"</td><td>100</td><td>CAN bus is off (a severe CAN error has occurred)</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#9\r"</td><td>100</td><td>Sending packets is not possible in silent mode</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#:\r"</td><td>100</td><td>The required baudrate has not been set</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#;\r"</td><td>100</td><td>Programming the Option Bytes in flash memory failed</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#&lt;\r"</td><td>100</td><td>Please reconnect the USB cable, a hardware reset is required</td><td>Requires advanced feedback mode (MF)</td></tr>
+    <tr><td>"#=\r"</td><td>102</td><td>A parameter is outside the valid range</td><td>Requires advanced feedback mode (MF)</td></tr>
 
-<tr><th>Response</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"+Text\r"</td><td>100</td><td>The firmware sends a plain text response to a command</td><td>Used by commands "*Boot0:?\r" and "V\r"</td></tr>
-<tr><td>"+Hex Data\r"</td><td>102</td><td>The firmware sends a hex byte response to a command</td><td>Used by command "*Flash:XX?\r"</td></tr>
+    <tr><th>Response</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"+Text\r"</td><td>100</td><td>The firmware sends a plain text response to a command</td><td>Used by commands "*Boot0:?\r" and "V\r"</td></tr>
+    <tr><td>"+Hex Data\r"</td><td>102</td><td>The firmware sends a hex byte response to a command</td><td>Used by command "*Flash:XX?\r"</td></tr>
 
-<tr><th>Event</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"&gt;Message\r"</td><td>100</td><td>The firmware sends a debug message (plain text)</td><td>Requires Debug Messages to be enabled</td></tr>
-<tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status. See <a href="#Slcan_Errors">Slcan Errors</a></td><td>Requires CAN Error Reports to be enabled</td></tr>
-<tr><td>"L27\r"</td><td>100</td><td>The firmware has calculated a bus load of 27%.<br>If the bus load is zero, no report is sent.</td><td>Requires Bus Load Reports to be enabled</td></tr>
-<tr><td>"M3C\r"</td><td>100</td><td>The firmware reports the Tx echo marker 0x3C. See <a href="#Slcan_Packets">Slcan Packets</a></td><td>Requires Tx Echo Report markers to be enabled</td></tr>
+    <tr><th>Event</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"&gt;Message\r"</td><td>100</td><td>The firmware sends a debug message (plain text)</td><td>Requires Debug Messages to be enabled</td></tr>
+    <tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status. See <a href="#Slcan_Errors">Slcan Errors</a></td><td>Requires CAN Error Reports to be enabled</td></tr>
+    <tr><td>"L27\r"</td><td>100</td><td>The firmware has calculated a bus load of 27%.<br>If the bus load is zero, no report is sent.</td><td>Requires Bus Load Reports to be enabled</td></tr>
+    <tr><td>"M3C\r"</td><td>100</td><td>The firmware reports the Tx echo marker 0x3C. See <a href="#Slcan_Packets">Slcan Packets</a></td><td>Requires Tx Echo Report markers to be enabled</td></tr>
 
-<tr><th>Rx Packets</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp;  See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
-<tr><td>"Txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
-<tr><td>"rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
-<tr><td>"Rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
-<tr><td>"dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
-<tr><td>"Dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
-<tr><td>"bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
-<tr><td>"Bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
+    <tr><th>Rx Packets</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 11 bit ID</td><td>Bits: None  &nbsp; &nbsp;  See <a href="#Slcan_Packets">Slcan Packets</a></td></tr>
+    <tr><td>"Txxxxxxxxx\r"</td><td>legacy</td><td>Received classic packet with 29 bit ID</td><td>Bits: IDE</td></tr>
+    <tr><td>"rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 11 bit ID</td><td>Bits: RTR</td></tr>
+    <tr><td>"Rxxxxxxxxx\r"</td><td>legacy</td><td>Received Remote Transmission Request with 29 bit ID</td><td>Bits: RTR + IDE</td></tr>
+    <tr><td>"dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit, no baudrate switch</td><td>Bits: FDF</td></tr>
+    <tr><td>"Dxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit, no baudrate switch</td><td>Bits: FDF + IDE</td></tr>
+    <tr><td>"bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 11 bit with baudrate switch</td><td>Bits: FDF + BRS</td></tr>
+    <tr><td>"Bxxxxxxxxx\r"</td><td>legacy</td><td>Received CAN FD packet, 29 bit with baudrate switch</td><td>Bits: FDF + BRS + IDE</td></tr>
 
-<tr><th>CAN Channel</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
-<tr><td>"response\r"</td><td>legacy</td><td>Origin is CAN channel 1</td><td>All adapters</td></tr>
-<tr><td>"&amp;response\r"</td><td>101</td><td>Origin is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
-<tr><td>"$response\r"</td><td>101</td><td>Origin is CAN channel 3</td><td>Only for multi-channel adapters</td></tr>
-</table>
+    <tr><th>CAN Channel</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
+    <tr><td>"response\r"</td><td>legacy</td><td>Origin is CAN channel 1</td><td>All adapters</td></tr>
+    <tr><td>"&amp;response\r"</td><td>101</td><td>Origin is CAN channel 2</td><td>Only for multi-channel adapters</td></tr>
+    <tr><td>"$response\r"</td><td>101</td><td>Origin is CAN channel 3</td><td>Only for multi-channel adapters</td></tr>
+    </table>
+</div>
 
 <a name="Slcan_Version_Info"></a>
 <h3>Slcan Version Info</h3>
 <div>In the new firmware the command "V\r" returns one string with <b>multiple key/value pairs</b> separatad by <b>tab characters</b>.</div>
 <div>It starts with a <b>plus character</b> that indicates a command response with text content, rather than a feedback response (#).</div>
 <p>
-<table class="Pre">
-<tr><td style="white-space: nowrap;">
-<div>+Board: Multiboard\t</div>
-<div>MCU: STM32G431\t</div>
-<div>DevID: 1128\t</div>
-<div>Firmware: 2427156\t</div>
-<div>Slcan: 103\t</div>
-<div>Clock: 160\t</div>
-<div>Channels: 1\t</div>
-<div>Quartz: No\t</div>
-<div>Limits: 512,256,128,128,32,32,16,16\t</div>
-<div>HAL: 1.2.5\t</div>
-<div>Serial: 206249E3946306550\r</div>
-</td></tr>
+<table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
+<tr><td>+Board: Multiboard\t</td></tr>
+<tr><td>MCU: STM32G431\t</td></tr>
+<tr><td>DevID: 1128\t</td></tr>
+<tr><td>Firmware: 2427156\t</td></tr>
+<tr><td>Slcan: 103\t</td></tr>
+<tr><td>Clock: 160\t</td></tr>
+<tr><td>hannels: 1\t</td></tr>
+<tr><td>Quartz: No\t</td></tr>
+<tr><td>Limits: 512,256,128,128,32,32,16,16\t</td></tr>
+<tr><td>HAL: 1.2.5\t</td></tr>
+<tr><td>Serial: 206249E3946306550\r</td></tr>
 </table>
 <p>
 <div>Split this string at each tab character ('\t') and then each part at the colon. You get 7 key/value pairs:</div>
 
-<table class="DataTable">
-<tr><th>Key</th><th>Value</th><th>Version</th><th>Comment</th></tr>
-<tr><td>Board</td><td>Multiboard</td><td>100</td><td>
-    <div>This defines for which board the firmware was compiled.</div>
-    <div>It may not match the real hardware if the user has uploaded the wrong firmware.</div>
-    <div>See <a href="#FirmwareVersions">Firmware Versions</a></div></td></tr>
-<tr><td>MCU</td><td>STM32G431</td><td>100</td><td>
-    <div>This defines for which processor the firmware was compiled.</div>
-    <div>It may not match the real processor if the user has uploaded the wrong firmware.</div>
-    <div>See <a href="#FirmwareVersions">Firmware Versions</a></div></td></tr>
-<tr><td>DevID</td><td>1128</td><td>100</td><td>
-    <div>This is the "Device ID" of the real processor. Convert 1128 to hex and you get 0x468.</div>
-    <div>Each <b>processor serie</b> is identified by a unique "Device ID".</div>
-    <div>In the <a href="https://www.st.com/resource/en/reference_manual/dm00355726.pdf" target="_blank">Reference Manual</a> from ST Microelectronics you find these identifiers:</div>
-    <div>0x468 = Category 2 devices (STM32G431, STM32G441)</div>
-    <div>0x469 = Category 3 devices (STM32G471, STM32G473, STM32G474, STM32G483, STM32G484)</div>
-    <div>0x479 = Category 4 devices (STM32G491, STM32G4A1)</div></td></tr>
-<tr><td>Firmware</td><td>2427156</td><td>100</td><td>
-    <div>The legacy firmware has returned completely meaningless version numbers like "ba6b1dd".</div>
-    <div>Here you get a <b>version</b> number that indicates <b>the date</b> when the firmware was created.</div>
-    <div>Convert to hex and you get the BCD version 0x250914, which means 14th september of 2025.</div></td></tr>
-<tr><td>Slcan</td><td>103</td><td>100</td><td>
-    <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
-    <div>Use the <a href="#Slcan_Versions">Slcan Version</a> to detect which features are available in the firmware.</div></td></tr>
-<tr><td>Clock</td><td>160</td><td>100</td><td>
-    <div>The CAN clock is 160 MHz</div>
-    <div>You need this value to calculate <a href="#Sample_Baud">Baudrate and Samplepoint</a></div></td></tr>
-<tr><td>Channels</td><td>1</td><td>101</td><td>
-    <div>The count of CAN channels (always 1, if not a multi-channel board).</div></td></tr>
-<tr><td>Quartz</td><td>No</td><td>101</td><td>
-    <div>'Yes' if the board has a quartz and the correct firmware has been uploaded.</div>
-    <div>'No' if the board has no quartz or the wrong firmware has been uploaded.</div>
-    <div>If the board has no quartz, the processor's RC oscillator with only 1% precision is used.</div></td></tr>
-<tr><td>Limits</td><td>512,256,128,128,<br>32,32,16,16</td><td>100</td><td>
-    <div>These 8 values are the <b>upper limits</b> for the bitrate commands 's' and 'y'.</div>
-    <div>Each processor has different limits for Prescaler, Segment1, Segment2 and Synchr. Jump Width.</div>
-    <div>Nominal baudrate: max Prescaler= 512, max Seg1 = 256, max Seg2= 128, max SJW = 128</div>
-    <div>FD Data baudrate: max Prescaler= 32, max Seg1 = 32, max Seg2= 16, max SJW = 16</div>
-    <div>You need these values to calculate <a href="#Sample_Baud">Baudrate and Samplepoint</a></div></td></tr>
-<tr><td>HAL</td><td>1.2.5</td><td>103</td><td>
-    <div>The version of the HAL (Hardware Abstraction Layer) that the firmware uses.</div></td></tr>
-<tr><td>Serial</td><td>206249E3946306550</td><td>102</td><td>
-    <div>The serial number of the processor. STM guarantees that this is unique.</div></td></tr>
-</table>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>Key</th><th>Value</th><th>Version</th><th>Comment</th></tr>
+    <tr><td>Board</td><td>Multiboard</td><td>100</td><td>
+        <div>This defines for which board the firmware was compiled.</div>
+        <div>It may not match the real hardware if the user has uploaded the wrong firmware.</div>
+        <div>See <a href="#FirmwareVersions">Firmware Versions</a></div></td></tr>
+    <tr><td>MCU</td><td>STM32G431</td><td>100</td><td>
+        <div>This defines for which processor the firmware was compiled.</div>
+        <div>It may not match the real processor if the user has uploaded the wrong firmware.</div>
+        <div>See <a href="#FirmwareVersions">Firmware Versions</a></div></td></tr>
+    <tr><td>DevID</td><td>1128</td><td>100</td><td>
+        <div>This is the "Device ID" of the real processor. Convert 1128 to hex and you get 0x468.</div>
+        <div>Each <b>processor serie</b> is identified by a unique "Device ID".</div>
+        <div>In the <a href="https://www.st.com/resource/en/reference_manual/dm00355726.pdf" target="_blank">Reference Manual</a> from ST Microelectronics you find these identifiers:</div>
+        <div>0x468 = Category 2 devices (STM32G431, STM32G441)</div>
+        <div>0x469 = Category 3 devices (STM32G471, STM32G473, STM32G474, STM32G483, STM32G484)</div>
+        <div>0x479 = Category 4 devices (STM32G491, STM32G4A1)</div></td></tr>
+    <tr><td>Firmware</td><td>2427156</td><td>100</td><td>
+        <div>The legacy firmware has returned completely meaningless version numbers like "ba6b1dd".</div>
+        <div>Here you get a <b>version</b> number that indicates <b>the date</b> when the firmware was created.</div>
+        <div>Convert to hex and you get the BCD version 0x250914, which means 14th september of 2025.</div></td></tr>
+    <tr><td>Slcan</td><td>103</td><td>100</td><td>
+        <div>This is the <b>version</b> of the Slcan module that you see in the tables above in column 'Version'.</div>
+        <div>Use the <a href="#Slcan_Versions">Slcan Version</a> to detect which features are available in the firmware.</div></td></tr>
+    <tr><td>Clock</td><td>160</td><td>100</td><td>
+        <div>The CAN clock is 160 MHz</div>
+        <div>You need this value to calculate <a href="#Sample_Baud">Baudrate and Samplepoint</a></div></td></tr>
+    <tr><td>Channels</td><td>1</td><td>101</td><td>
+        <div>The count of CAN channels (always 1, if not a multi-channel board).</div></td></tr>
+    <tr><td>Quartz</td><td>No</td><td>101</td><td>
+        <div>'Yes' if the board has a quartz and the correct firmware has been uploaded.</div>
+        <div>'No' if the board has no quartz or the wrong firmware has been uploaded.</div>
+        <div>If the board has no quartz, the processor's RC oscillator with only 1% precision is used.</div></td></tr>
+    <tr><td>Limits</td><td>512,256,128,128,<br>32,32,16,16</td><td>100</td><td>
+        <div>These 8 values are the <b>upper limits</b> for the bitrate commands 's' and 'y'.</div>
+        <div>Each processor has different limits for Prescaler, Segment1, Segment2 and Synchr. Jump Width.</div>
+        <div>Nominal baudrate: max Prescaler= 512, max Seg1 = 256, max Seg2= 128, max SJW = 128</div>
+        <div>FD Data baudrate: max Prescaler= 32, max Seg1 = 32, max Seg2= 16, max SJW = 16</div>
+        <div>You need these values to calculate <a href="#Sample_Baud">Baudrate and Samplepoint</a></div></td></tr>
+    <tr><td>HAL</td><td>1.2.5</td><td>103</td><td>
+        <div>The version of the HAL (Hardware Abstraction Layer) that the firmware uses.</div></td></tr>
+    <tr><td>Serial</td><td>206249E3946306550</td><td>102</td><td>
+        <div>The serial number of the processor. STM guarantees that this is unique.</div></td></tr>
+    </table>
+</div>
 
 
 <a name="Slcan_Packets"></a>
@@ -1628,28 +1660,30 @@
 <div>The marker in the Tx packet must be &gt; 0 otherwise no echo is sent.</div>
 </ul>
 
-<table class="DataTable">
-<tr><th>Direction</th><th>Packet</th><th>Slcan</th><th>Comment</th></tr>
-<tr><td>Both</td><td>18AABBCC: 11 22 33 44 55</td><td>"<span class="Magenta">T</span><span class="Green">18AABBCC</span><span class="Orange">5</span><span class="Blue">1122334455</span>\r"</td><td>Classic, 29 bit ID</td></tr>
-<tr><td>Both</td><td>7E0: 11 22 33 44 55 66 77 88 99 AA BB CC</td><td>"<span class="Magenta">d</span><span class="Green">7E0</span><span class="Orange">9</span><span class="Blue">112233445566778899AABBCC</span>\r"</td><td>CAN FD, 11 bit, FDF</td></tr>
-<tr><td>Receive</td><td>7E0: 11 22 33 44 55 66 77 88</td><td>"<span class="Magenta">b</span><span class="Green">7E0</span><span class="Orange">8</span><span class="Blue">1122334455667788</span><span class="Red">S</span>\r"</td><td>FDF, BRS, <span class="Red">ESI</span></td></tr>
-<tr><td>Transmit</td><td>7E0: 11 22 33 44 55 66</td><td>"<span class="Magenta">t</span><span class="Green">7E0</span><span class="Orange">6</span><span class="Blue">112233445566</span><span class="Red">3F</span>\r"</td><td>Marker = <span class="Red">3F</span> (00 = no echo)</td></tr>
-<tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 1</td></tr>
-<tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Cyan">&amp;</span><span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 2</td></tr>
-<tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Cyan">$</span><span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 3</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>Direction</th><th>Packet</th><th>Slcan</th><th>Comment</th></tr>
+    <tr><td>Both</td><td>18AABBCC: 11 22 33 44 55</td><td>"<span class="Magenta">T</span><span class="Green">18AABBCC</span><span class="Orange">5</span><span class="Blue">1122334455</span>\r"</td><td>Classic, 29 bit ID</td></tr>
+    <tr><td>Both</td><td>7E0: 11 22 33 44 55 66 77 88 99 AA BB CC</td><td>"<span class="Magenta">d</span><span class="Green">7E0</span><span class="Orange">9</span><span class="Blue">112233445566778899AABBCC</span>\r"</td><td>CAN FD, 11 bit, FDF</td></tr>
+    <tr><td>Receive</td><td>7E0: 11 22 33 44 55 66 77 88</td><td>"<span class="Magenta">b</span><span class="Green">7E0</span><span class="Orange">8</span><span class="Blue">1122334455667788</span><span class="Red">S</span>\r"</td><td>FDF, BRS, <span class="Red">ESI</span></td></tr>
+    <tr><td>Transmit</td><td>7E0: 11 22 33 44 55 66</td><td>"<span class="Magenta">t</span><span class="Green">7E0</span><span class="Orange">6</span><span class="Blue">112233445566</span><span class="Red">3F</span>\r"</td><td>Marker = <span class="Red">3F</span> (00 = no echo)</td></tr>
+    <tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 1</td></tr>
+    <tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Cyan">&amp;</span><span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 2</td></tr>
+    <tr><td>Both</td><td>101: AA BB CC DD EE FF</td><td>"<span class="Cyan">$</span><span class="Magenta">t</span><span class="Green">101</span><span class="Orange">6</span><span class="Blue">AABBCCDDEEFF</span>\r"</td><td>CAN channel 3</td></tr>
+    </table>
+</div>
 <p>
 <div><span class="Error">ATTENTION:</span> If there are any additional characters behind the packet data, this is a syntax error.</div>
 <p>
 <a name="Marker_Example"></a>
 <div><b>Example:</b></div>
-<table class="Pre" style="white-space: nowrap;">
-<tr><td>
-<div>Tx: "t7E061122334455663F\r" &lt;—— send packet with marker 3F</div>
-<div>Rx: "#\r" &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;—— receive command feedback (Success)</div>
-<div>Rx: "M3F\r" &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &lt;—— receive echo marker 3F</div>
-</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
+    <tr><td>Tx: "t7E061122334455663F\r" &lt;—— send packet with marker 3F</td></tr>
+    <tr><td>Rx: "#\r"                   &lt;—— receive command feedback (Success)</td></tr>
+    <tr><td>Rx: "M3F\r"                 &lt;—— receive echo marker 3F</td></tr>
+    </table>
+</div>
 
 <a name="Slcan_Errors"></a>
 <h3>Slcan Error Reports</h3>
@@ -1658,40 +1692,42 @@
 <div>Errors are sent immediately, after 100 ms or after 3 seconds as explained <a href="#CAN_Errors">above</a>.</div>
 <div>An error report is always of the form "Exxxxxxxx\r" and consists of 5 parts:</div>
 
-<table class="DataTable">
-<tr><th>Digit</th><th>Meaning</th><th>Value</th></tr>
-<tr><td align="center">1</td><td class="Magenta">Bus Status</td>
-    <td>
-        <div>'0' = Bus Active</div>
-        <div>'1' = Warning Level</div>
-        <div>'2' = Bus Passive</div>
-        <div>'3' = Bus Off</div>
-    </td>
-</tr>
-<tr><td align="center">2</td><td class="Green">Last Protocol Error</td>
-    <td>
-        <div>'0' = None</div>
-        <div>'1' = Bit stuffing error</div>
-        <div>'2' = Frame format error</div>
-        <div>'3' = No ACK received</div>
-        <div>'4' = Recessive bit error</div>
-        <div>'5' = Dominant bit error</div>
-        <div>'6' = CRC error</div>
-</tr>
-<tr><td>3 + 4</td><td class="Orange">Firmware Error Flags</td>
-    <td>
-    <div>0x00 = None</div>
-    <div>0x01 = Rx Failed</div>
-    <div>0x02 = Tx Failed</div>
-    <div>0x04 = CAN Tx buffer overflow</div>
-    <div>0x08 = USB IN buffer overflow</div>
-    <div>0x10 = Tx Timeout</div>
-    <div>Multiple flags may be combined</div>
-    </td>
-</tr>
-<tr><td>5 + 6</td><td class="Blue">Tx Error Count</td><td>0 ... 255 errors</td></tr>
-<tr><td>7 + 8</td><td class="Red">Rx Error Count</td><td>0 ... 255 errors</td></tr>
-</table>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>Digit</th><th>Meaning</th><th>Value</th></tr>
+    <tr><td align="center">1</td><td class="Magenta">Bus Status</td>
+        <td>
+            <div>'0' = Bus Active</div>
+            <div>'1' = Warning Level</div>
+            <div>'2' = Bus Passive</div>
+            <div>'3' = Bus Off</div>
+        </td>
+    </tr>
+    <tr><td align="center">2</td><td class="Green">Last Protocol Error</td>
+        <td>
+            <div>'0' = None</div>
+            <div>'1' = Bit stuffing error</div>
+            <div>'2' = Frame format error</div>
+            <div>'3' = No ACK received</div>
+            <div>'4' = Recessive bit error</div>
+            <div>'5' = Dominant bit error</div>
+            <div>'6' = CRC error</div>
+    </tr>
+    <tr><td>3 + 4</td><td class="Orange">Firmware Error Flags</td>
+        <td>
+        <div>0x00 = None</div>
+        <div>0x01 = Rx Failed</div>
+        <div>0x02 = Tx Failed</div>
+        <div>0x04 = CAN Tx buffer overflow</div>
+        <div>0x08 = USB IN buffer overflow</div>
+        <div>0x10 = Tx Timeout</div>
+        <div>Multiple flags may be combined</div>
+        </td>
+    </tr>
+    <tr><td>5 + 6</td><td class="Blue">Tx Error Count</td><td>0 ... 255 errors</td></tr>
+    <tr><td>7 + 8</td><td class="Red">Rx Error Count</td><td>0 ... 255 errors</td></tr>
+    </table>
+</div>
 
 <div><b>Example: </b> "E<span class="Magenta">2</span><span class="Green">3</span><span class="Orange">10</span><span class="Blue">80</span><span class="Red">0C</span>\r" means:</div>
 <div>Bus is passive, No ACK received, Tx Timeout, 128 Tx Errors, 12 Rx Errors</div>
