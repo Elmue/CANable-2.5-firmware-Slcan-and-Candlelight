@@ -7,15 +7,12 @@
 #include <conio.h>
 #include <windows.h>
 
-#include "Utils.h"
+#include "../Utils.h"
 #include "WinUSB_def.h"
 
 // =======================================================================================================
 //
 //  This class contains code for Windows.
-//  Someone must re-write it for Linux
-//  The WinUSB library must be replaced with the libusb library
-//  The thread in this class can probably be removed when using libusb
 //  NOTE: This class uses WinUSB by purpose: 
 //  The WinUSB driver is part of the operating system and installed 100% automatically 
 //  when connecting the device for the first time.
@@ -48,6 +45,7 @@ public:
     static uint32_t EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devices);
     static string   GetErrorMessage(uint32_t u32_Error);
     static string   ToUtf8(wchar_t* s_Unicode, int s32_StrLen = -1);
+    // Console
     static void     SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, string s_Title);
     static void     PrintConsole(uint16_t u16_Color, string s_Format, ...);
     static bool     CheckConsoleEnterPressed();
@@ -58,9 +56,11 @@ public:
     uint32_t    Open(string s_DevicePath);
     uint32_t    StartPipes();
     void        Close();
+    // USB transfer
     uint32_t    ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t u32_BufLen, uint32_t* pu32_Transferred);
     uint32_t    ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacket);
     uint32_t    WritePipeOut(uint8_t* u8_Transmit, uint32_t u32_TxLen);
+    // Time
     int64_t     GetTimestamp();
     // -------------------------
     inline bool      IsOpen()        { return mh_WinUsb != NULL && mb_ThreadRuns; }
@@ -68,7 +68,7 @@ public:
     inline kDevInfo* DevInfo()       { return &mk_Info; }
 
 private:
-    static uint32_t        EnumSerialNumbers(CStringMap& i_Serials);
+    static uint32_t        EnumSerialNumbers(cStringMap& i_Serials);
     static uint32_t        RegReadString(HKEY h_Class, const char* s8_Path, const char* s8_Entry, string* ps_Value);
     static uint32_t WINAPI PipeThreadStatic(void* p_This);
 

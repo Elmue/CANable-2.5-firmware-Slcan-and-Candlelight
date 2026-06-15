@@ -36,7 +36,8 @@ using namespace std;
 
 // ---------------------------------
 
-#define CStringMap unordered_map<string, string>
+#define cStringMap             unordered_map<string, string>
+#define LANGUAGE_ENGLISH_USA   0x409
 
 // Windows error codes are far below 50000
 // Define proprietary error codes here that are used also for Linux:
@@ -109,23 +110,23 @@ struct kSetup
 
 struct kDevInfo
 {
-    string                   ms_Vendor;
-    string                   ms_Product;
-    string                   ms_Serial;
-    string                   ms_Interface;
-    uint8_t                  mu8_EndpointIN;
-    uint8_t                  mu8_EndpointOUT;
-    uint8_t                  mu8_Channel;
-    uint16_t                 mu16_MaxPackSizeIN;
-    uint16_t                 mu16_MaxPackSizeOUT;
-    bool                     mb_IsElmueSoft;
-    bool                     mb_SupportsFD;
-    kDeviceDescriptor        mk_DeviceDescr;
-    kInterfaceDescriptor     mk_InterfDescr;
-    kCapabilityClassic       mk_Capability;
-    kCapabilityFD            mk_CapabilityFD;
-    kDeviceVersion           mk_DeviceVersion;
-    kBoardInfo               mk_BoardInfo;
+    string                   ms_Vendor;           // from device descriptor
+    string                   ms_Product;          // from device descriptor
+    string                   ms_Serial;           // from device descriptor
+    string                   ms_Interface;        // from interface descriptor
+    uint8_t                  mu8_EndpointIN;      // e.g. 0x81
+    uint8_t                  mu8_EndpointOUT;     // e.g. 0x02
+    uint8_t                  mu8_Channel;         // CAN channel 0,1,2
+    uint16_t                 mu16_MaxPackSizeIN;  // max packet size for IN  endpoint (64 bytes for Full Speed USB)
+    uint16_t                 mu16_MaxPackSizeOUT; // max packet size for OUT endpoint (64 bytes for Full Speed USB)
+    bool                     mb_IsElmueSoft;      // The adapter supports the ElmüSoft protocol
+    bool                     mb_SupportsFD;       // The adapter supports CAN FD
+    kDeviceDescriptor        mk_DeviceDescr;      // entire device descriptor
+    kInterfaceDescriptor     mk_InterfDescr;      // entire interface descriptor
+    kCapabilityClassic       mk_Capability;       // see Candlelight_def.h
+    kCapabilityFD            mk_CapabilityFD;     // see Candlelight_def.h
+    kDeviceVersion           mk_DeviceVersion;    // see Candlelight_def.h
+    kBoardInfo               mk_BoardInfo;        // see Candlelight_def.h
 
     void Clear()
     {
@@ -202,7 +203,7 @@ public:
     static string   MakeUpper(string s_String);
     static string   TrimRight(string s_String, char* s_Remove = " \n\r\t");
     static string   Format   (char* c_Format, ...);
-    static string   MapLookup(CStringMap& i_Map, string& s_Key);
+    static string   MapLookup(cStringMap& i_Map, string& s_Key);
     static string   FormatHexBytes(uint8_t u8_Data[], int s32_DataLen);
     static string   FormatBcdVersion(uint32_t u32_Version);
     static uint64_t GetTickMilli();

@@ -107,7 +107,7 @@ uint32_t Candlelight::Open(string s_DevicePath)
     mi_Details.push_back(kDetail("USB Interface Name", cUtils::Format("\"%s\"", mpk_Info->ms_Interface.c_str())));
     mi_Details.push_back(kDetail("USB Vendor  ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idVendor)));
     mi_Details.push_back(kDetail("USB Product ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idProduct)));
-    mi_Details.push_back(kDetail("USB Device Version", cUtils::FormatBcdVersion (mpk_Info->mk_DeviceDescr.bcdDevice)));  
+    mi_Details.push_back(kDetail("USB Device Version", cUtils::FormatBcdVersion(mpk_Info->mk_DeviceDescr.bcdDevice)));  
 
     // -------------------------- DFU --------------------------------
 
@@ -817,7 +817,6 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
     return cUtils::Format("%02u:%02u:%02u.%03u.%03u", u32_Hour, u32_Min, u32_Sec, u32_Milli, u32_Micro);
 }
 
-
 string Candlelight::FormatCanPacket(kCanPacket* pk_Packet)
 {
     string s_Frame;
@@ -845,7 +844,6 @@ string Candlelight::FormatCanPacket(kCanPacket* pk_Packet)
     }
     return s_Frame;
 }
-
 
 // From the multiple flags that have been defined by previous programmers we check only those which the CANable 2.5 firmware sets.
 // pe_BusStatus returns the current bus status (active, warning, passive, off)

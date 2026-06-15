@@ -19,13 +19,13 @@
     <ClInclude Include="Candlelight\Candlelight_def.h">
       <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
-    <ClInclude Include="Candlelight\WinUSB_def.h">
-      <Filter>Source Files\Candlelight</Filter>
-    </ClInclude>
-    <ClInclude Include="Candlelight\WinLibrary.h">
-      <Filter>Source Files\Candlelight</Filter>
-    </ClInclude>
     <ClInclude Include="Candlelight\Utils.h">
+      <Filter>Source Files\Candlelight</Filter>
+    </ClInclude>
+    <ClInclude Include="Candlelight\Windows\OsLibrary.h">
+      <Filter>Source Files\Candlelight</Filter>
+    </ClInclude>
+    <ClInclude Include="Candlelight\Windows\WinUSB_def.h">
       <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
   </ItemGroup>
@@ -36,10 +36,10 @@
     <ClCompile Include="Candlelight\Candlelight.cpp">
       <Filter>Source Files\Candlelight</Filter>
     </ClCompile>
-    <ClCompile Include="Candlelight\WinLibrary.cpp">
+    <ClCompile Include="Candlelight\Utils.cpp">
       <Filter>Source Files\Candlelight</Filter>
     </ClCompile>
-    <ClCompile Include="Candlelight\Utils.cpp">
+    <ClCompile Include="Candlelight\Windows\OsLibrary.cpp">
       <Filter>Source Files\Candlelight</Filter>
     </ClCompile>
   </ItemGroup>

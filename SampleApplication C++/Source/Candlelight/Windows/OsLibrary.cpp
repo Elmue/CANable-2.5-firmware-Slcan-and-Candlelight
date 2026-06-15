@@ -36,9 +36,6 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 // =======================================================================================================
 //
 //  This class contains code for Windows.
-//  Someone must re-write it for Linux
-//  The WinUSB library must be replaced with the libusb library
-//  The thread in this class can probably be removed when using libusb
 //  NOTE: This class uses WinUSB by purpose: 
 //  The WinUSB driver is part of the operating system and installed 100% automatically 
 //  when connecting the device for the first time.
@@ -47,7 +44,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 //
 // =======================================================================================================
 
-#include "WinLibrary.h"
+#include "OsLibrary.h"
 #include <setupapi.h>
 #include <initguid.h> // DEVPKEY_Device_BusReportedDeviceDesc
 #include <devpkey.h>  // DEVPKEY_Device_BusReportedDeviceDesc
@@ -57,8 +54,6 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 #pragma comment(lib, "WinUsb.lib")
 
 using namespace CANable;
-
-#define  LANGUAGE_ENGLISH_USA   0x409
 
 // Interface 0 "{c15b4308-04d3-11e6-b3ea-6057189e6443}"
 GUID GUID_CANDLELIGHT = { 0xc15b4308, 0x04d3, 0x11e6, { 0xb3, 0xea, 0x60, 0x57, 0x18, 0x9e, 0x64, 0x43 }};
@@ -266,6 +261,8 @@ uint32_t OsLibrary::ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_Language
 // ===================================== CTRL Pipe =====================================
 
 // ATTENTION: returns ERROR_NOACCESS if u8_Buffer is not in RAM !
+// Send SETUP packet and optionally additional data bytes as IN or OUT transfer.
+// Timeout has been set to 500 ms in Open()
 uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t u32_BufLen, uint32_t* pu32_Transferred)
 {
     if (!WinUsb_ControlTransfer(mh_WinUsb, *(WINUSB_SETUP_PACKET*)pk_Setup, u8_Buffer, u32_BufLen, pu32_Transferred, NULL))
@@ -276,6 +273,7 @@ uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32
 
 // ===================================== OUT Pipe ======================================
 
+// Timeout has been set to 500 ms in StartPipes()
 uint32_t OsLibrary::WritePipeOut(uint8_t* u8_Transmit, uint32_t u32_TxLen)
 {
     uint32_t u32_Transferred;
@@ -405,7 +403,8 @@ void OsLibrary::PipeThreadMember()
 }
 
 // Get the next frame from the Rx FIFO and copy it to pk_UsbInPacket.
-// If the Rx FIFO is empty -> wait during the timeout for more data from USB.
+// If the Rx FIFO is empty -> wait for more data from USB.
+// If no data received during timeout return ERR_TIMEOUT.
 uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacket)
 {
     EnterCriticalSection(&mk_Critical);
@@ -454,11 +453,11 @@ uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacke
 // =================================== Enumerate USB Devices ==================================
 
 // Returns device name, serial number and path like "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-// This function can also enumerate the DFU interfaces using GUID_CANDLE_DFU, but only if the device has the ElmüSoft firmware.
+// b_Candlelight = false -> this function enumerates the DFU interfaces using GUID_CANDLE_DFU, but only if the device has the ElmüSoft firmware.
 // All legacy fimrware versions were buggy and unable to send the two Microsoft OS descriptors correctly, so the driver is not installed.
 uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devices)
 {
-    CStringMap i_Serials;
+    cStringMap i_Serials;
     uint32_t u32_Error = EnumSerialNumbers(i_Serials);
     if (u32_Error)
         return u32_Error;
@@ -490,10 +489,10 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
     DEVPROPTYPE u32_PropType;
     uint32_t    u32_RequSize;
 
-    WCHAR c_Interface[128]; // USB Interface string                  (max 127 unicode chars)
-    WCHAR c_Product  [128]; // USB device descriptor product string  (max 127 unicode chars)
-    WCHAR c_Parent   [256];
-    WCHAR c_Container[ 50];
+    wchar_t c_Interface[128]; // USB Interface string                  (max 127 unicode chars)
+    wchar_t c_Product  [128]; // USB device descriptor product string  (max 127 unicode chars)
+    wchar_t c_Parent   [256];
+    wchar_t c_Container[ 50];
 
     for (int Idx=0; true; Idx++)
     {
@@ -557,7 +556,7 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
         kUsbDevice k_UsbDev;
         k_UsbDev.ms_Product   = ToUtf8(c_Product);   // "Candlelight 2.5 - OleksiiDual"
         k_UsbDev.ms_Interface = ToUtf8(c_Interface); // "CAN FD Interface 2"
-        string   s_Container  = ToUtf8(c_Container); // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
+        string    s_Container = ToUtf8(c_Container); // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
         k_UsbDev.ms_DevPath   = cUtils::MakeUpper(pk_DetailData->DevicePath); // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
         k_UsbDev.ms_SerialNo  = cUtils::MapLookup(i_Serials, cUtils::MakeUpper(s_Container));
 
@@ -589,7 +588,7 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
 // "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\VID_1D50&PID_606F\2066349E39455006"
 // The last part is the serial number: "2066349E39455006"
 // return a Map with ContainerID --> Serial Number
-uint32_t OsLibrary::EnumSerialNumbers(CStringMap& i_Serials)
+uint32_t OsLibrary::EnumSerialNumbers(cStringMap& i_Serials)
 {
     string s_RootPath = "System\\CurrentControlSet\\Enum\\USB\\VID_1D50&PID_606F";
 
@@ -640,7 +639,7 @@ uint32_t OsLibrary::RegReadString(HKEY h_Class, const char* s8_Path, const char*
         return u32_Error;
 
     char s8_Buffer[1000];
-    uint32_t u32_Type;                      // OUT
+    uint32_t u32_Type;                     // OUT
     uint32_t u32_Size = sizeof(s8_Buffer); // IN = 2000 --> OUT = count of bytes read
     u32_Error = RegQueryValueExA(h_Key, s8_Entry, 0, &u32_Type, (uint8_t*)s8_Buffer, &u32_Size);
 
@@ -714,7 +713,7 @@ int OsLibrary::WaitConsoleChar()
 // Create a timestamp with 1 µs precision.
 // The returned timestamp starts at zero when the device is opened.
 // It is recommended to turn off transmssion of timestamps (not set GS_DevFlagTimestamp) to reduce USB traffic.
-// Then this function is used as a replacement to generate a timestamp on reception of a packet and when sending a packet.
+// Then this function is used as a replacement to generate a timestamp on reception of a USB packet and when sending a packet.
 int64_t OsLibrary::GetTimestamp()
 {
     static int64_t s64_Frequency = 0; 

@@ -42,18 +42,17 @@ using namespace CANable;
 // The std library is primitive. It has no replacement for Microsoft's CString.ToUpper()
 string cUtils::MakeUpper(string s_String)
 {
-    string s_Copy = s_String;
-    for (size_t i = 0; i < s_Copy.size(); i++)
+    for (size_t i = 0; i < s_String.length(); i++)
     {
-        s_Copy[i] = toupper(s_Copy[i]);
+        s_String[i] = toupper(s_String[i]);
     }
-    return s_Copy;
+    return s_String;
 }
 
 // The std library is primitive. It has no replacement for Microsoft's CString.TrimRight()
 string cUtils::TrimRight(string s_String, char* s_Remove) // s_Remove = " \n\r\t"
 {
-    int s32_Len = (int)s_String.size();
+    int s32_Len = (int)s_String.length();
     for (int S = s32_Len - 1; S >= 0; S--)
     {
         bool b_Trim = false;
@@ -80,7 +79,7 @@ string cUtils::Format(char* c_Format, ...)
     va_start(args, c_Format);
 
     char s_Buffer[5000];
-    int s32_Len = vsnprintf_s(s_Buffer, sizeof(s_Buffer) / 2, c_Format, args);
+    int s32_Len = vsnprintf_s(s_Buffer, sizeof(s_Buffer), c_Format, args);
     va_end(args);
 
     if (s32_Len < 0)
@@ -94,7 +93,7 @@ string cUtils::Format(char* c_Format, ...)
 }
 
 // The std library is primitive. It has no replacement for Microsoft's CMapStringToString.Lookup()
-string cUtils::MapLookup(CStringMap& i_Map, string& s_Key)
+string cUtils::MapLookup(cStringMap& i_Map, string& s_Key)
 {
     auto it = i_Map.find(s_Key);
     if (it == i_Map.end())

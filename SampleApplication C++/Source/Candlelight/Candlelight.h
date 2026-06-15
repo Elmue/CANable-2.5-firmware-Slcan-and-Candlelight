@@ -6,9 +6,9 @@
 //  The files WinLibrary.h and WinLibrary.cpp contain code for Windows.
 //  Someone must re-write them for Linux
 #if defined(_MSC_VER)
-    #include "WinLibrary.h"
+    #include "Windows/OsLibrary.h"
 #elif defined(__linux__)
-    #include "LinuxLibrary.h"
+    #include "Linux/OsLibrary.h"
 #else
     #error "Unknown compiler"
 #endif
