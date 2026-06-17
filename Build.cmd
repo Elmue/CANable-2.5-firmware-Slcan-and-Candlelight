@@ -1,4 +1,3 @@
-
 @echo off
 
 rem Copy all BIN files after compiling into this directory:
