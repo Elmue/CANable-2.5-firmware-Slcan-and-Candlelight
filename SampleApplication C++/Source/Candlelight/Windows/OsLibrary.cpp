@@ -44,6 +44,7 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 //
 // =======================================================================================================
 
+// see also includes in Utils.h
 #include "OsLibrary.h"
 #include <setupapi.h>
 #include <initguid.h> // DEVPKEY_Device_BusReportedDeviceDesc
@@ -53,14 +54,16 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 #pragma comment(lib, "Advapi32.lib")
 #pragma comment(lib, "WinUsb.lib")
 
+#define LANGUAGE_ENGLISH_USA   0x409
+
 using namespace CANable;
 
 // Interface 0 "{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-GUID GUID_CANDLELIGHT = { 0xc15b4308, 0x04d3, 0x11e6, { 0xb3, 0xea, 0x60, 0x57, 0x18, 0x9e, 0x64, 0x43 }};
+GUID GUID_CANDLELIGHT  = { 0xc15b4308, 0x04d3, 0x11e6, { 0xb3, 0xea, 0x60, 0x57, 0x18, 0x9e, 0x64, 0x43 }};
 
 // Interface 1 "{c25b4308-04d3-11e6-b3ea-6057189e6443}"
 // This GUID can be used to switch the device into DFU mode. Requires the CANable 2.5 firmware from ElmüSoft.
-GUID GUID_CANDLE_DFU  = { 0xc25b4308, 0x04d3, 0x11e6, { 0xb3, 0xea, 0x60, 0x57, 0x18, 0x9e, 0x64, 0x43 }};
+GUID GUID_FIRMW_UPDATE = { 0xc25b4308, 0x04d3, 0x11e6, { 0xb3, 0xea, 0x60, 0x57, 0x18, 0x9e, 0x64, 0x43 }};
 
 HANDLE gh_ConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
 HANDLE gh_ConsoleIn  = GetStdHandle(STD_INPUT_HANDLE);
@@ -83,9 +86,10 @@ OsLibrary::~OsLibrary()
     CloseHandle(mh_ThreadEvent);
 }
 
-// Called from Candlelight::Open()
-// s_DevicePath = "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-uint32_t OsLibrary::Open(string s_DevicePath)
+// Called from Candlelight::Open() only if the device is not already open
+// pk_Device comes from OsLibrary::EnumDevices()
+// pk_Device->ms_WinNtPath = "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
+uint32_t OsLibrary::Open(kUsbDevice* pk_Device)
 {
     ms64_PerfTimeStart  = 0;
     mu32_RxPipeErrors   = 0;
@@ -102,7 +106,7 @@ uint32_t OsLibrary::Open(string s_DevicePath)
     // NOTE:
     // Here we enable Overlapped mode although we do not use a OVERLAPPED structure. This is unusual.
     // But it works here because we set a timeout with WinUsb_SetPipePolicy(PIPE_TRANSFER_TIMEOUT)
-    mh_Device = CreateFileA(s_DevicePath.c_str(), GENERIC_READ | GENERIC_WRITE, 
+    mh_Device = CreateFileA(pk_Device->ms_DevicePath.c_str(), GENERIC_READ | GENERIC_WRITE, 
                             0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED, NULL);
 
     if (mh_Device == INVALID_HANDLE_VALUE)
@@ -123,7 +127,7 @@ uint32_t OsLibrary::Open(string s_DevicePath)
     }
 
     // Set timeout for control pipe (500 ms is far more than enough)
-    uint32_t u32_Timeout = 500;
+    uint32_t u32_Timeout = PIPE_TIMEOUT;
     if (!WinUsb_SetPipePolicy(mh_WinUsb, 0, PIPE_TRANSFER_TIMEOUT, sizeof(u32_Timeout), &u32_Timeout))
         return GetLastError();
 
@@ -152,7 +156,7 @@ uint32_t OsLibrary::Open(string s_DevicePath)
     ReadStringDescriptor(mk_Info.mk_DeviceDescr.iSerialNumber, LANGUAGE_ENGLISH_USA, &mk_Info.ms_Serial);
     ReadStringDescriptor(mk_Info.mk_InterfDescr.iInterface,    LANGUAGE_ENGLISH_USA, &mk_Info.ms_Interface);
 
-    // Get the 2 pipes of the Candlelight interface (the DFU interface has bNumEndpoints == 0)
+    // Get the 2 pipes of the Candlelight interface (the Firmware Update interface has bNumEndpoints == 0)
     for (uint8_t P=0; P<mk_Info.mk_InterfDescr.bNumEndpoints; P++)
     {
         WINUSB_PIPE_INFORMATION k_PipeInfo;
@@ -176,7 +180,7 @@ uint32_t OsLibrary::Open(string s_DevicePath)
     return NO_ERROR;
 }
 
-// This is not called for the DFU interface which has no endpoints
+// This is not called for the Firmware Update interface which has no endpoints
 uint32_t OsLibrary::StartPipes()
 {
     uint8_t u8_True = 1;
@@ -185,7 +189,7 @@ uint32_t OsLibrary::StartPipes()
 
     // Set timeout for OUT pipe (500 ms is far more than enough)
     // This timeout assures that pipe operations are not blocking eternally as an OVERLAPPED structure is not used.
-    uint32_t u32_Timeout = 500;
+    uint32_t u32_Timeout = PIPE_TIMEOUT;
     if (!WinUsb_SetPipePolicy(mh_WinUsb, mk_Info.mu8_EndpointOUT, PIPE_TRANSFER_TIMEOUT, sizeof(u32_Timeout), &u32_Timeout))
         return GetLastError();
 
@@ -263,9 +267,9 @@ uint32_t OsLibrary::ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_Language
 // ATTENTION: returns ERROR_NOACCESS if u8_Buffer is not in RAM !
 // Send SETUP packet and optionally additional data bytes as IN or OUT transfer.
 // Timeout has been set to 500 ms in Open()
-uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t u32_BufLen, uint32_t* pu32_Transferred)
+uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t* pu32_Transferred)
 {
-    if (!WinUsb_ControlTransfer(mh_WinUsb, *(WINUSB_SETUP_PACKET*)pk_Setup, u8_Buffer, u32_BufLen, pu32_Transferred, NULL))
+    if (!WinUsb_ControlTransfer(mh_WinUsb, *(WINUSB_SETUP_PACKET*)pk_Setup, u8_Buffer, pk_Setup->wLength, pu32_Transferred, NULL))
         return GetLastError();
 
     return NO_ERROR;
@@ -274,10 +278,10 @@ uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32
 // ===================================== OUT Pipe ======================================
 
 // Timeout has been set to 500 ms in StartPipes()
-uint32_t OsLibrary::WritePipeOut(uint8_t* u8_Transmit, uint32_t u32_TxLen)
+uint32_t OsLibrary::WritePipeOut(uint8_t* u8_TxData, uint32_t u32_TxLen)
 {
     uint32_t u32_Transferred;
-    if (!WinUsb_WritePipe(mh_WinUsb, mk_Info.mu8_EndpointOUT, u8_Transmit, u32_TxLen, &u32_Transferred, NULL))
+    if (!WinUsb_WritePipe(mh_WinUsb, mk_Info.mu8_EndpointOUT, u8_TxData, u32_TxLen, &u32_Transferred, NULL))
     {
         mu32_TxPipeErrors ++;
         return GetLastError();
@@ -453,16 +457,16 @@ uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacke
 // =================================== Enumerate USB Devices ==================================
 
 // Returns device name, serial number and path like "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-// b_Candlelight = false -> this function enumerates the DFU interfaces using GUID_CANDLE_DFU, but only if the device has the ElmüSoft firmware.
+// b_GetCandlelight = false -> this function enumerates the Firmware Update interfaces using GUID_FIRMW_UPDATE, but only if the device has the ElmüSoft firmware.
 // All legacy fimrware versions were buggy and unable to send the two Microsoft OS descriptors correctly, so the driver is not installed.
-uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devices)
+uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_Devices)
 {
     cStringMap i_Serials;
     uint32_t u32_Error = EnumSerialNumbers(i_Serials);
     if (u32_Error)
         return u32_Error;
 
-    GUID* pk_Guid = b_Candlelight ? &GUID_CANDLELIGHT : &GUID_CANDLE_DFU;
+    GUID* pk_Guid = b_GetCandlelight ? &GUID_CANDLELIGHT : &GUID_FIRMW_UPDATE;
 
     // Enumerate all USB devices with the given GUID that are currently connected
     HDEVINFO h_DevInfo = SetupDiGetClassDevs(pk_Guid, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
@@ -554,23 +558,21 @@ uint32_t OsLibrary::EnumDevices(bool b_Candlelight, vector<kUsbDevice>* pi_Devic
         // ---------------------
 
         kUsbDevice k_UsbDev;
-        k_UsbDev.ms_Product   = ToUtf8(c_Product);   // "Candlelight 2.5 - OleksiiDual"
-        k_UsbDev.ms_Interface = ToUtf8(c_Interface); // "CAN FD Interface 2"
-        string    s_Container = ToUtf8(c_Container); // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
-        k_UsbDev.ms_DevPath   = cUtils::MakeUpper(pk_DetailData->DevicePath); // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-        k_UsbDev.ms_SerialNo  = cUtils::MapLookup(i_Serials, cUtils::MakeUpper(s_Container));
+        k_UsbDev.ms_Product    = ToUtf8(c_Product);   // "Candlelight 2.5 - OleksiiDual"
+        k_UsbDev.ms_Interface  = ToUtf8(c_Interface); // "CAN FD Interface 2"
+        string    s_Container  = ToUtf8(c_Container); // "{2c7d6257-7635-5dc8-ad4f-f4d3ad209925}"
+        k_UsbDev.ms_DevicePath = cUtils::MakeUpper(pk_DetailData->DevicePath); // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
+        k_UsbDev.ms_SerialNo   = cUtils::MapLookup(i_Serials, cUtils::MakeUpper(s_Container));
 
         // Append interface number for multi-interface (MI) adapters
-        int s32_Pos = (int)k_UsbDev.ms_DevPath.find("&MI_0");
+        int s32_Pos = (int)k_UsbDev.ms_DevicePath.find("&MI_0");
         if (s32_Pos > 0)
         {
-            // MI_00 --> Candlelight 1
-            // MI_01 --> DFU
-            // MI_02 --> Candlelight 2
-            // MI_03 --> Candlelight 3
-            k_UsbDev.ms32_Channel = atoi(k_UsbDev.ms_DevPath.substr(s32_Pos + 5, 1).c_str());
-            if (k_UsbDev.ms32_Channel == 0)
-                k_UsbDev.ms32_Channel = 1;  // display one-based interface number           
+            // MI_00 --> CAN channel 1
+            // MI_01 --> Firmware Update
+            // MI_02 --> CAN channel 2
+            // MI_03 --> CAN channel 3
+            k_UsbDev.ms32_Interface = atoi(k_UsbDev.ms_DevicePath.substr(s32_Pos + 5, 1).c_str());
         }
 
         pi_Devices->push_back(k_UsbDev);
@@ -702,7 +704,7 @@ bool OsLibrary::CheckConsoleEnterPressed()
             k_Buffer.Event.KeyEvent.wVirtualKeyCode == VK_RETURN);
 }
 
-// Blocks until the user hits a key, returns the ASCII code
+// Wait until the user hits a key, returns the ASCII code (blocking function)
 int OsLibrary::WaitConsoleChar()
 {
     return _getch();
@@ -712,7 +714,7 @@ int OsLibrary::WaitConsoleChar()
 
 // Create a timestamp with 1 µs precision.
 // The returned timestamp starts at zero when the device is opened.
-// It is recommended to turn off transmssion of timestamps (not set GS_DevFlagTimestamp) to reduce USB traffic.
+// It is recommended to turn off transimssion of timestamps (not set GS_DevFlagTimestamp) to reduce USB traffic.
 // Then this function is used as a replacement to generate a timestamp on reception of a USB packet and when sending a packet.
 int64_t OsLibrary::GetTimestamp()
 {

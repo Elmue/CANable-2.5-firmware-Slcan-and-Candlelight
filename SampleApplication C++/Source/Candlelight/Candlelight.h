@@ -64,7 +64,7 @@ public:
      Candlelight();
     ~Candlelight();
     // ------------------------------------
-    uint32_t   Open(string s_DevicePath);
+    uint32_t   Open(kUsbDevice* pk_Device);
     void       Close();
     void       EnableTxEcho(bool b_Enable);
     uint32_t   SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, string* ps_Display);
@@ -77,27 +77,27 @@ public:
     uint32_t   ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, int64_t* ps64_RxTimestamp, bool* pb_Blob = NULL);
     kCanPacket RxFrameToCanPacket(kRxFrameElmue* pk_RxFrame);
     kCanPacket GetTxEchoPacket   (kTxEchoElmue*  pk_TxEcho);
-    string    ConvertStringFrame(kStringElmue*  pk_String);
+    string     ConvertStringFrame(kStringElmue*  pk_String);
     // ------------------------------------
-    string    FormatCanPacket(kCanPacket* pk_Packet);
-    string    FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp);
-    string    FormatCanErrors(kErrorElmue*   pk_Error, eErrorBusStatus* pe_BusStatus, eErrorLevel* pe_Level);
-    string    FormatLastError(uint32_t u32_Error);
+    string     FormatCanPacket(kCanPacket* pk_Packet);
+    string     FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp);
+    string     FormatCanErrors(kErrorElmue*   pk_Error, eErrorBusStatus* pe_BusStatus, eErrorLevel* pe_Level);
+    string     FormatLastError(uint32_t u32_Error);
     // ------------------------------------
     uint32_t   Identify(bool b_Blink);
     uint32_t   EnableBusLoadReport(uint8_t u8_Interval);
     uint32_t   EnterDfuMode();
     uint32_t   DisableBootPin();
     uint32_t   IsBootPinEnabled(bool* pb_Enabled);
-    uint32_t   ReadFlash (uint8_t u8_Segment, uint8_t* u8_Buffer, uint32_t u32_BufSize, uint32_t* pu32_DataRead);
-    uint32_t   WriteFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint32_t u32_DataLen);
+    uint32_t   ReadFlash (uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t u16_BufSize, uint32_t* pu32_DataRead);
+    uint32_t   WriteFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t u16_DataLen);
     // ------------------------------------
     inline vector<kDetail> GetDetails()     { return  mi_Details; }
     inline kDevInfo        GetDeviceInfo()  { return *mi_OsLibrary.DevInfo(); } // return a copy of the struct. mpk_Info may be NULL here!
     inline int64_t         GetOsTimestamp() { return  mi_OsLibrary.GetTimestamp(); }
 
 private:
-    uint32_t   CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_t u16_Value, void* p_Data, uint32_t u32_DataSize, uint32_t* pu32_DataRead = NULL);
+    uint32_t   CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_t u16_Value, void* p_Data, uint16_t u16_DataSize, uint32_t* pu32_DataRead = NULL);
     uint32_t   TxPacketToTxBytes(kCanPacket* pk_Packet, uint8_t* u8_TxBuf, int s32_BufSize, int* ps32_Offset);
     uint32_t   Reset();
 

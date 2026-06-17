@@ -78,7 +78,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 {
     // Increase console buffer for 3000 lines output with 300 chars per line
     // Set console window to 120 chars in 60 lines
-    OsLibrary::SetUpConsole(300, 3000, 120, 60, "ElmüSoft Candlelight C++ Demo");
+    OsLibrary::SetUpConsole(300, 3000, 120, 60, "ElmueSoft Candlelight C++ Demo");
 
     if (CANDLELIGHT_DEMO) 
     {
@@ -103,7 +103,7 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 void CandlelightDemo()
 {
     OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
-    OsLibrary::PrintConsole(YELLOW, "               CANable 2.5 Candlelight C++ Demo by ElmüSoft                  \n");
+    OsLibrary::PrintConsole(YELLOW, "               CANable 2.5 Candlelight C++ Demo by ElmueSoft                 \n");
     OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
 
     // open Candlelight interface
@@ -233,7 +233,7 @@ void CandlelightDemo()
     OsLibrary::PrintConsole(GREEN,  "Green = Echo of sent packets that have been ACKnowledged\n");
     OsLibrary::PrintConsole(CYAN,   "Cyan  = Received packets\n\n");
 
-    OsLibrary::PrintConsole(MAGENTA, "Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
+    OsLibrary::PrintConsole(MAGENTA, "Press ENTER to abort. If you only close the console window the adapter stays open.\n\n");
 
     // -----------------------------------------
 
@@ -405,7 +405,7 @@ void DfuDemo()
     OsLibrary::PrintConsole(YELLOW, "                 CANable 2.5 Enter DFU C++ Demo by ElmüSoft                  \n");
     OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
 
-    // Open DFU interface
+    // Open Firmware Update interface
     if (!OpenDevice())
         return;
 
@@ -444,6 +444,7 @@ bool OpenDevice()
     // -----------------------------------------
 
     gs32_DeviceIndex = 0;
+    kUsbDevice* pk_SelectedDevice = NULL;
     if (i_Devices.size() > 1) // 2 or more devices connected
     {
         while (true)
@@ -456,8 +457,9 @@ bool OpenDevice()
                 kUsbDevice k_Device = i_Devices[i];
                 OsLibrary::PrintConsole(WHITE, "%u.) %s (%s)", i+1, k_Device.DisplayName().c_str(), k_Device.ms_SerialNo.c_str());
 
-                if (CANDLELIGHT_DEMO) // DFU devices have no channels
-                    OsLibrary::PrintConsole(WHITE, " CAN Channel: %d", k_Device.ms32_Channel);
+                int s32_Channel = k_Device.GetCanChannel();
+                if (s32_Channel > 0) // Firmware Update interfaces have no channels
+                    OsLibrary::PrintConsole(WHITE, " CAN Channel: %d", s32_Channel);
 
                 OsLibrary::PrintConsole(WHITE, "\n");
             }
@@ -469,17 +471,20 @@ bool OpenDevice()
             gs32_DeviceIndex = s32_Char - '1';
 
             if (gs32_DeviceIndex >= 0 && gs32_DeviceIndex < (int)i_Devices.size()) 
+            {
+                pk_SelectedDevice = &i_Devices[gs32_DeviceIndex];
                 break;
+            }
             
             OsLibrary::PrintConsole(RED, "\nInvalid key!\n");
         }
     }
-   
-    OsLibrary::PrintConsole(GREY, "\nDevice Path: \"%s\"\n", i_Devices[gs32_DeviceIndex].ms_DevPath.c_str());
+
+    OsLibrary::PrintConsole(GREY, "\n");
 
     // -----------------------------------------
 
-    u32_Error = gi_Candle.Open(i_Devices[gs32_DeviceIndex].ms_DevPath);
+    u32_Error = gi_Candle.Open(pk_SelectedDevice);
     gk_Info   = gi_Candle.GetDeviceInfo();
 
     vector<kDetail> i_Details = gi_Candle.GetDetails();
@@ -509,19 +514,19 @@ void FlashMemoryTest()
     uint8_t  u8_SegmentB = 5;
 
     const char*   s8_Hello = "Hello World of flash data!";
-    uint32_t  u32_LenHello = strlen(s8_Hello);
+    uint16_t  u16_LenHello = strlen(s8_Hello);
     // ATTENTION: String must be copied to RAM, otherwise ERROR_NOACCESS from WinUSB.
     strcpy_s((char*)u8_Hello, sizeof(u8_Hello), s8_Hello);
 
     uint64_t u64_Random    = cUtils::GetTickMilli() * 0x815A78F3D;
-    uint32_t u32_LenRandom = sizeof(u64_Random);
+    uint16_t u16_LenRandom = sizeof(u64_Random);
 
     // --------------------
 
-    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentA, u8_Hello, u32_LenHello))
+    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentA, u8_Hello, u16_LenHello))
         goto _Error;
 
-    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentB, (uint8_t*)&u64_Random, u32_LenRandom))
+    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentB, (uint8_t*)&u64_Random, u16_LenRandom))
         goto _Error;
 
     // --------------------
@@ -529,7 +534,7 @@ void FlashMemoryTest()
     if (u32_Error = gi_Candle.ReadFlash(u8_SegmentA, u8_FlashData, sizeof(u8_FlashData), &u32_Read))
         goto _Error;
 
-    if (u32_Read != u32_LenHello || memcmp(u8_Hello, u8_FlashData, u32_Read) != 0)
+    if (u32_Read != u16_LenHello || memcmp(u8_Hello, u8_FlashData, u32_Read) != 0)
     {
         OsLibrary::PrintConsole(RED, "\nFlash memory test 1 failed!\n");
         return;
@@ -540,7 +545,7 @@ void FlashMemoryTest()
     if (u32_Error = gi_Candle.ReadFlash(u8_SegmentB, u8_FlashData, sizeof(u8_FlashData), &u32_Read))
         goto _Error;
 
-    if (u32_Read != u32_LenRandom || memcmp(&u64_Random, u8_FlashData, u32_Read) != 0)
+    if (u32_Read != u16_LenRandom || memcmp(&u64_Random, u8_FlashData, u32_Read) != 0)
     {
         OsLibrary::PrintConsole(RED, "\nFlash memory test 2 failed!\n");
         return;

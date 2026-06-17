@@ -16,7 +16,7 @@
 // interface 2 = Candlelight 2
 // interface 3 = Candlelight 3
 #define CANDLE_INRERFACE_COUNT    CHANNEL_COUNT                // number of CAN channels
-#define DFU_INTERFACE_NUMBER      1                            // interface 1 is always DFU for backward compatibiliy
+#define FIRMW_UPDATE_INTERFACE    1                            // interface 1 is always Firmware Update for backward compatibiliy
 #define USBD_INTERFACES_COUNT    (CANDLE_INRERFACE_COUNT + 1)  // total count of USB interfaces
 
 void               USBD_SendInDataToHost(uint8_t channel, uint8_t* buf, uint16_t len);

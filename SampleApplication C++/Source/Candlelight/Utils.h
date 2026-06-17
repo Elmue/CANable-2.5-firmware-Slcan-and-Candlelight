@@ -3,6 +3,7 @@
 
 #pragma once
 
+// includes for Windows and Linux
 #include <stdio.h>
 #include <assert.h>
 #include <cwchar>
@@ -18,10 +19,12 @@ using namespace std;
 
 // ---------------------------------
 
-// Stuff to compile Candlelight_def.h on VS
+// definitions to compile Candlelight_def.h on VS / GCC
+#define  __aligned(x)  // only valid for ARM compiler (STM32xxx processors)
+#define  __packed      // only valid for ARM compiler (STM32xxx processors)
+
+// definitions for Visual Studio
 #if defined(_MSC_VER)
-    #define  __aligned(x)  
-    #define  __packed 
     #define  uint8_t    unsigned char
     #define  int16_t    short
     #define  uint16_t   unsigned short
@@ -36,11 +39,17 @@ using namespace std;
 
 // ---------------------------------
 
-#define cStringMap             unordered_map<string, string>
-#define LANGUAGE_ENGLISH_USA   0x409
+// must be equal to FIRMW_UPDATE_INTERFACE in usb_class.h in the firmware
+#define FIRMW_UPDATE_INTERFACE  1
 
-// Windows error codes are far below 50000
-// Define proprietary error codes here that are used also for Linux:
+// Timeout for writing the OUT pipe and for Control Transfer (500 ms is far more than required)
+#define PIPE_TIMEOUT            500  
+
+#define cStringMap              unordered_map<string, string>
+
+// These error codes are used for Windows and Linux.
+// Native Windows API error codes are far below 50000.
+// libusb errors are always negative (-1 to -99), although they are returned as uint32_t from the functions in OsLibrary.
 #ifndef NO_ERROR
     #define NO_ERROR              0  // Success
 #endif
@@ -64,6 +73,7 @@ namespace CANable
 
 #pragma pack(push,1)
 
+// standard USB device descriptor
 struct kDeviceDescriptor
 {
     uint8_t   bLength;
@@ -82,6 +92,7 @@ struct kDeviceDescriptor
     uint8_t   bNumConfigurations;
 };
 
+// standard USB interface descriptor
 struct kInterfaceDescriptor
 {
     uint8_t   bLength;
@@ -95,34 +106,40 @@ struct kInterfaceDescriptor
     uint8_t   iInterface;
 };
 
+// standard USB Setup request
 struct kSetup
 {
-    uint8_t   RequestType; // eSetupRecip | eSetupType | eDirection
-    uint8_t   Request;     // GS_ReqGetCapabilities,... / DFU_RequDetach, DFU_RequGetStatus,...
-    uint16_t  Value;       // CAN Channel / ePinID for ELM_ReqGetPinStatus
-    uint16_t  Index;       // Interface number (0 = Candlelight, 1 = DFU)
-    uint16_t  Length;      // Byte count
+    uint8_t   bRequestType; // eSetupRecip | eSetupType | eDirection
+    uint8_t   bRequest;     // GS_ReqGetCapabilities,... / DFU_RequDetach, DFU_RequGetStatus,...
+    uint16_t  wValue;       // CAN Channel / ePinID for ELM_ReqGetPinStatus
+    uint16_t  wIndex;       // Interface number (0 = Candlelight, 1 = DFU)
+    uint16_t  wLength;      // Byte count
 };
 
 #pragma pack(pop)
 
 // -------------------------------------------------------------
 
+// This struct contains all the details of the connected Candlelight device.
+// This struct can be obtained with Candlelight::GetDeviceInfo()
 struct kDevInfo
 {
+    // the following members are set in OsLibrary::Open()
     string                   ms_Vendor;           // from device descriptor
     string                   ms_Product;          // from device descriptor
     string                   ms_Serial;           // from device descriptor
     string                   ms_Interface;        // from interface descriptor
     uint8_t                  mu8_EndpointIN;      // e.g. 0x81
     uint8_t                  mu8_EndpointOUT;     // e.g. 0x02
-    uint8_t                  mu8_Channel;         // CAN channel 0,1,2
     uint16_t                 mu16_MaxPackSizeIN;  // max packet size for IN  endpoint (64 bytes for Full Speed USB)
     uint16_t                 mu16_MaxPackSizeOUT; // max packet size for OUT endpoint (64 bytes for Full Speed USB)
-    bool                     mb_IsElmueSoft;      // The adapter supports the ElmüSoft protocol
-    bool                     mb_SupportsFD;       // The adapter supports CAN FD
     kDeviceDescriptor        mk_DeviceDescr;      // entire device descriptor
     kInterfaceDescriptor     mk_InterfDescr;      // entire interface descriptor
+    
+    // the following members are set in Candlelight::Open()
+    uint8_t                  mu8_Channel;         // CAN channel 0,1,2
+    bool                     mb_IsElmueSoft;      // The adapter supports the ElmüSoft protocol
+    bool                     mb_SupportsFD;       // The adapter supports CAN FD
     kCapabilityClassic       mk_Capability;       // see Candlelight_def.h
     kCapabilityFD            mk_CapabilityFD;     // see Candlelight_def.h
     kDeviceVersion           mk_DeviceVersion;    // see Candlelight_def.h
@@ -136,9 +153,9 @@ struct kDevInfo
         ms_Interface        = "";
         mu8_EndpointIN      = 0;
         mu8_EndpointOUT     = 0;
-        mu8_Channel         = 0;
         mu16_MaxPackSizeIN  = 0;
         mu16_MaxPackSizeOUT = 0;
+        mu8_Channel         = 0;        
         mb_IsElmueSoft      = false;
         mb_SupportsFD       = false;
         memset(&mk_DeviceDescr,   0, sizeof(mk_DeviceDescr));
@@ -150,7 +167,7 @@ struct kDevInfo
     }
 };
 
-// A USB frame that was received on th IN pipe and is stored in the Rx FIFO
+// A USB packet that was received on the IN pipe
 struct kUsbInPacket
 {
     uint8_t   mu8_Buffer[MAX_BLOB_SIZE];
@@ -159,18 +176,36 @@ struct kUsbInPacket
     int64_t   ms64_OsTimestamp;  // Timestamp with 1µs precision from operating system
 };
 
+// This struct is filled by OsLibrary::EnumDevices()
+// The information is displayed to the user, so he can select one of the connected USB devices.
 struct kUsbDevice
 {
 public:
-    string  ms_Product;   // from Device Descriptor
-    string  ms_SerialNo;  // from Device Descriptor
-    string  ms_Interface; // from Interface Descriptor
-    string  ms_DevPath;   // Operating System path to open the device
-    int     ms32_Channel; // one-based channel (always 1 for devices that have only one CAN channel)
-
+    string  ms_Product;      // from Device Descriptor
+    string  ms_SerialNo;     // from Device Descriptor
+    string  ms_Interface;    // from Interface Descriptor
+    int     ms32_Interface;  // zero-based interface index
+    void*   mpi_LinuxDevice; // on Linux: libusb_device*
+    // Windows = "\\?\USB#VID_1D50&PID_606F&MI_00#7&1B930F3C&0&0000#{C15B4308-04D3-11E6-B3EA-6057189E6443}"
+    // Linux   = "/sys/class/usb_device/usbdev1.4/device/1-1.2:1.0"
+    string  ms_DevicePath;   
+    
     kUsbDevice()
     {
-        ms32_Channel = 0; // invalid
+        ms32_Interface  = 0;
+        mpi_LinuxDevice = 0;
+    }
+
+    // The Firmware Update Interface (1) has no CAN channels --> return -1
+    // The Candlelight interfaces are 0,2,3,... --> display as CAN Channel 1,2,3,...
+    int GetCanChannel()
+    {
+        switch (ms32_Interface)
+        {
+            case 0:                      return  1; // display one-based channel number           
+            case FIRMW_UPDATE_INTERFACE: return -1; // invalid
+            default:                     return ms32_Interface;
+        }
     }
 
     // returns "Candlelight 2.5 - OleksiiDual - CAN FD Interface 2"
@@ -179,7 +214,7 @@ public:
     {
         // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
         // Windows returns the Product string instead --> both are identical
-        if (ms_Product == ms_Interface)
+        if (ms_Product == ms_Interface || ms_Interface.length() == 0)
             return ms_Product;
 
         return ms_Product + " - " + ms_Interface;
@@ -191,7 +226,7 @@ public:
         if (ms_SerialNo != i_Dev2.ms_SerialNo)
             return ms_SerialNo < i_Dev2.ms_SerialNo;
 
-        return ms32_Channel < i_Dev2.ms32_Channel;
+        return ms32_Interface < i_Dev2.ms32_Interface;
     }
 };
 

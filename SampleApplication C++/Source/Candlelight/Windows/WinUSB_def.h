@@ -49,7 +49,7 @@ typedef struct _WINUSB_SETUP_PACKET
 
 // These requests can be sent to the firmware update interface.
 // In DFU mode they are all functional, but require the STtube30 driver from ST Microelectronics.
-// In APP mode the Candlelight exposes a reduced DFU interface which implements only DFU_RequDetach and DFU_RequGetStatus.
+// In APP mode the Candlelight exposes a reduced Firmware Update interface which implements only DFU_RequDetach and DFU_RequGetStatus.
 typedef enum 
 {
     DFU_RequDetach      = 0, // RequType = 0x21, Tells device to detach and re-enter DFU mode (wValue = Timeout)

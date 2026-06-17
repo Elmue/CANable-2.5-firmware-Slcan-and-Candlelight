@@ -1808,15 +1808,18 @@
 </ul>
 <div>The <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/SampleApplication%20C%2B%2B" target="_blank">source code</a> is full of <b>detailed comments</b> so you can easily understand how it works.</div>
 <p>
-<div>The demo also shows how to <b>use WinUSB.dll correctly</b> which is more complex than it seems at the first look.</div>
+<div>The demo also shows how to use <b>WinUSB</b> correctly which is more complex than it seems at the first look.</div>
 <div>For example in Cangaroo and in Candle.NET they use WinUSB wrongly which results in packet loss or wrong packet order.</div>
 <div>WinUSB requires an unusal programming that is not documented by Microsoft.</div>
 <p>
-<div>In the Candlelight C++ class the Windows operating system calls are in a separate class.</div>
-<div>If you are a <b>Linux</b> developer you can convert the class <code>OsLibrary</code > to Linux and send it to me.</div>
-
+<div>In the Candlelight C++ project the operating system calls are in a separate class.</div>
+<div>The code in the file <code>Windows/OsLibrary.cpp</code> is tested and functioning.</div>
+<div>The code in the file <code>Linux/OsLibrary.cpp</code> is 100% ready but not yet tested.</div>
+<div>If you are a <b>Linux</b> C++ developer you can finish the class and send it to me.</div>
 <p>
-<img src="Images/Candlelight Cpp demo.png" alt="Candlelight demo project" width="722" height="572">
+<div>This is the output of the C++ and C# demo applications on <b>Windows</b>:</div>
+<p>
+<img src="Images/Candlelight Cpp demo.png" alt="Candlelight demo project" width="722" height="933">
 <p>
 
 <a name="Candle_NewProto"></a>

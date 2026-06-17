@@ -41,8 +41,6 @@ using namespace CANable;
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251218 = 18.dec.2025)
 #define MIN_FIRMWARE      0x260606
-// must be equal to DFU_INTERFACE_NUMBER in usb_class.h in the firmware
-#define DFU_INTERFACE     1
 // must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
 #define CAN_QUEUE_SIZE    64
 
@@ -74,7 +72,8 @@ void Candlelight::Close()
 
 // STEP 1)
 // Initialize WinUSB and get the Candlelight structures with board info, capabilities, etc from the firmware
-uint32_t Candlelight::Open(string s_DevicePath)
+// pk_Device comes from OsLibrary::EnumDevices()
+uint32_t Candlelight::Open(kUsbDevice* pk_Device)
 {
     if (mi_OsLibrary.IsOpen())
         return ERR_OPERATION_INVALID; // Already open
@@ -94,13 +93,14 @@ uint32_t Candlelight::Open(string s_DevicePath)
     mi_Details.clear();
     memset(&mk_EchoPackets, 0, sizeof(mk_EchoPackets));
     
-    uint32_t u32_Error = mi_OsLibrary.Open(s_DevicePath);
+    uint32_t u32_Error = mi_OsLibrary.Open(pk_Device);
     if (u32_Error)
         return u32_Error;   
     
     mpk_Info      = mi_OsLibrary.DevInfo();
     mu8_Interface = mpk_Info->mk_InterfDescr.bInterfaceNumber;   
 
+    mi_Details.push_back(kDetail("Device Path",        pk_Device->ms_DevicePath));
     mi_Details.push_back(kDetail("USB Vendor",         cUtils::Format("\"%s\"", mpk_Info->ms_Vendor   .c_str())));   
     mi_Details.push_back(kDetail("USB Product",        cUtils::Format("\"%s\"", mpk_Info->ms_Product  .c_str())));  
     mi_Details.push_back(kDetail("USB Serial  Nº",     cUtils::Format("\"%s\"", mpk_Info->ms_Serial   .c_str())));   
@@ -111,9 +111,9 @@ uint32_t Candlelight::Open(string s_DevicePath)
 
     // -------------------------- DFU --------------------------------
 
-    if (mu8_Interface == DFU_INTERFACE)
+    if (mu8_Interface == FIRMW_UPDATE_INTERFACE)
     {
-        // The DFU interface has no IN / OUT endpoints. It supports only SETUP requests.
+        // The Firmware Update interface has no IN / OUT endpoints. It supports only SETUP requests.
         if (mpk_Info->mk_InterfDescr.bNumEndpoints != 0)
             return ERR_INVALID_DEVICE;
 
@@ -128,7 +128,7 @@ uint32_t Candlelight::Open(string s_DevicePath)
         return ERR_INVALID_DEVICE;
 
     // Interface 0 -> Channel 0
-    // Interface 1 -> DFU
+    // Interface 1 -> Firmware Update
     // Interface 2 -> Channel 1
     // Interface 3 -> Channel 2
     mu8_Channel = mu8_Interface; 
@@ -174,8 +174,8 @@ uint32_t Candlelight::Open(string s_DevicePath)
 
     if (mpk_Info->mb_IsElmueSoft) // not BCD encoded
         mi_Details.push_back(kDetail("HAL Version", cUtils::Format("%u.%u.%u", mpk_Info->mk_DeviceVersion.hal_ver_high,
-                                                                                 mpk_Info->mk_DeviceVersion.hal_ver_mid,
-                                                                                 mpk_Info->mk_DeviceVersion.hal_ver_low)));
+                                                                               mpk_Info->mk_DeviceVersion.hal_ver_mid,
+                                                                               mpk_Info->mk_DeviceVersion.hal_ver_low)));
 
     mi_Details.push_back(kDetail("Firmware Type",   mpk_Info->mb_IsElmueSoft ? "CANable 2.5" : "Legacy"));        
     mi_Details.push_back(kDetail("Supports CAN FD", mpk_Info->mb_SupportsFD  ? "Yes"         : "No"));            
@@ -237,7 +237,7 @@ void Candlelight::EnableTxEcho(bool b_Enable)
 // returns the formatted baudrate and samplepoint in s_Display
 uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, string* ps_Display)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     if (b_FD && !mpk_Info->mb_SupportsFD)
@@ -285,7 +285,7 @@ uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_S
 // ATTENTION: If you set only an 11 bit filter, no 29 bit ID's will pass and vice versa.
 uint32_t Candlelight::AddHostFilter(bool b_29bit, uint32_t u32_Filter, uint32_t u32_Mask)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     kFilter k_Filter = {0};
@@ -334,7 +334,7 @@ uint32_t Candlelight::SetBridgeFilter(uint8_t u8_FilterIndex, uint8_t u8_DestCha
 // Connect to CAN bus, turn off the Tx LED
 uint32_t Candlelight::Start(eDeviceFlags e_Flags)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     kDeviceMode k_Mode;
@@ -612,7 +612,7 @@ string Candlelight::ConvertStringFrame(kStringElmue* pk_String)
 // Flashes the Rx + Tx LEDs on the board
 uint32_t Candlelight::Identify(bool b_Blink)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     uint32_t u32_Mode = b_Blink ? 1 : 0; 
@@ -623,7 +623,7 @@ uint32_t Candlelight::Identify(bool b_Blink)
 // NOTE: The firmware does not report the busload if bus load is permanently 0%.
 uint32_t Candlelight::EnableBusLoadReport(uint8_t u8_Interval)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     return CtrlTransfer(DIR_Out, ELM_ReqSetBusLoadReport, mu8_Channel, &u8_Interval, sizeof(u8_Interval));
@@ -634,7 +634,7 @@ uint32_t Candlelight::EnableBusLoadReport(uint8_t u8_Interval)
 // The pin is automatically enabled when entering DFU mode with EnterDfuMode()
 uint32_t Candlelight::DisableBootPin()
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     kPinStatus k_PinStatus = {0};
@@ -646,7 +646,7 @@ uint32_t Candlelight::DisableBootPin()
 // Read the detailed documentation about pin BOOT0 on https://netcult.ch/elmue/CANable%20Firmware%20Update
 uint32_t Candlelight::IsBootPinEnabled(bool* pb_Enabled)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     // The requested pin ID must be transmitted in SETUP.wValue because a USB IN request cannot otherwise transmit parameters to the firmware.
@@ -662,23 +662,23 @@ uint32_t Candlelight::IsBootPinEnabled(bool* pb_Enabled)
 // Write user data to flash memory. The firmware also stores the length of the data and returns the same data in ReadFlash()
 // A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
 // ATTENTION: u8_Buffer must point to RAM memory, otherwise ERROR_NOACCESS.
-uint32_t Candlelight::WriteFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint32_t u32_DataLen)
+uint32_t Candlelight::WriteFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t u16_DataLen)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
-    return CtrlTransfer(DIR_Out, ELM_ReqWriteFlash, u8_Segment, u8_Buffer, u32_DataLen);
+    return CtrlTransfer(DIR_Out, ELM_ReqWriteFlash, u8_Segment, u8_Buffer, u16_DataLen);
 }
 
 // Read user data from the flash memory that was written before with WriteFlash()
 // A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
 // *pu32_DataRead returns the count of bytes that was written into u8_Buffer.
-uint32_t Candlelight::ReadFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint32_t u32_BufSize, uint32_t* pu32_DataRead)
+uint32_t Candlelight::ReadFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t u16_BufSize, uint32_t* pu32_DataRead)
 {
-    if (!mb_InitDone || mu8_Interface == DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
-    return CtrlTransfer(DIR_In, ELM_ReqReadFlash, u8_Segment, u8_Buffer, u32_BufSize, pu32_DataRead);
+    return CtrlTransfer(DIR_In, ELM_ReqReadFlash, u8_Segment, u8_Buffer, u16_BufSize, pu32_DataRead);
 }
 
 // --------------------------------------------------------------------
@@ -689,45 +689,46 @@ uint32_t Candlelight::ReadFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint32_t
 // This function can obtain the feedback from the ElmüSoft firmware, but works also with legacy firmware.
 // ATTENTION: p_Data must point to RAM memory, otherwise ERROR_NOACCESS.
 uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_t u16_Value, 
-                                   void* p_Data, uint32_t u32_DataSize, 
+                                   void* p_Data, uint16_t u16_DataSize, 
                                    uint32_t* pu32_DataRead) // = NULL
 {
     if (pu32_DataRead) *pu32_DataRead = 0;
 
     // A Control Transfer must not exceed 4 kB.
-    if (u32_DataSize > 4096)
+    if (u16_DataSize > 4096)
         return ERR_TX_DATA_TOO_LONG;
 
-    // The Candlelight interface implements Vendor requests while the DFU interface implements Class requests.
-    eSetupType e_Type = (mu8_Interface == DFU_INTERFACE) ? TYP_Class : TYP_Vendor;
+    // The Candlelight interface implements Vendor requests while the Firmware Update interface implements Class requests.
+    eSetupType e_Type = (mu8_Interface == FIRMW_UPDATE_INTERFACE) ? TYP_Class : TYP_Vendor;
 
     kSetup k_Setup;
-    k_Setup.RequestType = RECIP_Interface | e_Type | e_Dir;
-    k_Setup.Request     = u8_Request;
-    k_Setup.Value       = u16_Value;     // Channel / PinID for ELM_ReqGetPinStatus
-    k_Setup.Index       = mu8_Interface; // destination interface (0 = Candlelight, 1 = DFU Firmware Update)
-    k_Setup.Length      = 0;             // set by WinUSB to u32_DataSize
+    k_Setup.bRequestType = RECIP_Interface | e_Type | e_Dir;
+    k_Setup.bRequest     = u8_Request;
+    k_Setup.wValue       = u16_Value;     // Channel / PinID for ELM_ReqGetPinStatus
+    k_Setup.wIndex       = mu8_Interface; // destination interface (0,2,3 = Candlelight, 1 = Firmware Update)
+    k_Setup.wLength      = u16_DataSize; 
 
     // -------- Execute Request ------------
 
     uint32_t u32_CmdBytes;
     // ATTENTION: returns ERROR_NOACCESS if p_Data is not in RAM !
-    uint32_t u32_CmdErr = mi_OsLibrary.ControlTransfer(&k_Setup, (uint8_t*)p_Data, u32_DataSize, &u32_CmdBytes);
+    uint32_t u32_CmdErr = mi_OsLibrary.ControlTransfer(&k_Setup, (uint8_t*)p_Data, &u32_CmdBytes);
 
-    // The DFU interface sends no feedback
-    if (mu8_Interface != DFU_INTERFACE)
+    // The Firmware Update interface sends no feedback
+    if (mu8_Interface != FIRMW_UPDATE_INTERFACE)
     {
         // ---------- Get Feedback -------------
 
         // ALWAYS get the feedback, even if the previous command execution did NOT return an error!
         // In second stage of the SETUP request the firmware can NOT stall the endpoint which is the only way to alert an USB error.
+        uint8_t u8_Feedback; // feedback is a one byte response
 
-        k_Setup.RequestType = RECIP_Interface | TYP_Vendor | DIR_In;
-        k_Setup.Request     = ELM_ReqGetLastError;
+        k_Setup.bRequestType = RECIP_Interface | TYP_Vendor | DIR_In;
+        k_Setup.bRequest     = ELM_ReqGetLastError;
+        k_Setup.wLength      = sizeof(u8_Feedback);
 
-        uint8_t  u8_Feedback; // feedback is a one byte response
         uint32_t u32_FbkBytes;
-        uint32_t u32_FbkErr = mi_OsLibrary.ControlTransfer(&k_Setup, &u8_Feedback, sizeof(u8_Feedback), &u32_FbkBytes);
+        uint32_t u32_FbkErr = mi_OsLibrary.ControlTransfer(&k_Setup, &u8_Feedback, &u32_FbkBytes);
 
         me_LastError = (eFeedback)u8_Feedback;
 
@@ -747,7 +748,7 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
         // When reading flash memory the firmware will return less bytes than requested, this is not an error.
         if (u8_Request != ELM_ReqReadFlash)
         {
-            if (u32_CmdBytes < u32_DataSize) 
+            if (u32_CmdBytes < u16_DataSize) 
                 return ERR_INVALID_RX_DATA; 
         }
     }
@@ -770,7 +771,7 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
     int64_t s64_Stamp = -1;
     if (mb_McuTimestamp)
     {
-        if (pk_Header != NULL)
+        if (pk_Header)
         {
             switch (pk_Header->msg_type)
             {
@@ -957,6 +958,8 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
             }
         }
     }
+
+    // Get Windows API or libusb error message
     return OsLibrary::GetErrorMessage(u32_Error);
 }
 
@@ -968,14 +971,14 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
 // IMPORTANT:
 // This will ONLY work if the Candlelight has the new CANable 2.5 firmware from ElmüSoft.
 // ALL legacy Candlelights have a sloppy firmware that does not respond to the Microsoft OS descriptor request for interface 1.
-// The consequence is that Windows cannot install the WinUSB driver for the DFU interface and EnumDevices() will not find the device.
+// The consequence is that Windows cannot install the WinUSB driver for the Firmware Update interface and EnumDevices() will not find the device.
 // ATTENTION:
 // This works only if the device is in Candlelight mode. If the device is already in DFU mode it will fail.
 // If the device is already in DFU mode you cannot use the WinUSB driver, you need the STtube30 driver from ST Microelectronics.
 // If you want to update the firmware use HUD ECU Hacker which comes with a very comfortable STM32 Firmware Programmer.
 uint32_t Candlelight::EnterDfuMode()
 {
-    if (!mb_InitDone || mu8_Interface != DFU_INTERFACE)
+    if (!mb_InitDone || mu8_Interface != FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
     // The legacy firmware would have entered immediately in DFU mode and CtrlTransfer() would have returned error 31 here.

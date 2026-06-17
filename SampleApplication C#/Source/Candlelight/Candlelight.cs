@@ -825,13 +825,35 @@ public class Candlelight : IDisposable
 
     #endregion
 
+    #region class cDetail
+
+    public class cDetail
+    {
+        String ms_Name;
+        String ms_Value;
+
+        public cDetail(String s_Name, String s_Value)
+        {
+            ms_Name  = s_Name + ':';
+            ms_Value = s_Value;
+        }
+
+        // returns "USB Product:            Candlelight 2.5 - Multiboard"
+        public String Format(int s32_ColumnWidth)
+        {
+            return ms_Name.PadRight(s32_ColumnWidth) + ms_Value;
+        }
+    };
+
+    #endregion
+
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251218 = 18.dec.2025)
     const int MIN_FIRMWARE = 0x260606;
 
-    // must be equal to DFU_INTERFACE_NUMBER in usb_class.h in the firmware
-    const Byte DFU_INTERFACE = 1;
+    // must be equal to FIRMW_UPDATE_INTERFACE in usb_class.h in the firmware
+    const Byte FIRMW_UPDATE_INTERFACE = 1;
 
     // must be equal to MAX_BLOB_SIZE in candlelight_def.h in firmware
     const int MAX_BLOB_SIZE = 2048;
@@ -841,7 +863,7 @@ public class Candlelight : IDisposable
 
     WinUSB           mi_WinUSB;
     kDevInfo         mk_Info;
-    StringBuilder    ms_Details;
+    List<cDetail>    mi_Details;
     cPipeIn          mi_PipeIn;
     cPipeOut         mi_PipeOut;
     Byte             mu8_Channel;
@@ -863,9 +885,9 @@ public class Candlelight : IDisposable
     {
         get { return mk_Info; }
     }
-    public String DeviceDetails
+    public List<cDetail> DeviceDetails
     {
-        get { return ms_Details.ToString(); }
+        get { return mi_Details; }
     }
     public override string ToString()
     {
@@ -913,7 +935,7 @@ public class Candlelight : IDisposable
             throw new Exception("The Candlelight adapter is already open");
 
         mk_Info           = new kDevInfo();
-        ms_Details        = new StringBuilder();
+        mi_Details        = new List<cDetail>();
         mi_TxOverflow     = new Stopwatch();
         mb_InitDone       = false;
         mb_BaudFDSet      = false;
@@ -935,17 +957,18 @@ public class Candlelight : IDisposable
         mk_Info.ms_Interface   = mi_WinUSB.Interface.String;
         mk_Info.mk_DeviceDescr = mi_WinUSB.DeviceDescriptor;
 
-        ms_Details.AppendFormat("USB Vendor:           \"{0}\"\n", mk_Info.ms_Vendor);
-        ms_Details.AppendFormat("USB Product:          \"{0}\"\n", mk_Info.ms_Product);
-        ms_Details.AppendFormat("USB Serial  Nº:       \"{0}\"\n", mk_Info.ms_SerialNo);
-        ms_Details.AppendFormat("USB Interface Name:   \"{0}\"\n", mk_Info.ms_Interface);
-        ms_Details.AppendFormat("USB Vendor  ID:       {0:X4}\n",  mk_Info.mk_DeviceDescr.idVendor);
-        ms_Details.AppendFormat("USB Product ID:       {0:X4}\n",  mk_Info.mk_DeviceDescr.idProduct);
-        ms_Details.AppendFormat("USB Device Version:   {0}\n",     Utils.FormatBcdVersion(mk_Info.mk_DeviceDescr.bcdDevice));
+        mi_Details.Add(new cDetail("Device Path",          '"' + s_NtPath             + '"'));
+        mi_Details.Add(new cDetail("USB Vendor",           '"' + mk_Info.ms_Vendor    + '"'));
+        mi_Details.Add(new cDetail("USB Product",          '"' + mk_Info.ms_Product   + '"'));
+        mi_Details.Add(new cDetail("USB Serial  Nº",       '"' + mk_Info.ms_SerialNo  + '"'));
+        mi_Details.Add(new cDetail("USB Interface Name",   '"' + mk_Info.ms_Interface + '"'));
+        mi_Details.Add(new cDetail("USB Vendor  ID",       mk_Info.mk_DeviceDescr.idVendor .ToString("X4")));
+        mi_Details.Add(new cDetail("USB Product ID",       mk_Info.mk_DeviceDescr.idProduct.ToString("X4")));
+        mi_Details.Add(new cDetail("USB Device Version",   Utils.FormatBcdVersion(mk_Info.mk_DeviceDescr.bcdDevice)));
 
         // ----------------- DFU --------------------
 
-        if (mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
         {
             // Interface 1 (DFU) has no IN / OUT endpoints. It supports only SETUP requests.
             if (mi_WinUSB.Interface.EndpointCount != 0)
@@ -984,9 +1007,9 @@ public class Candlelight : IDisposable
         mk_Info.mu16_MaxPackSizeIN  = mi_PipeIn .MaxPacketSize;
         mk_Info.mu16_MaxPackSizeOUT = mi_PipeOut.MaxPacketSize;
 
-        ms_Details.AppendFormat("USB Endpoint CTRL:    00,  max packet size: {0} byte\n",     mk_Info.mk_DeviceDescr.bMaxPacketSize0);
-        ms_Details.AppendFormat("USB Endpoint IN:      {0:X2},  max packet size: {1} byte\n", mk_Info.mu8_EndpointIN,  mk_Info.mu16_MaxPackSizeIN);
-        ms_Details.AppendFormat("USB Endpoint OUT:     {0:X2},  max packet size: {1} byte\n", mk_Info.mu8_EndpointOUT, mk_Info.mu16_MaxPackSizeOUT);
+        mi_Details.Add(new cDetail("USB Endpoint CTRL", String.Format(    "00,  max packet size: {0} byte", mk_Info.mk_DeviceDescr.bMaxPacketSize0)));
+        mi_Details.Add(new cDetail("USB Endpoint IN",   String.Format("{0:X2},  max packet size: {1} byte", mk_Info.mu8_EndpointIN,  mk_Info.mu16_MaxPackSizeIN)));
+        mi_Details.Add(new cDetail("USB Endpoint OUT",  String.Format("{0:X2},  max packet size: {1} byte", mk_Info.mu8_EndpointOUT, mk_Info.mu16_MaxPackSizeOUT)));
 
         mi_PipeIn.SetPolicy(ePipePolicy.RawIO, true);
 
@@ -1014,18 +1037,18 @@ public class Candlelight : IDisposable
 
         mk_Info.mk_DeviceVersion    = CtrlTransfer<kDeviceVersion>((Byte)eUsbRequest.GetDeviceVersion, eDirection.In, mu8_Channel); 
 
-        ms_Details.AppendFormat("Hardware Version:     {0}\n", mk_Info.mk_DeviceVersion.HardVersion);
-        ms_Details.AppendFormat("Firmware Version:     {0}\n", mk_Info.mk_DeviceVersion.SoftVersion);
+        mi_Details.Add(new cDetail("Hardware Version",     mk_Info.mk_DeviceVersion.HardVersion));
+        mi_Details.Add(new cDetail("Firmware Version",     mk_Info.mk_DeviceVersion.SoftVersion));
         
         if (mk_Info.mb_IsElmueSoft)
-            ms_Details.AppendFormat("HAL      Version:     {0}\n", mk_Info.mk_DeviceVersion.HalVersion);
+            mi_Details.Add(new cDetail("HAL      Version", mk_Info.mk_DeviceVersion.HalVersion));
 
-        ms_Details.AppendFormat("Firmware Type:        {0}\n", mk_Info.mb_IsElmueSoft ? "CANable 2.5" : "Legacy");
-        ms_Details.AppendFormat("Supports CAN FD:      {0}\n", mk_Info.mb_SupportsFD  ? "Yes"         : "No");
+        mi_Details.Add(new cDetail("Firmware Type",        mk_Info.mb_IsElmueSoft ? "CANable 2.5" : "Legacy"));
+        mi_Details.Add(new cDetail("Supports CAN FD",      mk_Info.mb_SupportsFD  ? "Yes"         : "No"));
 
         if (!mk_Info.mb_IsElmueSoft)
         {
-            ms_Details.AppendFormat("CAN Clock:            {0} MHz\n", mk_Info.mk_Capability.ms32_CanClock / 1000000);
+            mi_Details.Add(new cDetail("CAN Clock", String.Format("{0} MHz", mk_Info.mk_Capability.ms32_CanClock / 1000000)));
             throw new Exception("This class supports only devices that have the CANable 2.5 firmware from ElmüSoft.");
         }
 
@@ -1037,14 +1060,14 @@ public class Candlelight : IDisposable
 
         bool b_UseQuartz = (mk_Info.mk_BoardInfo.me_BoardFlags & eBoardFlags.Quartz_In_Use) > 0;
 
-        ms_Details.AppendFormat("Target Board:         {0}\n", mk_Info.mk_BoardInfo.BoardName);
-        ms_Details.AppendFormat("Processor:            {0}, CAN Clock: {1} MHz, MCU DeviceID: 0x{2:X}\n",
-                                                               mk_Info.mk_BoardInfo.McuName,
-                                                               mk_Info.mk_Capability.ms32_CanClock / 1000000,
-                                                               mk_Info.mk_BoardInfo.mu16_McuDeviceID);
-        ms_Details.AppendFormat("Quartz in use:        {0}\n", b_UseQuartz ? "Yes" : "No");
-        ms_Details.AppendFormat("CAN Channel:          {0} of {1}\n", mu8_Channel + 1, mk_Info.mk_DeviceVersion.ChannelCount);
-        ms_Details.AppendFormat("Pin BOOT0:            {0}\n", b_Enabled ? "Enabled" : "Disabled");
+        mi_Details.Add(new cDetail("Target Board",  mk_Info.mk_BoardInfo.BoardName));
+        mi_Details.Add(new cDetail("Processor", String.Format("{0}, CAN Clock: {1} MHz, MCU DeviceID: 0x{2:X}",
+                                                              mk_Info.mk_BoardInfo.McuName,
+                                                              mk_Info.mk_Capability.ms32_CanClock / 1000000,
+                                                              mk_Info.mk_BoardInfo.mu16_McuDeviceID)));
+        mi_Details.Add(new cDetail("Quartz in use", b_UseQuartz ? "Yes" : "No"));
+        mi_Details.Add(new cDetail("CAN Channel",   String.Format("{0} of {1}", mu8_Channel + 1, mk_Info.mk_DeviceVersion.ChannelCount)));
+        mi_Details.Add(new cDetail("Pin BOOT0",     b_Enabled ? "Enabled" : "Disabled"));
 
         if (mk_Info.mk_DeviceVersion.mu32_SoftVersionBcd < MIN_FIRMWARE)
             throw new Exception("Please upload the latest firmware.");
@@ -1077,7 +1100,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public void SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, out String s_Display)
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         if (b_FD && !mk_Info.mb_SupportsFD)
@@ -1123,7 +1146,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public void AddHostFilter(bool b_29bit, int s32_Filter, int s32_Mask)
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         kFilter k_Filter;
@@ -1180,7 +1203,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public void Start(eDeviceFlags e_Flags)
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         e_Flags |= eDeviceFlags.ProtocolElmue;
@@ -1211,7 +1234,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public void Identify(bool b_Blink)
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         int s32_Mode = b_Blink ? 1 : 0; 
@@ -1224,7 +1247,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public void EnableBusLoadReport(Byte u8_Interval)
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         CtrlTransfer((Byte)eUsbRequest.SetBusLoadReport, eDirection.Out, mu8_Channel, u8_Interval);
@@ -1237,7 +1260,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public void DisableBootPin()
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         kPinStatus k_PinStatus;
@@ -1253,7 +1276,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public bool IsBootPinEnabled()
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         // The requested pin ID must be transmitted in SETUP.wValue because a USB IN request cannot otherwise transmit parameters to the firmware.
@@ -1265,7 +1288,7 @@ public class Candlelight : IDisposable
     // A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
     public void WriteFlash(Byte u8_Segment, Byte[] u8_Buffer)
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         CtrlTransfer<Byte[]>((Byte)eUsbRequest.WriteFlash, eDirection.Out, u8_Segment, u8_Buffer);
@@ -1275,7 +1298,7 @@ public class Candlelight : IDisposable
     // A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
     public Byte[] ReadFlash(Byte u8_Segment)
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         return CtrlTransfer<Byte[]>((Byte)eUsbRequest.ReadFlash, eDirection.In, u8_Segment);
@@ -1292,7 +1315,7 @@ public class Candlelight : IDisposable
     {
         eSetupType e_Type;
         String s_Request;
-        if (mi_WinUSB.Interface.Number == DFU_INTERFACE)
+        if (mi_WinUSB.Interface.Number == FIRMW_UPDATE_INTERFACE)
         {
             e_Type = eSetupType.Class;
             s_Request = ((eDfuRequest)u8_Request).ToString();
@@ -1323,7 +1346,7 @@ public class Candlelight : IDisposable
         int s32_CmdError = mi_WinUSB.CtrlTansfer(eSetupRecip.Interface, e_Type, e_Dir, u8_Request, wValue, wIndex, ref u8_Buffer);     
 
         // The DFU interface has no feedback
-        if (mi_WinUSB.Interface.Number != DFU_INTERFACE)
+        if (mi_WinUSB.Interface.Number != FIRMW_UPDATE_INTERFACE)
         {
             // ---------- Get Feedback -------------
 
@@ -1761,7 +1784,7 @@ public class Candlelight : IDisposable
     /// </summary>
     public void EnterDfuMode()
     {
-        if (!mb_InitDone || mi_WinUSB.Interface.Number != DFU_INTERFACE)
+        if (!mb_InitDone || mi_WinUSB.Interface.Number != FIRMW_UPDATE_INTERFACE)
             throw new Exception("The device must be opened for the DFU interface.");
 
         // The legacy firmware would have entered immediately in DFU mode and CtrlTransfer() would have returned error 31 here.

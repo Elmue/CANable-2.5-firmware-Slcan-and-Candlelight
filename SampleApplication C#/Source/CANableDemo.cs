@@ -55,6 +55,7 @@ using cRxFrameElmue       = CANable.Candlelight.cRxFrameElmue;
 using cErrorElmue         = CANable.Candlelight.cErrorElmue;
 using cStringElmue        = CANable.Candlelight.cStringElmue;
 using cBusloadElmue       = CANable.Candlelight.cBusloadElmue;
+using cDetail             = CANable.Candlelight.cDetail;
 using Utils               = CANable.Utils;
 using INPUT_KEY_RECORD    = CANable.Utils.INPUT_KEY_RECORD;
 
@@ -241,7 +242,7 @@ class Program
             Print(ConsoleColor.DarkGreen, "Green = Echo of sent packets that have been ACKnowledged\n");
             Print(ConsoleColor.Cyan,      "Cyan  = Received packets\n\n");
 
-            Print(ConsoleColor.Magenta, "Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
+            Print(ConsoleColor.Magenta, "Press ENTER to abort. If you only close the console window the adapter stays open.\n\n");
         }
         catch (Exception Ex)
         {
@@ -524,7 +525,7 @@ class Program
             }
         }
    
-        Print(ConsoleColor.Gray, "\nDevice Path: \"{0}\"\n", i_Devices[ms32_DeviceIndex].ms_DevPath);
+        Print(ConsoleColor.Gray, "\n");
 
         // -----------------------------------------
 
@@ -539,7 +540,11 @@ class Program
         }
 
         // Even after an exception some of the device details may be valid --> always print
-        Print(ConsoleColor.Gray, mi_Candle.DeviceDetails);
+        foreach (cDetail i_Detail in mi_Candle.DeviceDetails)
+        {
+            Print(ConsoleColor.Gray, "{0}\n", i_Detail.Format(21));
+        }
+
         mk_Info = mi_Candle.DeviceInfo;
 
         if (i_Exception != null)
