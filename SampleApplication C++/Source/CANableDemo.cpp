@@ -66,6 +66,7 @@ void CandlelightDemo();
 void DfuDemo();
 bool OpenDevice();
 void FlashMemoryTest();
+void PrintDeviceMenu(vector<kUsbDevice>& i_Devices);
 
 // global instances
 Candlelight gi_Candle;
@@ -452,17 +453,7 @@ bool OpenDevice()
             OsLibrary::PrintConsole(LIME, "\nPlease select one of the devices:");
             OsLibrary::PrintConsole(GREY, "  (Exit with ESCAPE)\n\n");
 
-            for (size_t i=0; i<i_Devices.size(); i++)
-            {
-                kUsbDevice k_Device = i_Devices[i];
-                OsLibrary::PrintConsole(WHITE, "%u.) %s (%s)", i+1, k_Device.DisplayName().c_str(), k_Device.ms_SerialNo.c_str());
-
-                int s32_Channel = k_Device.GetCanChannel();
-                if (s32_Channel > 0) // Firmware Update interfaces have no channels
-                    OsLibrary::PrintConsole(WHITE, " CAN Channel: %d", s32_Channel);
-
-                OsLibrary::PrintConsole(WHITE, "\n");
-            }
+            PrintDeviceMenu(i_Devices);
 
             int s32_Char = OsLibrary::WaitConsoleChar();
             if (s32_Char == 27) // ESCAPE key pressed
@@ -499,6 +490,41 @@ bool OpenDevice()
         return false;
     }
     return true;
+}
+
+// Formatted output for each device: Product - Interface (Serial Number) CAN Channel
+void PrintDeviceMenu(vector<kUsbDevice>& i_Devices)
+{
+    uint32_t u32_ProductLen = 0;
+    uint32_t u32_SerialLen  = 0;
+    uint32_t u32_InterfLen  = 0;
+
+    for (size_t i=0; i<i_Devices.size(); i++)
+    {
+        kUsbDevice k_Device = i_Devices[i];
+        u32_ProductLen = max(u32_ProductLen, k_Device.ms_Product  .length());
+        u32_SerialLen  = max(u32_SerialLen,  k_Device.ms_SerialNo .length());
+        u32_InterfLen  = max(u32_InterfLen,  k_Device.ms_Interface.length());
+    }
+
+    for (size_t i=0; i<i_Devices.size(); i++)
+    {
+        kUsbDevice k_Device = i_Devices[i];
+        string s_SpaceProduct = string(u32_ProductLen - k_Device.ms_Product  .length(), ' ');
+        string s_SpaceSerial  = string(u32_SerialLen  - k_Device.ms_SerialNo .length(), ' ');
+        string s_SpaceInterf  = string(u32_InterfLen  - k_Device.ms_Interface.length(), ' ');
+
+        OsLibrary::PrintConsole(WHITE, "%u.) %s%s - %s%s (%s)%s", i+1, 
+                                k_Device.ms_Product  .c_str(), s_SpaceProduct.c_str(), 
+                                k_Device.ms_Interface.c_str(), s_SpaceInterf .c_str(),
+                                k_Device.ms_SerialNo .c_str(), s_SpaceSerial .c_str());
+
+        int s32_Channel = k_Device.GetCanChannel();
+        if (s32_Channel > 0) // Firmware Update interfaces have no channels
+            OsLibrary::PrintConsole(WHITE, " CAN Channel: %d", s32_Channel);
+
+        OsLibrary::PrintConsole(WHITE, "\n");
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

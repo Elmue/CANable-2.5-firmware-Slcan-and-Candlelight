@@ -847,13 +847,13 @@ public class Candlelight : IDisposable
 
     #endregion
 
+    // must be equal to FIRMW_UPDATE_INTERFACE in usb_class.h in the firmware
+    public const Byte FIRMW_UPDATE_INTERFACE = 1;
+
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251218 = 18.dec.2025)
     const int MIN_FIRMWARE = 0x260606;
-
-    // must be equal to FIRMW_UPDATE_INTERFACE in usb_class.h in the firmware
-    const Byte FIRMW_UPDATE_INTERFACE = 1;
 
     // must be equal to MAX_BLOB_SIZE in candlelight_def.h in firmware
     const int MAX_BLOB_SIZE = 2048;

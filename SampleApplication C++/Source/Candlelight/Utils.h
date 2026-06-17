@@ -208,18 +208,6 @@ public:
         }
     }
 
-    // returns "Candlelight 2.5 - OleksiiDual - CAN FD Interface 2"
-    // returns "canable gs_usb" for a legacy device
-    string DisplayName()
-    {
-        // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
-        // Windows returns the Product string instead --> both are identical
-        if (ms_Product == ms_Interface || ms_Interface.length() == 0)
-            return ms_Product;
-
-        return ms_Product + " - " + ms_Interface;
-    }
-
     // Sort by by Serial Number and then by Channel number
     bool operator<(const kUsbDevice& i_Dev2) const
     {

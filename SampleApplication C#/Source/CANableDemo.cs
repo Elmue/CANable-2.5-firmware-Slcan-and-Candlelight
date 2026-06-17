@@ -501,16 +501,7 @@ class Program
                 Print(ConsoleColor.Green, "\nPlease select one of the devices:");
                 Print(ConsoleColor.Gray,  "  (Exit with ESCAPE)\n\n");
 
-                for (int i=0; i<i_Devices.Count; i++)
-                {
-                    cUsbDevice i_Dev = i_Devices[i];
-                    Print(ConsoleColor.White, "{0}.) {1} ({2})", i+1, i_Dev.DisplayName, i_Dev.ms_SerialNo);
-
-                    if (CANDLELIGHT_DEMO) // DFU devices have no channels
-                        Print(ConsoleColor.White, " CAN Channel: {0}", i_Dev.ms32_Channel);
-
-                    Print(ConsoleColor.White, "\n");
-                }
+                PrintDeviceMenu(i_Devices);
 
                 ConsoleKeyInfo k_Key = Console.ReadKey(true);
                 if (k_Key.KeyChar == 27) // ESCAPE key pressed
@@ -557,6 +548,38 @@ class Program
         }
         return true;
     }
+
+    // Formatted output for each device: Product - Interface (Serial Number) CAN Channel
+    static void PrintDeviceMenu(List<cUsbDevice> i_Devices)
+    {
+        int s32_ProductLen = 0;
+        int s32_SerialLen  = 0;
+        int s32_InterfLen  = 0;
+
+        for (int i=0; i<i_Devices.Count; i++)
+        {
+            cUsbDevice i_Device = i_Devices[i];
+            s32_ProductLen = Math.Max(s32_ProductLen, i_Device.ms_Product  .Length);
+            s32_SerialLen  = Math.Max(s32_SerialLen,  i_Device.ms_SerialNo .Length);
+            s32_InterfLen  = Math.Max(s32_InterfLen,  i_Device.ms_Interface.Length);
+        }
+
+        for (int i=0; i<i_Devices.Count; i++)
+        {
+            cUsbDevice i_Device = i_Devices[i];
+            Print(ConsoleColor.White, "{0}.) {1}{2} - {3}{4} ({5}){6}", i+1, 
+                  i_Device.ms_Product,   new String(' ', s32_ProductLen - i_Device.ms_Product  .Length), 
+                  i_Device.ms_Interface, new String(' ', s32_InterfLen  - i_Device.ms_Interface.Length),
+                  i_Device.ms_SerialNo,  new String(' ', s32_SerialLen  - i_Device.ms_SerialNo .Length));
+
+            int s32_Channel = i_Device.GetCanChannel();
+            if (s32_Channel > 0) // Firmware Update interfaces have no channels
+                Print(ConsoleColor.White, " CAN Channel: {0}", s32_Channel);
+
+            Print(ConsoleColor.White, "\n");
+        }
+    }
+
 
     static void Print(ConsoleColor e_Color, String s_Format, params Object[] o_Param)
     {

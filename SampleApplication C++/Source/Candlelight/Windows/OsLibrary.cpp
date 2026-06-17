@@ -564,6 +564,11 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
         k_UsbDev.ms_DevicePath = cUtils::MakeUpper(pk_DetailData->DevicePath); // "\\?\usb#vid_1d50&pid_606f&mi_00#7&1b930f3c&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
         k_UsbDev.ms_SerialNo   = cUtils::MapLookup(i_Serials, cUtils::MakeUpper(s_Container));
 
+        // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
+        // Windows returns the Product string instead --> both are identical ("canable gs_usb")
+        if (k_UsbDev.ms_Interface == k_UsbDev.ms_Product)
+            k_UsbDev.ms_Interface = "[N/A]";
+
         // Append interface number for multi-interface (MI) adapters
         int s32_Pos = (int)k_UsbDev.ms_DevicePath.find("&MI_0");
         if (s32_Pos > 0)

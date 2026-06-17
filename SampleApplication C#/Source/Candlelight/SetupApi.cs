@@ -55,18 +55,17 @@ public class SetupApi
         public String ms_Interface;
         public String ms_DevPath;
         public String ms_SerialNo;
-        public int    ms32_Channel;
+        public int    ms32_Interface;
 
-        public String DisplayName
+        // The Firmware Update Interface (1) has no CAN channels --> return -1
+        // The Candlelight interfaces are 0,2,3,... --> display as CAN Channel 1,2,3,...
+        public int GetCanChannel()
         {
-            get
+            switch (ms32_Interface)
             {
-                // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
-                // Windows returns the Product string instead --> both are identical
-                if (ms_Product == ms_Interface)
-                    return ms_Product;
-
-                return ms_Product + " - " + ms_Interface;
+                case 0:                                  return  1; // display one-based channel number           
+                case Candlelight.FIRMW_UPDATE_INTERFACE: return -1; // invalid
+                default:                                 return ms32_Interface;
             }
         }
 
@@ -80,7 +79,7 @@ public class SetupApi
             int s32_Diff = ms_SerialNo.CompareTo(i_Dev2.ms_SerialNo);
 
             if (s32_Diff == 0)
-                s32_Diff = ms32_Channel.CompareTo(i_Dev2.ms32_Channel);
+                s32_Diff = ms32_Interface.CompareTo(i_Dev2.ms32_Interface);
             
             return s32_Diff;
         }
@@ -277,19 +276,20 @@ public class SetupApi
             i_UsbDev.ms_Interface = s_InterfaceBuf.ToString();
             i_Serials.TryGetValue(s_ContainerBuf.ToString(), out i_UsbDev.ms_SerialNo);
 
+            // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
+            // Windows returns the Product string instead --> both are identical ("canable gs_usb")
+            if (i_UsbDev.ms_Interface == i_UsbDev.ms_Product)
+                i_UsbDev.ms_Interface = "[N/A]";
+
             // Append interface number for multi-interface adapters
             int Pos = i_UsbDev.ms_DevPath.IndexOf("&MI_0");
             if (Pos > 0)
             {
-                if (int.TryParse(i_UsbDev.ms_DevPath.Substring(Pos + 5, 1), out i_UsbDev.ms32_Channel))
-                {
-                    // MI_00 --> Candlelight 1
-                    // MI_01 --> DFU
-                    // MI_02 --> Candlelight 2
-                    // MI_03 --> Candlelight 3
-                    if (i_UsbDev.ms32_Channel == 0)
-                        i_UsbDev.ms32_Channel = 1;  // display one-based interface number
-                }
+                // MI_00 --> CAN channel 1
+                // MI_01 --> Firmware Update
+                // MI_02 --> CAN channel 2
+                // MI_03 --> CAN channel 3
+                int.TryParse(i_UsbDev.ms_DevPath.Substring(Pos + 5, 1), out i_UsbDev.ms32_Interface);
             }
 
             i_DeviceList.Add(i_UsbDev);
