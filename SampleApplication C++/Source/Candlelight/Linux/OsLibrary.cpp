@@ -290,14 +290,42 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
         // If there are not at least 2 interfaces, it is not a valid Candlelight device
         if (pk_ConfigDesc->bNumInterfaces >= 2)
         {
-            // s_BasePath = "/sys/class/usb_device/usbdev1.4/device"   (for bus number= 1, device address= 4)
-            string s_BasePath = cUtils::Format("/sys/class/usb_device/usbdev%u.%u/device",
-                                               libusb_get_bus_number    (pi_UsbDevice),
-                                               libusb_get_device_address(pi_UsbDevice));
+            // get string descriptors without opening the device
+            char s8_Product[256];
+            s32_Error = libusb_get_device_string(pi_UsbDevice, LIBUSB_DEVICE_STRING_PRODUCT, s8_Product, sizeof(s8_Product));
+            if (s32_Error < 0)
+                return (uint32_t)s32_Error;
+            
+            char s8_Serial[256];            
+            s32_Error = libusb_get_device_string(pi_UsbDevice, LIBUSB_DEVICE_STRING_SERIAL_NUMBER, s8_Serial, sizeof(s8_Serial));
+            if (s32_Error < 0)
+                return (uint32_t)s32_Error;
+            
+            // ---------------------------------
+           
+            // Now we build the Linux device path in multiple steps:
+            // DevicePath = "/sys/class/usb_device/usbdev1.4/device/1-1.2:1.0"
+            // where        "............................N.D/....../N-R.H:C.I"
+            // means: N= BusNumber, D= DeviceAddress, R= RootPort, H= HubPort, C= ConfigValue, I= Interface Number
 
-            string s_Product = ReadSysfsString(s_BasePath + "/product");
-            string s_Serial  = ReadSysfsString(s_BasePath + "/serial");
+            uint8_t u8_BusNumber  = libusb_get_bus_number    (pi_UsbDevice);
+            uint8_t u8_DeviceAddr = libusb_get_device_address(pi_UsbDevice);
+            string s_BasePath = cUtils::Format("/sys/class/usb_device/usbdev%u.%u/device/%u-",
+                                               u8_BusNumber, u8_DeviceAddr, u8_BusNumber);   
 
+            uint8_t u8_Ports[7]; // Linux supports up to 7 tiers in topology
+            int s32_PortCount = libusb_get_port_numbers(pi_UsbDevice, u8_Ports, sizeof(u8_Ports));
+            if (s32_PortCount < 0)
+                return (uint32_t)s32_PortCount;
+            
+            for (int P = 0; P < s32_PortCount; P++) 
+            {
+                if (P > 0) s_BasePath += ".";
+                s_BasePath += cUtils::Format("%u", u8_Ports[P]);
+            }
+            
+            s_BasePath += cUtils::Format(":%u.", pk_ConfigDesc->bConfigurationValue);
+            
             // enumerate interfaces
             for (uint8_t I = 0; I < pk_ConfigDesc->bNumInterfaces; I++)
             {
@@ -313,42 +341,14 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
                     continue; // not a valid Candlelight device
 
                 const libusb_interface_descriptor* pk_InterfDesc = &pk_Interface->altsetting[0];
-
+                
                 kUsbDevice k_UsbDev;
                 k_UsbDev.mpi_LinuxDevice = pi_UsbDevice;
                 k_UsbDev.ms32_Interface  = I;
-                k_UsbDev.ms_Product      = s_Product;
-                k_UsbDev.ms_SerialNo     = s_Serial;
-
-                // ---------------------------
-
-                // s_Suffix = ":1.0"  (for Config Value = 1, Interface Number = 0)
-                string s_Suffix = cUtils::Format(":%u.%u", pk_ConfigDesc->bConfigurationValue,
-                                                           pk_InterfDesc->bInterfaceNumber);
-
-                // Linux is inconsistent:
-                // The RootPort and HubPort are required to get the interface string,
-                // but not to get the product string or the serial number string.
-                bool b_Found = false;
-                if (fs::exists(s_BasePath))
-                {
-                    for (const auto& i_DirEntry : fs::directory_iterator(s_BasePath))
-                    {
-                        // Search the folder with the interface suffix in the file system.
-                        string s_Folder = i_DirEntry.path().filename().string();
-                        if (s_Folder.ends_with(s_Suffix))
-                        {
-                            // DevicePath = "/sys/class/usb_device/usbdev1.4/device/1-1.2:1.0"
-                            // where        "............................N.D/....../N-R.H:C.I"
-                            // means: N= BusNumber, D= DeviceAddress, R= RootPort, H= HubPort, C= ConfigValue, I= Interface Number
-                            k_UsbDev.ms_DevicePath = i_DirEntry.path().string();
-                            k_UsbDev.ms_Interface  = ReadSysfsString(k_UsbDev.ms_DevicePath + "/interface");
-                            b_Found = true;
-                            break;
-                        }
-                    }
-                }
-                assert(b_Found);
+                k_UsbDev.ms_Product      = s8_Product;
+                k_UsbDev.ms_SerialNo     = s8_Serial;
+                k_UsbDev.ms_DevicePath   = s_BasePath + cUtils::Format("%u", pk_InterfDesc->bInterfaceNumber);
+                k_UsbDev.ms_Interface    = ReadSysfsString(k_UsbDev.ms_DevicePath + "/interface");
 
                 pi_Devices->push_back(k_UsbDev);
             }
