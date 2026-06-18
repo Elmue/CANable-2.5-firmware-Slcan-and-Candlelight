@@ -266,6 +266,7 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
     return FBK_Success;
 }
 
+// Called when the computer enters sleep mode (USB suspend) and before switching to DFU mode.
 void can_close_all()
 {
     for (int C=0; C<CHANNEL_COUNT; C++)

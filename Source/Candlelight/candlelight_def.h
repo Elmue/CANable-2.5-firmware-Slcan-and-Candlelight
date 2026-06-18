@@ -30,7 +30,7 @@ typedef enum // transferred as 8 bit
     GS_ReqGetCapabilitiesFD,   // kCapabilityFD: get supported features and processor limits of timing for CAN FD
     GS_ReqSetTermination,      // eTermination: enable the 120 Ohm termination resistor (if supported by the board)
     GS_ReqGetTermination,      // eTermination: get status of 120 Ohm termination resistor (if supported by the board)
-    GS_ReqGetState,            // kDeviceState: not implemented, undocumented
+    GS_ReqGetErrorState,       // kErrorState: the host can poll for bus errors (deprecated)
 
     // ----------- ELM commands added by ElmüSoft -----------
     ELM_ReqFIRST        = 20,  // First request that requires ElmüSoft protocol to be enabled
@@ -60,7 +60,9 @@ typedef enum // transferred as 32 bit
     // If this flag is combined with ListenOnly, the internal loopback mode is enabled, otherwise the external loopback mode.
     GS_DevFlagLoopback                = 0x00002, // bit 1
     
-    // take 3 samples per 1 bit on CAN bus, not implemented
+    // take 3 samples per 1 bit on CAN bus, not implemented.
+    // None of the modern CAN FD processors implements triple sampling.
+    // This was a feature for some old processors and only available for CAN classic.
 //  GS_DevFlagTripleSample            = 0x00004, // bit 2
 
     // if set, send a packet only once, otherwise retransmit until an ACK was revcived
@@ -75,7 +77,9 @@ typedef enum // transferred as 32 bit
     // blink the LEDs to distinguish between multiple connected devices
     GS_DevFlagIdentify                = 0x00020, // bit 5
     
-    // undocumented, not implemented, WTF is a user id ?
+    // Old processors did not have a unique serial number that is programmed in the factory.
+    // This feature allowed the user to store an individual serial number in the processor.
+    // Modern processors do not need this anymore, not implemented.
 //  GS_DevFlagUserID                  = 0x00040, // bit 6
 
     // This is total nonsense: Send always 128 byte USB packets to the host, not implemented
@@ -85,7 +89,8 @@ typedef enum // transferred as 32 bit
     // In kDeviceMode it is useless because CAN FD is enabled as soon as a data bitrate has been set.
     GS_DevFlagCAN_FD                  = 0x00100, // bit 8
     
-    // request workaround for LPC546XX erratum USB.15: let host driver add a padding byte to each USB frame, not implemented
+    // request workaround for LPC546XX erratum USB.15: 
+    // Let host driver add a padding byte to each USB frame, not implemented
 //  GS_DevFlagQuirk_LPC546XX          = 0x00200, // bit 9
 
     // Setting a data bitrate for CAN FD is supported (commands GS_ReqGetCapabilitiesFD and GS_ReqSetBitTimingFD can be used)
@@ -94,17 +99,21 @@ typedef enum // transferred as 32 bit
     // The 120 ohm termination resistor can be turned on/off by command, only few boards support this.
     GS_DevFlagTermination             = 0x00800, // bit 11
     
-    // undocumented, not implemented
-//  GS_DevFlagBerrReporting           = 0x01000, // bit 12
+    // Enable automatic error reports sending error frames with flag CAN_ID_Error.
+    // This flag has never been implemented by any legacy firmware.
+    // Therfore all the CAN software expects error frames to be sent by the firmware without setting this flag.
+//  GS_DevFlagErrorReporting          = 0x01000, // bit 12
 
-    // Not implemented (send struct kDeviceState) because errors are reported in special error frames.
-    // It is not required that the host application must poll errors. They are reported automatically when the error status changes.
-//  GS_DevFlagGetState                = 0x02000, // bit 13
+    // Request GS_ReqGetErrorState can poll for kErrorState that contains the current error status (deprecated).
+    // This is only implemented for compatibility with legacy software.
+    // This was inefficient, because the host had to poll for errors producing useless USB traffic.
+    // This firmware sends error reports as soon as a CAN error appears. Polling the error state is not required.
+    GS_DevFlagGetErrorState           = 0x02000, // bit 13
 
     // Switch to the new extended ElmüSoft CANable 2.5 protocol (use kHostFrameElmue instead of kHostFrameLegacy)  
     // ATTENTION: This flag enables the ElmüSoft protocol for ALL channels and it stays enabled until all channels have been closed!
     // This flag also enables debug reports (USR_DebugReport).
-    // In the Capabilities this flag means that all ELM_ReqXXX commands are supported.
+    // In the Capabilities this flag means that all the ELM_ReqXXX commands are supported.
     ELM_DevFlagProtocolElmue          = 0x04000, // bit 14
   
     // This flag has been replaced with ELM_DevFlagSendUsbBlobs in firmware version 29.may.2026 
@@ -210,32 +219,24 @@ typedef struct
 
 // ---------------
 
-/*
-// The following has never been implemented in firmware on Github.
-// This struct has been replaced by error packets with the flag CAN_ID_Error.
-// The advantage is that errors are sent automatically to the host only when they are present.
-// GS_ReqGetState / kDeviceState was clumsy, because the host had to poll for errors.
-
-// not used (previously the intention was to use this struct with GS_ReqGetState)
 typedef enum // transferred as 32 bit
 {
     GS_BusActive = 0, // no CAN bus errors
     GS_ErrorWarning,  // >=  96 errors
     GS_ErrorPassive,  // >= 128 errors
     GS_BusOff,        // >= 248 errors
-    GS_Stopped,
-    GS_Sleeping,
+    GS_Stopped,       // CAN channel is closed
+    GS_Sleeping,      // Not used. Complete nonsense: If USB is suspended -> no USB traffic is possible
 } eBusState;
 
-// not used (previously the intention was to use this struct with GS_ReqGetState)
+// GS_ReqGetErrorState
+// Read the comment for GS_DevFlagGetErrorState
 typedef struct  
 {
     uint32_t state;  // eBusState
     uint32_t rx_err; // count of RX errors (0 ... 248)
     uint32_t tx_err; // count of TX errors (0 ... 248)
-} __packed __aligned(4) kDeviceState;
-
-*/
+} __packed __aligned(4) kErrorState;
 
 
 // =========================== ERROR REPORT =============================

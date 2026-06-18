@@ -853,7 +853,7 @@ public class Candlelight : IDisposable
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251218 = 18.dec.2025)
-    const int MIN_FIRMWARE = 0x260606;
+    const int MIN_FIRMWARE = 0x260618;
 
     // must be equal to MAX_BLOB_SIZE in candlelight_def.h in firmware
     const int MAX_BLOB_SIZE = 2048;

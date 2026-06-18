@@ -40,7 +40,7 @@ using namespace CANable;
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251218 = 18.dec.2025)
-#define MIN_FIRMWARE      0x260606
+#define MIN_FIRMWARE      0x260618
 // must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
 #define CAN_QUEUE_SIZE    64
 

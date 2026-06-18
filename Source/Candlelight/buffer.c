@@ -21,8 +21,9 @@
 extern eUserFlags GLB_UserFlags[CHANNEL_COUNT];
 
 // Global flag that enables the new ElmüSoft protocol for maximum USB throughput (Candlelight only).
-// It is not possible to enable the ElmüSoft protocol for an individual channel,
-// because ElmüSoft uses different USB interfaces while Legacy routes all traffic through the first interface.
+// It is not possible to enable the ElmüSoft protocol only for an individual channel,
+// because ElmüSoft uses different USB interfaces while Legacy routes all traffic through the first USB interface.
+// To interpret the bytes of a USB packet, that was received from the host in usb_class.c, the protocol must be known.
 bool GLB_ProtoElmue = false;
 
 // ----- Class Instance
@@ -665,5 +666,5 @@ buf_class* buf_get_inst_for_usb(uint8_t channel)
     if (GLB_ProtoElmue)
         return &buf_inst[channel]; // ElmüSoft -> send each CAN channel through it's own USB interface 0, 2 or 3
     else
-        return &buf_inst[0];           // Legacy   -> send all CAN channels through USB interface 0
+        return &buf_inst[0];       // Legacy   -> send all CAN channels through USB interface 0
 }

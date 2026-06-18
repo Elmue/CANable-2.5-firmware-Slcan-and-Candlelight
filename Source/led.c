@@ -69,7 +69,7 @@ bool led_init()
     return true;
 }
 
-// when the operating system goes into sleep mode --> turn off all LED's
+// when the operating system goes into sleep mode --> USB suspended --> turn off all LED's
 void led_sleep()
 {
     for (int C=0; C<CHANNEL_COUNT; C++)

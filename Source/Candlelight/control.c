@@ -63,6 +63,7 @@ void control_init()
                                    GS_DevFlagIdentify       |
                                    GS_DevFlagCAN_FD         |
                                    GS_DevFlagBitTimingFD    |
+                                   GS_DevFlagGetErrorState  |
                                    ELM_DevFlagProtocolElmue |
                                    ELM_DevFlagSendUsbBlobs;
     if (SET_TermPins[0] > 0)
@@ -84,8 +85,8 @@ void control_init()
     GS_CapabilityClassic.time.sjw_max  = limits->sjw_max;
 
     // ------------------------------------------------
-    
-    limits = utils_get_bit_limits(true);    
+
+    limits = utils_get_bit_limits(true);
 
     GS_CapabilityFD.fclk_can = GS_CapabilityClassic.fclk_can;
     GS_CapabilityFD.feature  = GS_CapabilityClassic.feature;
@@ -180,8 +181,8 @@ bool control_setup_request(USBD_SetupReqTypedef *req)
             break;
     }
 
-    // If the channel is closed the Rx LED indicates that a SETUP command was recived.
-    // If the channel is open   the Rx LED indicates that a CAN packet was received.
+    // If the channel is closed the Rx LED indicates that a USB Setup command was received from the host.
+    // If the channel is open   the Rx LED indicates that a CAN packet was received from CAN bus.
     if (!can_is_open(channel))
         led_flash_RX(channel); // Flash the Rx LED shortly for 15 ms
 
@@ -247,10 +248,11 @@ bool control_setup_request(USBD_SetupReqTypedef *req)
     }
     else  // -------- IN: Device -> Host (error checking here) --------
     {
-        uint16_t value16;
-        uint32_t value32;
-        void*    src;
-        uint16_t len;
+        uint16_t    value16;
+        uint32_t    value32;
+        kErrorState err_state = {0};
+        void*       src;
+        uint16_t    len;
 
         switch (req->bRequest)
         {
@@ -273,6 +275,27 @@ bool control_setup_request(USBD_SetupReqTypedef *req)
                 src = &value32;
                 len = sizeof(uint32_t);
                 break;
+            case GS_ReqGetErrorState:
+            {
+                if (can_is_open(channel))
+                {
+                    FDCAN_ProtocolStatusTypeDef status;
+                    FDCAN_ErrorCountersTypeDef  counters;
+                    HAL_FDCAN_GetProtocolStatus(can_get_handle(channel), &status);
+                    HAL_FDCAN_GetErrorCounters (can_get_handle(channel), &counters);
+
+                    err_state.rx_err = counters.RxErrorCnt;
+                    err_state.tx_err = counters.TxErrorCnt;
+                    if (status.Warning)      err_state.state = GS_ErrorWarning;
+                    if (status.ErrorPassive) err_state.state = GS_ErrorPassive;
+                    if (status.BusOff)       err_state.state = GS_BusOff;
+                }
+                else err_state.state = GS_Stopped;
+
+                src = &err_state;
+                len = sizeof(err_state);
+                break;
+            }
             case GS_ReqGetTermination:
             {
                 bool bEnabled;
@@ -318,7 +341,7 @@ bool control_setup_request(USBD_SetupReqTypedef *req)
                 // The first 2 bytes of the flash segment contain the length of the data
                 src = (void*)(flash_addr + 2);
                 len = ((uint16_t*)flash_addr)[0];
-                
+
                 if (len == 0xFFFF) len = 0; // erased segment
                 len = MIN(len, MAX_FLASH_DATA_LEN);
                 break;
@@ -402,11 +425,12 @@ void control_setup_OUT_data()
 
             // ------------------------- 2.) Set Flags -------------------------------------
 
-            // set / reset global flag for all channels
+            // GLB_ProtoElmue must be a global variable for all channels.
+            // See comment for variable GLB_ProtoElmue in buffer.c
             if (!can_is_any_open())
-                GLB_ProtoElmue = false; 
-            
-            if (dev_Mode->flags & ELM_DevFlagProtocolElmue) GLB_ProtoElmue = true;   
+                GLB_ProtoElmue = false;
+
+            if (dev_Mode->flags & ELM_DevFlagProtocolElmue) GLB_ProtoElmue = true;
 
             // ----------------
 
@@ -416,8 +440,9 @@ void control_setup_OUT_data()
 
             if (GLB_ProtoElmue)
             {
-                if (dev_Mode->flags & ELM_DevFlagSendUsbBlobs) GLB_UserFlags[channel] |= USR_SendBlobs;                
-                
+                if (dev_Mode->flags & ELM_DevFlagSendUsbBlobs) GLB_UserFlags[channel] |= USR_SendBlobs;
+
+                // When the ElmüSoft protocol is enabled, also debug messages and error reports are enabled by default.
                 for (int C=0; C<CHANNEL_COUNT; C++)
                 {
                     GLB_UserFlags[C] |= USR_DebugReport;
