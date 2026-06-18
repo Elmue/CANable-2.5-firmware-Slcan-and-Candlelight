@@ -15,12 +15,11 @@
 
 // ATTENTION:
 // This version defines which Slcan commands are available.
-// The first version was 100.
-// In version 101 support for multi-channel adapters has been added.
+// The first version was 100. See manual for version history.
 // (Candlelight does not need a version number because it returns the supported features as bit flags)
-#define SLCAN_VERSION          104
+#define SLCAN_VERSION          105
 
-// If this is 1 all baudrates will be printed to verify all CAN_NOM_BITTIMING_xxx and CAN_DATA_BITTIMING_xxx
+// If this is != 0 all baudrates will be printed to verify all CAN_NOM_BITTIMING_xxx and CAN_DATA_BITTIMING_xxx
 #define VERIFY_ALL_BAUDRATES   0
 
 // If any of the following constants is defined as zero --> the processor does not support the baudrate --> FBK_UnsupportedFeature.
@@ -127,23 +126,31 @@ void control_parse_command(char* buf, int len)
 #endif
     }
 
+    // Execute Slcan command
     eFeedback e_Ret = control_parse_str(channel, buf, len);
-    if ((GLB_UserFlags[channel] & USR_Feedback) == 0)
-        return;
-
+    
+    // Send feedback
     switch (e_Ret)
     {
-        case FBK_RetString:
-            break; // response has already been written with buf_enqueue_cdc()
+        case FBK_RetString: // response has already been written with buf_enqueue_cdc()
+            break;
+            
         case FBK_Success:
-            buf_enqueue_cdc(channel, "#\r", 2); // return "#\r" for success
+            if (GLB_UserFlags[channel] & USR_Feedback)
+                buf_enqueue_cdc(channel, "#\r", 2); // Advanced mode: return "#\r" for success
+            else
+                buf_enqueue_cdc(channel, "\r", 1);  // Legacy Mode: return <CR> character for success
             break;
-        default:
-        {
-            char s8_Error[3] = { '#', e_Ret, '\r' }; // return "#4\r" for error 4
-            buf_enqueue_cdc(channel, s8_Error, 3);
+            
+        default: // several errors
+            if (GLB_UserFlags[channel] & USR_Feedback)
+            {
+                char s8_Error[3] = { '#', e_Ret, '\r' }; // Advanced mode: return "#4\r" for error 4 (FBK_AdapterMustBeClosed)
+                buf_enqueue_cdc(channel, s8_Error, 3);
+            }
+            else 
+                buf_enqueue_cdc(channel, "\x07", 1);     // Legacy Mode: return <BEL> character for error
             break;
-        }
     }
 }
 

@@ -51,10 +51,23 @@ public class SetupApi
 
     public class cUsbDevice : IComparable
     {
-        public String ms_DispName;
+        public String ms_Product;
+        public String ms_Interface;
         public String ms_DevPath;
         public String ms_SerialNo;
-        public int    ms32_Channel;
+        public int    ms32_Interface;
+
+        // The Firmware Update Interface (1) has no CAN channels --> return -1
+        // The Candlelight interfaces are 0,2,3,... --> display as CAN Channel 1,2,3,...
+        public int GetCanChannel()
+        {
+            switch (ms32_Interface)
+            {
+                case 0:                                  return  1; // display one-based channel number           
+                case Candlelight.FIRMW_UPDATE_INTERFACE: return -1; // invalid
+                default:                                 return ms32_Interface;
+            }
+        }
 
         /// <summary>
         /// Compare by Serial Number and then by Channel number for sorting
@@ -66,7 +79,7 @@ public class SetupApi
             int s32_Diff = ms_SerialNo.CompareTo(i_Dev2.ms_SerialNo);
 
             if (s32_Diff == 0)
-                s32_Diff = ms32_Channel.CompareTo(i_Dev2.ms32_Channel);
+                s32_Diff = ms32_Interface.CompareTo(i_Dev2.ms32_Interface);
             
             return s32_Diff;
         }
@@ -98,6 +111,19 @@ public class SetupApi
         public Char[] chrDevicePath;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct DEVPROPKEY
+    {
+        public Guid fmtid;
+        public int  pid;
+
+        public DEVPROPKEY(Guid guid, int id)
+        {
+            fmtid = guid;
+            pid   = id;
+        }
+    }
+
     #endregion
 
     #region Dll Imports SetupApi
@@ -109,10 +135,19 @@ public class SetupApi
     static extern bool SetupDiEnumDeviceInterfaces(IntPtr h_DevInfo, IntPtr devInfo, ref Guid interfaceClassGuid, int memberIndex, ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData);
 
     [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    static extern bool SetupDiGetDeviceInterfaceDetailW(IntPtr h_DevInfo, ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData, ref SP_DEVICE_INTERFACE_DETAIL_DATA k_DetailData, int deviceInterfaceDetailDataSize, out int s32_RequiredSize, ref SP_DEVINFO_DATA deviceInfoData);
+    static extern bool SetupDiGetDeviceInterfaceDetailW(IntPtr h_DevInfo, ref SP_DEVICE_INTERFACE_DATA deviceInterfaceData, ref SP_DEVICE_INTERFACE_DETAIL_DATA k_DetailData, int deviceInterfaceDetailDataSize, out int s32_ReqSize, ref SP_DEVINFO_DATA deviceInfoData);
 
     [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    static extern bool SetupDiGetDeviceRegistryPropertyW(IntPtr h_DevInfo, ref SP_DEVINFO_DATA deviceInfoData, uint property, out uint u32_RegDataType, StringBuilder propertyBuffer, int propertyBufferSize, out int s32_RequiredSize);
+    static extern bool SetupDiGetDeviceRegistryPropertyW(IntPtr h_DevInfo, ref SP_DEVINFO_DATA deviceInfoData, int property, out int s32_RegDataType, StringBuilder propertyBuffer, int propertyBufferSize, out int s32_ReqSize);
+
+    [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern bool SetupDiGetDevicePropertyW(IntPtr h_DevInfo, ref SP_DEVINFO_DATA deviceInfoData, ref DEVPROPKEY PropertyKey, out int PropertyType, StringBuilder propertyBuffer, int propertyBufferSize, out int s32_ReqSize, int flags);
+
+    [DllImport("setupapi.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    static extern bool SetupDiOpenDeviceInfoW(IntPtr h_DevInfo, String DeviceInstanceId, IntPtr h_WndParent, int OpenFlags, out SP_DEVINFO_DATA deviceInfoData);
+
+    [DllImport("setupapi.dll", SetLastError = true)]
+    static extern IntPtr SetupDiCreateDeviceInfoList(IntPtr k_GuidDummy, IntPtr h_Wnd);
 
     [DllImport("setupapi.dll", SetLastError = true)]
     static extern bool SetupDiDestroyDeviceInfoList(IntPtr h_DevInfo);
@@ -124,11 +159,14 @@ public class SetupApi
     // Interface 1 = DFU
     const String GUID_DFU    = "{c25b4308-04d3-11e6-b3ea-6057189e6443}";
 
-    const int  DIGCF_PRESENT          = 0x02;
-    const int  DIGCF_DEVICEINTERFACE  = 0x10;
-    const uint SPDRP_DEVICEDESC       = 0x00;
-    const uint SPDRP_FRIENDLYNAME     = 0x0C;
-    const uint SPDRP_BASE_CONTAINERID = 0x24;
+    const int DIGCF_PRESENT          = 0x02;
+    const int DIGCF_DEVICEINTERFACE  = 0x10;
+    const int SPDRP_DEVICEDESC       = 0x00;
+    const int SPDRP_FRIENDLYNAME     = 0x0C;
+    const int SPDRP_BASE_CONTAINERID = 0x24;
+
+    static DEVPROPKEY DEVPKEY_Device_BusReportedDeviceDesc = new DEVPROPKEY(new Guid("540b947e-8b40-45bc-a8a2-6a0b894cbda2"), 4);
+    static DEVPROPKEY DEVPKEY_Device_Parent                = new DEVPROPKEY(new Guid("4340a6c5-93fa-4706-972c-7b648008a5a7"), 8);
 
     /// <summary>
     /// Enumerate all Candlelight devices that are currently connected
@@ -146,22 +184,32 @@ public class SetupApi
         if (h_DevInfo == Utils.INVALID_HANDLE_VALUE)
             Utils.ThrowApiError(Marshal.GetLastWin32Error(), "Error {0} enumerating USB devices: {1}");
 
+        IntPtr h_ParentInfo = SetupDiCreateDeviceInfoList(IntPtr.Zero, IntPtr.Zero);
+        if (h_ParentInfo == Utils.INVALID_HANDLE_VALUE)
+        {
+            SetupDiDestroyDeviceInfoList(h_DevInfo);
+            Utils.ThrowApiError(Marshal.GetLastWin32Error(), "Error {0} enumerating USB devices: {1}");
+        }
+
         SP_DEVICE_INTERFACE_DATA k_InterfaceData = new SP_DEVICE_INTERFACE_DATA();
         k_InterfaceData.cbSize = Marshal.SizeOf(k_InterfaceData);
 
-        SP_DEVINFO_DATA k_DevInfoData = new SP_DEVINFO_DATA();
-        k_DevInfoData.cbSize = Marshal.SizeOf(k_DevInfoData);
+        SP_DEVINFO_DATA k_DeviceInfo = new SP_DEVINFO_DATA();
+        k_DeviceInfo.cbSize = Marshal.SizeOf(k_DeviceInfo);
 
         SP_DEVICE_INTERFACE_DETAIL_DATA k_DetailData = new SP_DEVICE_INTERFACE_DETAIL_DATA();
         k_DetailData.cbSize = ((IntPtr.Size == 8) ? 8 : 4) + sizeof(Char); // alignment
 
-        StringBuilder    s_NameBuf      = new StringBuilder(256);
-        StringBuilder    s_ContainerBuf = new StringBuilder(100);
+        StringBuilder    s_ProductBuf   = new StringBuilder(128);
+        StringBuilder    s_InterfaceBuf = new StringBuilder(128);
+        StringBuilder    s_ContainerBuf = new StringBuilder(50);
+        StringBuilder    s_ParentBuf    = new StringBuilder(256);
         List<cUsbDevice> i_DeviceList   = new List<cUsbDevice>();
 
-        int  s32_Error = 0;
-        int  s32_RequiredSize;
-        uint u32_RegDataType;
+        int s32_Error = 0;
+        int s32_ReqSize;
+        int s32_RegDataType;
+        int s32_PropType;
 
         for (int s32_Idx = 0; true; s32_Idx++)
         {
@@ -173,59 +221,82 @@ public class SetupApi
                 break;
             }
 
-            // Get the NT path of the device that is required for CreateFile()
+            // Get the NT path of the device that will be passed to CreateFile()
             if (!SetupDiGetDeviceInterfaceDetailW(h_DevInfo, ref k_InterfaceData, ref k_DetailData, 2000, 
-                                                    out s32_RequiredSize, ref k_DevInfoData))
+                                                    out s32_ReqSize, ref k_DeviceInfo))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                break;
-            }
-
-            // Get name from USB interface descriptor "CAN FD Interface 1" (not available on Windows 7)
-            if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, ref k_DevInfoData, SPDRP_FRIENDLYNAME, out u32_RegDataType, 
-                                                   s_NameBuf, s_NameBuf.Capacity, out s32_RequiredSize))
-            {
-                // Get generic name "WinUSB Device" (Windows 7)
-                if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, ref k_DevInfoData, SPDRP_DEVICEDESC, out u32_RegDataType, 
-                                                        s_NameBuf, s_NameBuf.Capacity, out s32_RequiredSize))
-                {
-                    s32_Error = Marshal.GetLastWin32Error();
-                    break;
-                }
+                continue;
             }
 
             // Get the 'ContainerID' GUID string (since Windows 7) which is identical for all interfaces of the same device
-            if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, ref k_DevInfoData, SPDRP_BASE_CONTAINERID, out u32_RegDataType, 
-                                                   s_ContainerBuf, s_ContainerBuf.Capacity, out s32_RequiredSize))
+            if (!SetupDiGetDeviceRegistryPropertyW(h_DevInfo, ref k_DeviceInfo, SPDRP_BASE_CONTAINERID, out s32_RegDataType, 
+                                                   s_ContainerBuf, s_ContainerBuf.Capacity * 2, out s32_ReqSize))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                break;
+                continue;
             }
 
-            cUsbDevice i_UsbDev  = new cUsbDevice();
-            i_UsbDev.ms_DevPath  = new String(k_DetailData.chrDevicePath).TrimEnd('\0').ToUpper();
-            i_UsbDev.ms_DispName = s_NameBuf.ToString();
+            // Get the Interface string from Interface Descriptor (max USB string descriptor length = 127 Unicode chars)
+            // If a legacy interface descriptor has iInterface == 0 (no string available) this will return the product string instead.
+            if (!SetupDiGetDevicePropertyW(h_DevInfo, ref k_DeviceInfo, ref DEVPKEY_Device_BusReportedDeviceDesc, out s32_PropType, 
+                                          s_InterfaceBuf, s_InterfaceBuf.Capacity * 2, out s32_ReqSize, 0))
+            {
+                s32_Error = Marshal.GetLastWin32Error();
+                continue;
+            }
+
+            // Go one level up from USB interface to USB device --> c_Parent = "USB\VID_1D50&PID_606F\208A347D4B4550142"
+            if (!SetupDiGetDevicePropertyW(h_DevInfo, ref k_DeviceInfo, ref DEVPKEY_Device_Parent, out s32_PropType, 
+                                           s_ParentBuf, s_ParentBuf.Capacity * 2, out s32_ReqSize, 0))
+            {
+                s32_Error = Marshal.GetLastWin32Error();
+                continue;
+            }
+
+            if (!SetupDiOpenDeviceInfoW(h_ParentInfo, s_ParentBuf.ToString(), IntPtr.Zero, 0, out k_DeviceInfo))
+            {
+                s32_Error = Marshal.GetLastWin32Error();
+                continue;
+            }
+
+            // Get the Product string from Device Descriptor (max USB string descriptor length = 127 Unicode chars)
+            if (!SetupDiGetDevicePropertyW(h_ParentInfo, ref k_DeviceInfo, ref DEVPKEY_Device_BusReportedDeviceDesc, out s32_PropType, 
+                                           s_ProductBuf, s_ProductBuf.Capacity * 2, out s32_ReqSize, 0))
+            {
+                s32_Error = Marshal.GetLastWin32Error();
+                continue;
+            }
+
+            // --------------------
+
+            cUsbDevice i_UsbDev   = new cUsbDevice();
+            i_UsbDev.ms_DevPath   = new String(k_DetailData.chrDevicePath).TrimEnd('\0').ToUpper();
+            i_UsbDev.ms_Product   = s_ProductBuf  .ToString();
+            i_UsbDev.ms_Interface = s_InterfaceBuf.ToString();
             i_Serials.TryGetValue(s_ContainerBuf.ToString(), out i_UsbDev.ms_SerialNo);
+
+            // If a legacy Candlelight device does not expose a string in the Candlelight interface, 
+            // Windows returns the Product string instead --> both are identical ("canable gs_usb")
+            if (i_UsbDev.ms_Interface == i_UsbDev.ms_Product)
+                i_UsbDev.ms_Interface = "[N/A]";
 
             // Append interface number for multi-interface adapters
             int Pos = i_UsbDev.ms_DevPath.IndexOf("&MI_0");
             if (Pos > 0)
             {
-                if (int.TryParse(i_UsbDev.ms_DevPath.Substring(Pos + 5, 1), out i_UsbDev.ms32_Channel))
-                {
-                    // MI_00 --> Candlelight 1
-                    // MI_01 --> DFU
-                    // MI_02 --> Candlelight 2
-                    // MI_03 --> Candlelight 3
-                    if (i_UsbDev.ms32_Channel == 0)
-                        i_UsbDev.ms32_Channel = 1;  // display one-based interface number
-                }
+                // MI_00 --> CAN channel 1
+                // MI_01 --> Firmware Update
+                // MI_02 --> CAN channel 2
+                // MI_03 --> CAN channel 3
+                int.TryParse(i_UsbDev.ms_DevPath.Substring(Pos + 5, 1), out i_UsbDev.ms32_Interface);
             }
 
             i_DeviceList.Add(i_UsbDev);
         }
 
         SetupDiDestroyDeviceInfoList(h_DevInfo);
+        SetupDiDestroyDeviceInfoList(h_ParentInfo);
 
         if (s32_Error != 0)
             Utils.ThrowApiError(s32_Error, "Error {0} enumerating USB devices: {1}");

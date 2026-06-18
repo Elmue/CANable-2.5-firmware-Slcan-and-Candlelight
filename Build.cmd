@@ -1,9 +1,8 @@
-
 @echo off
 
 rem Copy all BIN files after compiling into this directory:
 rem The firmware updater will convert them automatically into DFU files.
-@set COPY_DIRECTORY="C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmware Update\Firmware\"
+set "COPY_DIRECTORY=C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmware Update\Firmware\"
 
 rem -------------------------------------------------------------------------------------------------
 
@@ -70,10 +69,15 @@ if %errorlevel% == 14 call :Compile  Make_G473_Candle_OleksiiDual
 if %errorlevel% == 15 call :Compile  Make_G0B1_Candle_WeActStudioV1
 if %errorlevel% == 16 call :Compile  Make_G431_Candle_WeActStudioV2
 
-rem Copy all BIN files to HUD ECU Hacker
-for /D %%i in ("Build_STM*") do (
-    echo:
-    copy /Y "%%~fi\*.bin" %COPY_DIRECTORY%
+if exist "%COPY_DIRECTORY%" (
+    rem Copy all BIN files to HUD ECU Hacker
+    for /D %%i in ("Build_STM*") do (
+        echo:
+        copy /Y "%%~fi\*.bin" "%COPY_DIRECTORY%"
+        echo Copied to: "%COPY_DIRECTORY%"
+    )
+) else (
+    echo Directory does not exist: "%COPY_DIRECTORY%"
 )
 
 echo:

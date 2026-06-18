@@ -13,27 +13,33 @@
     <ClInclude Include="CANableDemo.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Candlelight\Candlelight.h">
       <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
     <ClInclude Include="Candlelight\Candlelight_def.h">
       <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
-    <ClInclude Include="Candlelight\WinUSB_def.h">
+    <ClInclude Include="Candlelight\Utils.h">
+      <Filter>Source Files\Candlelight</Filter>
+    </ClInclude>
+    <ClInclude Include="Candlelight\Windows\OsLibrary.h">
+      <Filter>Source Files\Candlelight</Filter>
+    </ClInclude>
+    <ClInclude Include="Candlelight\Windows\WinUSB_def.h">
       <Filter>Source Files\Candlelight</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="CANableDemo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Candlelight\Candlelight.cpp">
+      <Filter>Source Files\Candlelight</Filter>
+    </ClCompile>
+    <ClCompile Include="Candlelight\Utils.cpp">
+      <Filter>Source Files\Candlelight</Filter>
+    </ClCompile>
+    <ClCompile Include="Candlelight\Windows\OsLibrary.cpp">
       <Filter>Source Files\Candlelight</Filter>
     </ClCompile>
   </ItemGroup>

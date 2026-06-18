@@ -571,22 +571,14 @@ public class WinUSB : IDisposable
 
     public class cPipeIn : cPipe, IDisposable
     {
-        class cRxFifo
-        {
-            public Byte[]  mu8_Buffer;
-            public int     ms32_BytesRead;
-            public int     ms32_Error;
-            public Int64   ms64_WinTimestamp;
-        };
-
-        cRxFifo[]   mi_RxFifo = new cRxFifo[30]; // must only be accessed in a lock()
-        int         ms32_FifoReadIdx;            // must only be accessed in a lock()
-        int         ms32_FifoCount;              // must only be accessed in a lock()
-        bool        mb_AbortThread;
-        bool        mb_FifoOverflow;
-        IntPtr      mh_ThreadEvent;
-        IntPtr      mh_ReceiveEvent;
-        int         ms32_BufSize;
+        cUsbInPacket[] mi_RxFifo = new cUsbInPacket[30]; // must only be accessed in a lock()
+        int            ms32_FifoReadIdx;                 // must only be accessed in a lock()
+        int            ms32_FifoCount;                   // must only be accessed in a lock()
+        bool           mb_AbortThread;
+        bool           mb_FifoOverflow;
+        IntPtr         mh_ThreadEvent;
+        IntPtr         mh_ReceiveEvent;
+        int            ms32_BufSize;
 
         public cPipeIn(WinUSB i_WinUSB, IntPtr h_Handle, cInterface i_Interface, kPipeInformation k_Pipe) 
             : base(i_WinUSB, h_Handle, i_Interface, k_Pipe)
@@ -595,7 +587,7 @@ public class WinUSB : IDisposable
 
             for (int i=0; i<mi_RxFifo.Length; i++)
             {
-                mi_RxFifo[i] = new cRxFifo();
+                mi_RxFifo[i] = new cUsbInPacket();
             }
         }
 
@@ -668,7 +660,7 @@ public class WinUSB : IDisposable
                 }
 
                 int s32_FifoWriteIdx;
-                cRxFifo i_FifoWrite;
+                cUsbInPacket i_FifoWrite;
                 lock (mi_RxFifo)
                 {
                     s32_FifoWriteIdx = (ms32_FifoReadIdx + ms32_FifoCount) % mi_RxFifo.Length;
@@ -745,12 +737,10 @@ public class WinUSB : IDisposable
         /// <summary>
         /// returns null if timeout
         /// </summary>
-        public Byte[] Receive(int s32_Timeout, out Int64 s64_RxTimestamp)
+        public cUsbInPacket ReadPipeIn(int s32_Timeout)
         {
-            s64_RxTimestamp = 0;
-
-            int   s32_Available;
-            cRxFifo i_FifoRead;
+            int s32_Available;
+            cUsbInPacket i_FifoRead;
             lock (mi_RxFifo)
             {
                 i_FifoRead    = mi_RxFifo[ms32_FifoReadIdx];
@@ -786,22 +776,30 @@ public class WinUSB : IDisposable
                     return null; // Timeout
             }
 
-            Byte[] u8_RxData = i_FifoRead.mu8_Buffer;
-            int   s32_Error  = i_FifoRead.ms32_Error;
-            s64_RxTimestamp  = i_FifoRead.ms64_WinTimestamp;
-
             lock (mi_RxFifo)
             {
                 ms32_FifoReadIdx = (ms32_FifoReadIdx + 1) % mi_RxFifo.Length;
                 ms32_FifoCount --;
             }
 
-            if (s32_Error != 0)
-                Utils.ThrowApiError(s32_Error, "Error {0} reading WinUSB pipe: {1}");
+            if (i_FifoRead.ms32_Error != 0)
+                Utils.ThrowApiError(i_FifoRead.ms32_Error, "Error {0} reading WinUSB pipe: {1}");
 
-            return u8_RxData;
+            return i_FifoRead;
         }
     }
+
+    #endregion
+
+    #region cUsbInPacket
+
+    public class cUsbInPacket
+    {
+        public Byte[]  mu8_Buffer;
+        public int     ms32_BytesRead;
+        public int     ms32_Error;
+        public Int64   ms64_WinTimestamp;
+    };
 
     #endregion
 

@@ -17,7 +17,7 @@
 #include "can.h"
 
 #define EP_DATA_PACKET_SIZE         64                      // Data endpoints IN + OUT = max 64 byte
-#define DFU_INTERFACE_STR_IDX       (USBD_IDX_NEXT_STR + 0) // "Firmware Update Interface"
+#define FIRMW_UPDATE_STR_IDX        (USBD_IDX_NEXT_STR + 0) // "Firmware Update Interface"
 #define CANDLE_INTERFACE_STR_1_IDX  (USBD_IDX_NEXT_STR + 1) // "CAN FD Interface 1"
 #define CANDLE_INTERFACE_STR_2_IDX  (USBD_IDX_NEXT_STR + 2) // "CAN FD Interface 2"
 #define CANDLE_INTERFACE_STR_3_IDX  (USBD_IDX_NEXT_STR + 3) // "CAN FD Interface 3"
@@ -173,13 +173,13 @@ __ALIGN_BEGIN uint8_t USBD_ConfigDescFS[] __ALIGN_END =
     // length = USB_LEN_FIRMWARE_DESC:
     USB_LEN_IF_DESC,                  // bLength = 9 byte
     USB_DESC_TYPE_INTERFACE,          // bDescriptorType: Interface
-    DFU_INTERFACE_NUMBER,             // bInterfaceNumber: 1
+    FIRMW_UPDATE_INTERFACE,           // bInterfaceNumber: 1 = Firmware Update
     0x00,                             // bAlternateSetting
     0x00,                             // bNumEndpoints
     0xFE,                             // bInterfaceClass: Vendor Specific
     0x01,                             // bInterfaceSubClass
     0x01,                             // bInterfaceProtocol : Runtime mode
-    DFU_INTERFACE_STR_IDX,            // iInterface
+    FIRMW_UPDATE_STR_IDX,            // iInterface
 
     // ------ DFU Functional descriptor ------
     USB_LEN_DFU_DESC,                 // bLength = 9 byte
@@ -287,7 +287,7 @@ __ALIGN_BEGIN uint8_t USBD_MicrosoftFeatureDescr[] __ALIGN_END =
     0x00, 0x00,
     // ------------------------
     // length = USB_LEN_WINUSB_DESC:
-    DFU_INTERFACE_NUMBER,             // interface number: 1 = DFU
+    FIRMW_UPDATE_INTERFACE,           // interface number: 1 = Firmware Update
     0x01,                             // reserved - 1 byte
     0x57, 0x49, 0x4E, 0x55,           // compatible ID ("WINUSB\0\0") - 8 bytes
     0x53, 0x42, 0x00, 0x00,
@@ -465,7 +465,7 @@ uint8_t USB_IRQ_Setup(USBD_SetupReqTypedef *req)
 void USB_IRQ_Vendor_Request(USBD_SetupReqTypedef *req)
 {
     // wIndex = interface number
-    if (req->wIndex == DFU_INTERFACE_NUMBER)
+    if (req->wIndex == FIRMW_UPDATE_INTERFACE)
     {
         if (USB_IRQ_DFU_Request(req))
             return; // success
@@ -580,7 +580,7 @@ uint8_t* USBD_GetUserStringDescr(uint8_t index, uint16_t *length)
 #endif
         }
         // This name is important: Windows displays it while the driver is installed.
-        case DFU_INTERFACE_STR_IDX:
+        case FIRMW_UPDATE_STR_IDX:
             return USBD_GetStringDescr("Firmware Update Interface", length);
 
         case 0xEE: // Microsoft OS String Descriptor Request --> return "MSFT100" + Vendor Code
@@ -639,7 +639,7 @@ bool USB_IRQ_CustomRequest(USBD_SetupReqTypedef *req)
             // ATTENTION: USBD_CtlSendData() does not work with a local buffer on the stack --> get 512 byte string buffer at fix address
             uint8_t* buf = USBD_GetStringDescr(NULL, NULL);
             memcpy(buf, USBD_MicrosoftExtPropertyDescr, sizeof(USBD_MicrosoftExtPropertyDescr));
-            if (req->wValue == DFU_INTERFACE_NUMBER)
+            if (req->wValue == FIRMW_UPDATE_INTERFACE)
                 buf[70] = '2';
 
             USBD_CtlSendData(buf, MIN(sizeof(USBD_MicrosoftExtPropertyDescr), req->wLength));

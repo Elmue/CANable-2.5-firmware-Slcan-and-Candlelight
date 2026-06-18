@@ -55,6 +55,7 @@ using cRxFrameElmue       = CANable.Candlelight.cRxFrameElmue;
 using cErrorElmue         = CANable.Candlelight.cErrorElmue;
 using cStringElmue        = CANable.Candlelight.cStringElmue;
 using cBusloadElmue       = CANable.Candlelight.cBusloadElmue;
+using cDetail             = CANable.Candlelight.cDetail;
 using Utils               = CANable.Utils;
 using INPUT_KEY_RECORD    = CANable.Utils.INPUT_KEY_RECORD;
 
@@ -241,7 +242,7 @@ class Program
             Print(ConsoleColor.DarkGreen, "Green = Echo of sent packets that have been ACKnowledged\n");
             Print(ConsoleColor.Cyan,      "Cyan  = Received packets\n\n");
 
-            Print(ConsoleColor.Magenta, "Press ENTER to abort. If you close the console window the adapter stays open.\n\n");
+            Print(ConsoleColor.Magenta, "Press ENTER to abort. If you only close the console window the adapter stays open.\n\n");
         }
         catch (Exception Ex)
         {
@@ -329,10 +330,11 @@ class Program
 
             // Check for Rx data
             Int64 s64_RxTimestamp = 0;
+            bool    b_RxBlob = false;
             cHeader i_Header = null;
             try
             {
-                i_Header = mi_Candle.ReceiveData(100, out s64_RxTimestamp);
+                i_Header = mi_Candle.ReceiveData(100, out s64_RxTimestamp, out b_RxBlob);
             }
             catch (Exception Ex)
             {
@@ -354,15 +356,15 @@ class Program
                     {
                         CanPacket i_Packet = mi_Candle.RxFrameToCanPacket((cRxFrameElmue)i_Header);
                         Print(ConsoleColor.White, " Recv");
-                        Print(ConsoleColor.Cyan,  " {0}\n", i_Packet);
+                        Print(ConsoleColor.Cyan,  " {0}", i_Packet);
                         break;
                     }
                     case eMessageType.TxEcho:
                     {
                         CanPacket i_EchoPacket = mi_Candle.GetTxEchoPacket((cTxEchoElmue)i_Header);
                         Print(ConsoleColor.White, " Echo");
-                        if (i_EchoPacket == null) Print(ConsoleColor.Red, " Invalid echo marker received\n");
-                        else                      Print(ConsoleColor.DarkGreen, " {0}\n", i_EchoPacket);
+                        if (i_EchoPacket == null) Print(ConsoleColor.Red, " Invalid echo marker received");
+                        else                      Print(ConsoleColor.DarkGreen, " {0}", i_EchoPacket);
                         break;
                     }
                     case eMessageType.Error:
@@ -374,30 +376,33 @@ class Program
                         if (e_ErrLevel == eErrorLevel.Medium) e_Color = ConsoleColor.Yellow;
                         if (e_ErrLevel == eErrorLevel.High)   e_Color = ConsoleColor.Red;
                         Print(ConsoleColor.White, " Err ");
-                        Print(e_Color, " {0}\n", s_Error);
+                        Print(e_Color, " {0}", s_Error);
                         break;
                     }
                     case eMessageType.String:
                     {
                         cStringElmue i_String = (cStringElmue)i_Header;
                         Print(ConsoleColor.White, " Debg");
-                        Print(ConsoleColor.Gray,  " {0}\n", i_String.Message);
+                        Print(ConsoleColor.Gray,  " {0}", i_String.Message);
                         break;
                     }
                     case eMessageType.Busload:
                     {
                         cBusloadElmue i_Busload = (cBusloadElmue)i_Header;
                         Print(ConsoleColor.White, " Load");
-                        Print(ConsoleColor.Gray,  " Busload: {0}%\n", i_Busload.mu8_BusLoad);
+                        Print(ConsoleColor.Gray,  " Busload: {0}%", i_Busload.mu8_BusLoad);
                         break;
                     }
                     default:
                     {
                         Print(ConsoleColor.White, " Err ");
-                        Print(ConsoleColor.Red,   " Unknown USB message received: {0}\n", i_Header.me_MesgType);
+                        Print(ConsoleColor.Red,   " Unknown USB message received: {0}", i_Header.me_MesgType);
                         break;
                     }
                 }
+
+                if (b_RxBlob) Print(ConsoleColor.Gray, "   Rx Blob\n");
+                else          Print(ConsoleColor.Gray, "\n");
             }
 
             // ==================================================
@@ -493,20 +498,15 @@ class Program
         {
             while (true)
             {
-                Print(ConsoleColor.Green, "\nPlease select one of the devices:\n\n");
+                Print(ConsoleColor.Green, "\nPlease select one of the devices:");
+                Print(ConsoleColor.Gray,  "  (Exit with ESCAPE)\n\n");
 
-                for (int i=0; i<i_Devices.Count; i++)
-                {
-                    cUsbDevice i_Dev = i_Devices[i];
-                    Print(ConsoleColor.White, "{0}.) Name: {1} - Serial Nº: {2}", i+1, i_Dev.ms_DispName, i_Dev.ms_SerialNo);
-
-                    if (CANDLELIGHT_DEMO) // DFU devices have no channels
-                        Print(ConsoleColor.White, " - CAN Channel: {0}", i_Dev.ms32_Channel);
-
-                    Print(ConsoleColor.White, "\n");
-                }
+                PrintDeviceMenu(i_Devices);
 
                 ConsoleKeyInfo k_Key = Console.ReadKey(true);
+                if (k_Key.KeyChar == 27) // ESCAPE key pressed
+                    return false;
+
                 ms32_DeviceIndex = k_Key.KeyChar - '1';
 
                 if (ms32_DeviceIndex >= 0 && ms32_DeviceIndex < i_Devices.Count) 
@@ -516,7 +516,7 @@ class Program
             }
         }
    
-        Print(ConsoleColor.Gray, "\nDevice Path: \"{0}\"\n", i_Devices[ms32_DeviceIndex].ms_DevPath);
+        Print(ConsoleColor.Gray, "\n");
 
         // -----------------------------------------
 
@@ -531,7 +531,11 @@ class Program
         }
 
         // Even after an exception some of the device details may be valid --> always print
-        Print(ConsoleColor.Gray, mi_Candle.DeviceDetails);
+        foreach (cDetail i_Detail in mi_Candle.DeviceDetails)
+        {
+            Print(ConsoleColor.Gray, "{0}\n", i_Detail.Format(21));
+        }
+
         mk_Info = mi_Candle.DeviceInfo;
 
         if (i_Exception != null)
@@ -544,6 +548,38 @@ class Program
         }
         return true;
     }
+
+    // Formatted output for each device: Product - Interface (Serial Number) CAN Channel
+    static void PrintDeviceMenu(List<cUsbDevice> i_Devices)
+    {
+        int s32_ProductLen = 0;
+        int s32_SerialLen  = 0;
+        int s32_InterfLen  = 0;
+
+        for (int i=0; i<i_Devices.Count; i++)
+        {
+            cUsbDevice i_Device = i_Devices[i];
+            s32_ProductLen = Math.Max(s32_ProductLen, i_Device.ms_Product  .Length);
+            s32_SerialLen  = Math.Max(s32_SerialLen,  i_Device.ms_SerialNo .Length);
+            s32_InterfLen  = Math.Max(s32_InterfLen,  i_Device.ms_Interface.Length);
+        }
+
+        for (int i=0; i<i_Devices.Count; i++)
+        {
+            cUsbDevice i_Device = i_Devices[i];
+            Print(ConsoleColor.White, "{0}.) {1}{2} - {3}{4} ({5}){6}", i+1, 
+                  i_Device.ms_Product,   new String(' ', s32_ProductLen - i_Device.ms_Product  .Length), 
+                  i_Device.ms_Interface, new String(' ', s32_InterfLen  - i_Device.ms_Interface.Length),
+                  i_Device.ms_SerialNo,  new String(' ', s32_SerialLen  - i_Device.ms_SerialNo .Length));
+
+            int s32_Channel = i_Device.GetCanChannel();
+            if (s32_Channel > 0) // Firmware Update interfaces have no channels
+                Print(ConsoleColor.White, " CAN Channel: {0}", s32_Channel);
+
+            Print(ConsoleColor.White, "\n");
+        }
+    }
+
 
     static void Print(ConsoleColor e_Color, String s_Format, params Object[] o_Param)
     {
