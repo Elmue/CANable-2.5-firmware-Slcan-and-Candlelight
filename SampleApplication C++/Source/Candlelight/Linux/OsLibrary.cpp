@@ -303,7 +303,7 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
             
             // ---------------------------------
            
-            // Now we build the Linux device path in multiple steps:
+            // libusb does not provide the Linux device path.
             // DevicePath = "/sys/class/usb_device/usbdev1.4/device/1-1.2:1.0"
             // where        "............................N.D/....../N-R.H:C.I"
             // means: N= BusNumber, D= DeviceAddress, R= RootPort, H= HubPort, C= ConfigValue, I= Interface Number
@@ -318,7 +318,11 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
             if (s32_PortCount < 0)
                 return (uint32_t)s32_PortCount;
             
-            for (int P = 0; P < s32_PortCount; P++) 
+            if (s32_PortCount == 0)
+            {
+                s_BasePath += "0";
+            }
+            else for (int P = 0; P < s32_PortCount; P++) 
             {
                 if (P > 0) s_BasePath += ".";
                 s_BasePath += cUtils::Format("%u", u8_Ports[P]);
@@ -326,7 +330,7 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
             
             s_BasePath += cUtils::Format(":%u.", pk_ConfigDesc->bConfigurationValue);
             
-            // enumerate interfaces
+            // Add each interface as a separate device to pi_Devices
             for (uint8_t I = 0; I < pk_ConfigDesc->bNumInterfaces; I++)
             {
                 // The Firmware Update interface is always the second interface (I == 1)
@@ -338,7 +342,7 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
                 const libusb_interface* pk_Interface = &pk_ConfigDesc->interface[I];
 
                 if (pk_Interface->num_altsetting != 1)
-                    continue; // not a valid Candlelight device
+                    break; // not a valid Candlelight device
 
                 const libusb_interface_descriptor* pk_InterfDesc = &pk_Interface->altsetting[0];
                 
@@ -364,10 +368,7 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
 string ReadSysfsString(string s_Path)
 {
     if (!fs::exists(s_Path))
-    {
-        assert(false);
-        return "[Invalid Path]";
-    }
+        return "[N/A]"; // the interface does not expose a name
 
     ifstream i_File(s_Path);
     if (!i_File.is_open())
