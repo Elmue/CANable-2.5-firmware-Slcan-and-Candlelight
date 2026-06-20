@@ -445,7 +445,6 @@ bool OpenDevice()
     // -----------------------------------------
 
     gs32_DeviceIndex = 0;
-    kUsbDevice* pk_SelectedDevice = NULL;
     if (i_Devices.size() > 1) // 2 or more devices connected
     {
         while (true)
@@ -462,10 +461,7 @@ bool OpenDevice()
             gs32_DeviceIndex = s32_Char - '1';
 
             if (gs32_DeviceIndex >= 0 && gs32_DeviceIndex < (int)i_Devices.size()) 
-            {
-                pk_SelectedDevice = &i_Devices[gs32_DeviceIndex];
                 break;
-            }
             
             OsLibrary::PrintConsole(RED, "\nInvalid key!\n");
         }
@@ -475,7 +471,7 @@ bool OpenDevice()
 
     // -----------------------------------------
 
-    u32_Error = gi_Candle.Open(pk_SelectedDevice);
+    u32_Error = gi_Candle.Open(&i_Devices[gs32_DeviceIndex]);
     gk_Info   = gi_Candle.GetDeviceInfo();
 
     vector<kDetail> i_Details = gi_Candle.GetDetails();
