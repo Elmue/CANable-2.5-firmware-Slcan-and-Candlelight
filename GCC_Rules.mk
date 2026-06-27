@@ -85,9 +85,9 @@ LD_SCRIPT = $(CONFIG_DIR)/$(TARGET_MCU).ld
 INCLUDES  = -ISTM32/CMSIS
 INCLUDES += -I$(DRIVER_PATH)/Inc
 INCLUDES += -I$(CONFIG_DIR)
-INCLUDES += -ISource
-INCLUDES += -ISource/USB
-INCLUDES += -ISource/$(TARGET_FIRMWARE)
+INCLUDES += -IFirmware
+INCLUDES += -IFirmware/USB
+INCLUDES += -IFirmware/$(TARGET_FIRMWARE)
 
 # compile gcc flags
 CFLAGS =  $(INCLUDES)
@@ -149,7 +149,7 @@ FIRM_OBJECTS += $(addprefix $(FIRM_BUILD_DIR)/,$(notdir $(FIRM_SOURCES:.c=.o)))
 
 firm: $(FIRM_OBJECTS)
 
-$(FIRM_BUILD_DIR)/%.o: Source/$(TARGET_FIRMWARE)/%.c | $(FIRM_BUILD_DIR)
+$(FIRM_BUILD_DIR)/%.o: Firmware/$(TARGET_FIRMWARE)/%.c | $(FIRM_BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(FIRM_BUILD_DIR):
@@ -184,7 +184,7 @@ $(BUILD_TRUNK).elf: $(OBJECTS) $(FIRM_OBJECTS) $(CUBELIB)
 		-Map=$(BUILD_TRUNK).map
 	$(SIZE) $@
 
-$(BUILD_DIR)/%.o: Source/%.c | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: Firmware/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 $(BUILD_DIR)/system_$(MCU_SERIE).o: $(CONFIG_DIR)/system_$(MCU_SERIE).c | $(BUILD_DIR)
