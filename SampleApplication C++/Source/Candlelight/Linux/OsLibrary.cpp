@@ -302,6 +302,9 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
                 return (uint32_t)s32_Error;
             
             // ---------------------------------
+            
+            // Building the path in s_BasePath is not needed anymore if this pull request will be implemented into libusb:
+            // https://github.com/libusb/libusb/pull/1860
            
             // libusb does not provide the Linux device path.
             // DevicePath = "/sys/class/usb_device/usbdev1.4/device/1-1.2:1.0"
@@ -362,6 +365,9 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
     }
     return NO_ERROR;
 }
+
+// This code is not needed anymore if this pull request will be implemented into libusb:
+// https://github.com/libusb/libusb/pull/1860
 
 // Read strings that are cached in the kernel.
 // This avoids sending USB requests to each USB device which would be slow or even hang if a device does not respond.
