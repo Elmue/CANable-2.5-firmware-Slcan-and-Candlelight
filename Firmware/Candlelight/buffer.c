@@ -251,7 +251,11 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
 void buf_store_can_frame_blob(uint8_t channel, uint8_t* can_frame)
 {
     kBlob* blob = (kBlob*)can_frame;
-    if (blob->msg_type == MSG_TxBlob)
+    // Blobs exist only in the ElmueSoft protocol. In legacy mode byte[1] is the
+    // echo_id byte 1, so without this GLB_ProtoElmue guard a legacy frame whose
+    // echo_id byte 1 == MSG_TxBlob (0x10) is misparsed as a blob and the classic
+    // frame is dropped/garbled. A monotonic echo_id triggers this at 4096 frames.
+    if (GLB_ProtoElmue && blob->msg_type == MSG_TxBlob)
     {
         int offset = sizeof(kBlob);
         for (uint8_t i=0; i<blob->frame_count; i++)
