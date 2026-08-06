@@ -251,7 +251,7 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
 void buf_store_can_frame_blob(uint8_t channel, uint8_t* can_frame)
 {
     kBlob* blob = (kBlob*)can_frame;
-    if (blob->msg_type == MSG_TxBlob)
+    if (GLB_ProtoElmue && blob->msg_type == MSG_TxBlob)
     {
         int offset = sizeof(kBlob);
         for (uint8_t i=0; i<blob->frame_count; i++)

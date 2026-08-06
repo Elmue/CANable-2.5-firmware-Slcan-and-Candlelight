@@ -52,6 +52,13 @@ An additional "m" is prefixed for all member variables (e.g. ms_String)
 #include <libusb-1.0/libusb.h>
 #include "OsLibrary.h"
 
+// This code needs libusb_get_interface_string() which has been added in pull request 1860.
+// https://github.com/libusb/libusb/pull/1860
+// libusb uses totally stupid version numbers: 0x0100010D == 1.0.31 !!
+#if !defined(LIBUSB_API_VERSION) || (LIBUSB_API_VERSION < 0x0100010D)
+    #error "libusb version 1.0.31 or higher is required"
+#endif
+
 using namespace CANable;
 
 // Constructor
@@ -290,49 +297,18 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
         // If there are not at least 2 interfaces, it is not a valid Candlelight device
         if (pk_ConfigDesc->bNumInterfaces >= 2)
         {
-            // get string descriptors without opening the device
+            // get string descriptor from the kernel without opening the device
             char s8_Product[256];
             s32_Error = libusb_get_device_string(pi_UsbDevice, LIBUSB_DEVICE_STRING_PRODUCT, s8_Product, sizeof(s8_Product));
             if (s32_Error < 0)
                 return (uint32_t)s32_Error;
-            
-            char s8_Serial[256];            
+
+			// get string descriptor from the kernel without opening the device
+            char s8_Serial[256];
             s32_Error = libusb_get_device_string(pi_UsbDevice, LIBUSB_DEVICE_STRING_SERIAL_NUMBER, s8_Serial, sizeof(s8_Serial));
             if (s32_Error < 0)
                 return (uint32_t)s32_Error;
-            
-            // ---------------------------------
-            
-            // Building the path in s_BasePath is not needed anymore if this pull request will be implemented into libusb:
-            // https://github.com/libusb/libusb/pull/1860
-           
-            // libusb does not provide the Linux device path.
-            // DevicePath = "/sys/class/usb_device/usbdev1.4/device/1-1.2:1.0"
-            // where        "............................N.D/....../N-R.H:C.I"
-            // means: N= BusNumber, D= DeviceAddress, R= RootPort, H= HubPort, C= ConfigValue, I= Interface Number
 
-            uint8_t u8_BusNumber  = libusb_get_bus_number    (pi_UsbDevice);
-            uint8_t u8_DeviceAddr = libusb_get_device_address(pi_UsbDevice);
-            string s_BasePath = cUtils::Format("/sys/class/usb_device/usbdev%u.%u/device/%u-",
-                                               u8_BusNumber, u8_DeviceAddr, u8_BusNumber);   
-
-            uint8_t u8_Ports[7]; // Linux supports up to 7 tiers in topology
-            int s32_PortCount = libusb_get_port_numbers(pi_UsbDevice, u8_Ports, sizeof(u8_Ports));
-            if (s32_PortCount < 0)
-                return (uint32_t)s32_PortCount;
-            
-            if (s32_PortCount == 0)
-            {
-                s_BasePath += "0";
-            }
-            else for (int P = 0; P < s32_PortCount; P++) 
-            {
-                if (P > 0) s_BasePath += ".";
-                s_BasePath += cUtils::Format("%u", u8_Ports[P]);
-            }
-            
-            s_BasePath += cUtils::Format(":%u.", pk_ConfigDesc->bConfigurationValue);
-            
             // Add each interface as a separate device to pi_Devices
             for (uint8_t I = 0; I < pk_ConfigDesc->bNumInterfaces; I++)
             {
@@ -348,14 +324,23 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
                     break; // not a valid Candlelight device
 
                 const libusb_interface_descriptor* pk_InterfDesc = &pk_Interface->altsetting[0];
-                
+				
+				// get string descriptor from the kernel without opening the device
+				// This comand requires libusb version 1.0.31
+				char s8_Interface[256];
+				s32_Error = libusb_get_interface_string(pi_UsbDevice, pk_ConfigDesc->bConfigurationValue, 
+				                                        pk_InterfDesc->bInterfaceNumber, pk_InterfDesc->bAlternateSetting,
+				                                        s8_Interface, sizeof(s8_Interface));
+				if (s32_Error < 0)
+					return (uint32_t)s32_Error;
+				
                 kUsbDevice k_UsbDev;
                 k_UsbDev.mpi_LinuxDevice = pi_UsbDevice;
                 k_UsbDev.ms32_Interface  = I;
                 k_UsbDev.ms_Product      = s8_Product;
                 k_UsbDev.ms_SerialNo     = s8_Serial;
-                k_UsbDev.ms_DevicePath   = s_BasePath + cUtils::Format("%u", pk_InterfDesc->bInterfaceNumber);
-                k_UsbDev.ms_Interface    = ReadSysfsString(k_UsbDev.ms_DevicePath + "/interface");
+                k_UsbDev.ms_Interface    = s8_Interface;
+                k_UsbDev.ms_DevicePath   = "not implemeted in libusb"; // https://github.com/libusb/libusb/issues/1854				
 
                 pi_Devices->push_back(k_UsbDev);
             }
@@ -364,30 +349,6 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
         libusb_free_config_descriptor(pk_ConfigDesc);
     }
     return NO_ERROR;
-}
-
-// This code is not needed anymore if this pull request will be implemented into libusb:
-// https://github.com/libusb/libusb/pull/1860
-
-// Read strings that are cached in the kernel.
-// This avoids sending USB requests to each USB device which would be slow or even hang if a device does not respond.
-string ReadSysfsString(string s_Path)
-{
-    if (!fs::exists(s_Path))
-        return "[N/A]"; // the interface does not expose a name
-
-    ifstream i_File(s_Path);
-    if (!i_File.is_open())
-    {
-        assert(false);
-        return "[Device not open]"; // e.g. device disconnected / suspended
-    }
-
-    string s_Line;
-    if (getline(i_File, s_Line))
-        return cUtils::TrimRight(s_Line); // remove all whitespace at the end
-    else
-        return ""; // no string available
 }
 
 // ===================================== Console =====================================

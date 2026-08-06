@@ -21,7 +21,8 @@
     ul, ol        { padding-inline-start: 25px; }
     li            { padding-top:1px; padding-bottom:1px;}
     code          { color:brown; font-size:14px; }
-    img           { max-width: 100%; height: auto;}
+    /* Modern browsers read this ":root". IE8 completely ignores it, otherwise it would cripple all images. */
+    :root img     { max-width: 100%; height: auto;}
     a:hover       { color: #AA00FF; }
     pre           { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:#FFFFDD; width:690px; }
     .Pre          { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:white; }
@@ -128,7 +129,10 @@
         var Img = document.getElementById("ImgFullSize");
         var Scr = document.getElementById("DivScrollable");
 
-        var Top = Math.max(document.body.scrollTop, document.documentElement.scrollTop) + 15;
+        var Top = (window.pageYOffset || // best option, but not available on IE 8
+                   document.documentElement.scrollTop || // quirks mode
+                   document.body.scrollTop) + 15;        // strict mode
+
         Div.style.top  = Top + "px";
         Div.style.left = "20px";
         Div.style.display = "block";
@@ -145,8 +149,13 @@
         Img.style.maxWidth = "none";
         Img.onload = function()
         {
-            var MaxWidth  = window.innerWidth  - 80;
-            var MaxHeight = window.innerHeight - 80;
+            var MaxWidth  = (window.innerWidth || // best option, but not available on IE 8
+                             document.documentElement.clientWidth ||  // quirks mode
+                             document.body.clientWidth)  - 80;        // strict mode
+
+            var MaxHeight = (window.innerHeight || // best option, but not available on IE 8
+                             document.documentElement.clientHeight || // quirks mode
+                             document.body.clientHeight) - 80;        // strict mode
 
             var ImgWidth  = Img.width  + 4;
             var ImgHeight = Img.height + 4;
@@ -179,31 +188,36 @@
 
     function ShowMenu(bShow)
     {
-        MenuHead = document.getElementById("MenuHead");
-        MenuCont = document.getElementById("MenuContent");
-        if (MenuHead == null || MenuCont == null)
-            return;
+        var MenuHead = document.getElementById("MenuHead");
+        var MenuCont = document.getElementById("MenuContent");
+
+        if (MenuHead != null && MenuCont != null)
+        {
             MenuHead.style.display = bShow ? "none"  : "block";
             MenuCont.style.display = bShow ? "block" : "none";
         }
-
-    try
-    {
-        window.addEventListener('scroll', function(e)
-        {
-            var Top = Math.max(document.body.scrollTop, document.documentElement.scrollTop)
-            if (Math.abs(LastTop - Top) > 50) // Workaround for buggy Firefox 79
-            {
-                if (LastUrl == window.location.href)
-                    HideFullSize(); // also hide menu
-
-                LastTop = Top;
-                LastUrl = window.location.href;
-            }
-        } );
     }
-    catch (ex)
-    {}
+
+    function onScrollCallback(e)
+    {
+        var Top = (window.pageYOffset || // best option, but not available on IE 8
+                   document.documentElement.scrollTop || // quirks mode
+                   document.body.scrollTop);             // strict mode
+
+        if (Math.abs(LastTop - Top) > 50) // Workaround for buggy Firefox 79
+        {
+            if (LastUrl == window.location.href)
+                HideFullSize(); // also hide menu
+
+            LastTop = Top;
+            LastUrl = window.location.href;
+        }
+    }
+
+    if (window.addEventListener) // Modern browsers
+        window.addEventListener('scroll', onScrollCallback, false);
+    else if (window.attachEvent) // Internet Explorer 8
+        window.attachEvent('onscroll', onScrollCallback);
     </script>
 </head>
 <body background="Images/Bkgnd.jpg">
@@ -256,7 +270,7 @@
         <div>— &nbsp; <a href="#Candle_NewProto"      class="MenuLink" onClick="ShowMenu(false)">The New Protocol</a></div>
         <div>— &nbsp; <a href="#Candle_DFU"           class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>
         <div><a href="#Firmware_Manual"               class="MenuLink" onClick="ShowMenu(false)">4.) Firmware Developer Manual</a></div>
-        <div>— &nbsp; <a href="#Compiling"            class="MenuLink" onClick="ShowMenu(false)">Compiling the Code</a></div>
+        <div>— &nbsp; <a href="#Compiling"            class="MenuLink" onClick="ShowMenu(false)">Compile &amp; Upload Firmware</a></div>
         <div>— &nbsp; <a href="#Source_Code"          class="MenuLink" onClick="ShowMenu(false)">Source Code Versions</a></div>
     </div>
 </div>
@@ -298,7 +312,7 @@
 <div>&nbsp;</div>
 <table border="0" cellspacing="0" cellpadding="10" style="border:solid 2px #007799;">
 <tr><td>
-    <div><img src="Images/OosMetrics.svg" width="408" height="20"></div>
+    <div><img src="Images/OosMetrics.png" width="408" height="20"></div>
     <p>
     <div>This firmware is ranked under the <b>Top Ten</b> in the embedded category on <a href="https://oosmetrics.com/repo/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight" target="_blank">oosmetrics</a>.</div>
 </td></tr>
@@ -390,7 +404,7 @@
 <div>There is <b>no easy way</b> to remove their 'firmware updater' and the several protections and to enable pin BOOT0.</div>
 <div>They force you to buy a <b>ST-Link adapter</b>, solder 4 pins to the board, install the STM <b>Cube Programmer</b>,</div>
 <div>which is a monster of of 1.5 GB and manually manipulate the <b>option bytes</b> which is risky.</div>
-<div>Cube Programmer is a garbage that mostly does not connect to the adapter without any error message.</div>
+<div>Cube Programmer is a garbage that mostly does not connect to the adapter without even showing an error message.</div>
 <p>
 <div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer</a> removes all this WeAct stuff with <b>one click</b>.</div>
 <div>To achieve this I had to write a firmware that I upload with the <b>Y-Modem</b> protocol through their firmware updater.<//div>
@@ -751,7 +765,7 @@
 <div>This allows you to always revert the adapter to it's factory default.</div>
 </td></tr></table>
 <p>
-<div>The firmware programmer works with the <b>DFU file format</b> that has been developed by ST Microelectronics.</div>
+<div>The firmware programmer works with the <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/blob/main/Documentation/ST%20-%20UM0391%20-%20DfuSe%20File%20Format.pdf" target="_blank">DfuSe file format</a> that has been developed by ST Microelectronics.</div>
 <div>Apart from the binary flash data the DFU file contains additional information like name, target, version, memory address,...</div>
 <div>If you have other firmware formats, like <b>BIN</b>, <b>HEX</b> or <b>S19</b> you can copy them into the subfolder 'Firmware'.</div>
 <div>The firmware programmer will convert the files automatically into DFU files that match the currently selected device.</div>
@@ -1895,12 +1909,23 @@
 
 
 <a name="Compiling"></a>
+<h3>Firmware Upload on Linux</h3>
+<div>Install the DFU Util: <code>sudo apt install dfu-util </code></div>
+<div>Download the correct <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/blob/main/Binay%20Files/" target="_blank">DFU file</a> for your adapter. (See <a href="#Firmware_Updater">explanation</a> of DFU files)</div>
+<div>Flash the new firmware: <code>sudo dfu-util -w -c 1 -i 0 -a 0 -D "STM32G431 - Candlelight2.5 - Multiboard.dfu"</code></div>
+<div><b>ATTENTION:</b> On Linux it is not possible to upload the new firmware to a factory default <b>WeActStudio v1</b> adapter.</div>
+<div>You must use the HUD ECU Hacker Firmware Programmer to <a href="#WeActStudioV1">remove the preinstalled crap</a> from the adapter.</div>
+
+<h3>Firmware Upload on Windows</h3>
+<div>When you install the latest <b>HUD ECU Hacker</b> you always get the latest DFU firmware files.</div>
+<div>Read chapter <a href="#Firmware_Updater">The new Firmware Programmer</a> how to flash the new firmware into your CANable with one click.</div>
+
 <h3>Compiling STM32 code on Linux</h3>
 <div>Install the ARM compiler: <code>sudo apt install build-essential gcc-arm-none-eabi</code><div>
 <div>You can use GNU tools for STM32 version 10.3.1 or higher.</div>
 <div>Compile the firmware: <code>make -s -f Make_G431_Candle_Multiboard</code></div>
 <div>The compiler generates a BIN, HEX and ELF file.</div>
-<div>The make file contains a command (dfu-util) that automatically uploads the compiled firmware to the CANable.</div>
+<div>The make file contains a command (<b>dfu-util</b>) that automatically uploads the compiled firmware to the CANable.</div>
 
 <h3>Compiling STM32 code on Windows</h3>
 <div>You find a lot of instructions in internet how to compile the firmware on Linux.</div>
@@ -1961,10 +1986,9 @@
 <li><div><b>31.May.2026</b>: Support for <a href="#WeActStudioV2">WeActStudio v2</a> adapter.</div>
 <li><div><b>06.Jun.2026</b>: Legacy Slcan <a href="#Slcan_Responses">feedback</a> sent by default: CR / BEL character.</div>
 <li><div><b>18.Jun.2026</b>: Added support for Candlelight <code>GS_ReqGetErrorState</code>.</div>
+<li><div><b>03.Aug.2026</b>: Bugfix for fake echo ID in Candlelight legacy mode. Added compiled binary files. Simplified Linux C++ demo.</div>
 <li><div><span class="Grey">Any future versions will be listed here.</div>
 </ul>
-
-<div><b>NOTE:</b> With each new firmware version I also release a new <a href="https://netcult.ch/elmue/HUD ECU Hacker" target="_blank">HUD ECU Hacker</a> version which contains the compiled firmware DFU files.</div>
 
 <p>
 <div>You find the source code on <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight" target="_blank">Github</a>.</div>
