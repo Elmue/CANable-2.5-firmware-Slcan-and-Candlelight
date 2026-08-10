@@ -1,13 +1,14 @@
+
 @echo off
 
 rem Copy all BIN files after compiling into this directory:
 rem The firmware updater will convert them automatically into DFU files.
-set "COPY_DIRECTORY=C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmware Update\Firmware\"
+set "COPY_DIRECTORY=E:\Workspace\HUD ECU Hacker\Output\Driver\CANable Firmware Update\Firmware\"
 
 rem -------------------------------------------------------------------------------------------------
 
-echo You must have MingW and the STM32 Cube CLT installed.
-echo Find a detailed description on https://netcult.ch/elmue/CANable Firmware Update#Compiling
+echo  You must have MingW and the STM32 Cube CLT installed.
+echo  Find a detailed description on https://netcult.ch/elmue/CANable Firmware Update#Compiling
 echo:
 
 :Loop

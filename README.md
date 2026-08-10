@@ -26,9 +26,12 @@ Please read the detailed
 
 https://netcult.ch/elmue/CANable%20Firmware%20Update
 
-________________________
-
 Latest Updates:
-You find the version history here:
 
 https://netcult.ch/elmue/CANable%20Firmware%20Update#Source_Code
+
+IMPORTANT:
+If you get blocked by the firewall on netcult.ch, please write an email to the website owner: office@netcult.ch and send him a screenshot of the block.
+The firewall is far too restrictive and the more people report this problem, the more probable it becomes that he will finally fix the wrong configuration.
+
+You can also read the "User & Developer Manual.htm" after downloading this Github repository.

@@ -84,19 +84,23 @@ typedef enum // sent as 8 bit
 // ============================================================================================
 // TARGET_BOARD is defined in Makefile
 
+// NOTE:
+// Some boards use the ADM 3050 CAN transceiver chip which supports CAN baudrates up to 12 Mbaud.
+// But MAX_CAN_BAUDRATE is always <= 10 MBaud because the processor running at 160 MHz cannot generate this baudrate.
+
 #if defined(Multiboard)
 
     // MKS Makerbase + Walfront + DSD Tech + Jhoinrch before 2026 use default settings and there is no quartz.
-    #define MAX_CAN_BAUDRATE    10 // CAN transceiver chip limits to 10 Mbaud
+    #define MAX_CAN_BAUDRATE    10 // Makerbase supports 10 Mbaud, Walfront and DS-Tech only 5 Mbaud.
     // -------------------    
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
-    
+
 #elif defined(Jhoinrch)
 
     // Jhoinrch puts a 25 MHz quartz on all their boards since 2026
-    #define MAX_CAN_BAUDRATE    10 // CAN transceiver chip limits to 10 Mbaud
+    #define MAX_CAN_BAUDRATE    10  // maximum is 10 Mbaud (The RH02 has the transceiver ADM 3050)
     // -------------------    
-    #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
+    #define ALLOW_DISABLE_BOOT0 1   // allow to disable pin BOOT0
     
 #elif defined(OpenlightLabs)
 
@@ -104,9 +108,9 @@ typedef enum // sent as 8 bit
     #define LED_TX_PINS         GPIO_PIN_11
     #define LED_TX_PORTS        GPIOB
     // -------------------
-    #define MAX_CAN_BAUDRATE    5 // CAN transceiver chip limits to 5 Mbaud
+    #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1051 limits to 5 Mbaud
     // -------------------
-    #define ALLOW_DISABLE_BOOT0 1 // allow to disable pin BOOT0    
+    #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0    
     
 #elif defined(OleksiiSolo)
 
@@ -120,9 +124,9 @@ typedef enum // sent as 8 bit
     #define LED_ON              GPIO_PIN_SET             // The LED's cathode is connected to ground
     #define LED_OFF             GPIO_PIN_RESET
     // -------------------
-    #define MAX_CAN_BAUDRATE    8 // CAN transceiver chip limits to 8 Mbaud
+    #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1044 limits to 5 Mbaud
     // -------------------
-    #define ALLOW_DISABLE_BOOT0 1 // allow to disable pin BOOT0 (indispensable for correct operation)
+    #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0 (indispensable for correct operation)
     
 #elif defined(OleksiiDual)
 
@@ -147,9 +151,9 @@ typedef enum // sent as 8 bit
     #define LED_ON              GPIO_PIN_SET             // The LED's cathode is connected to ground
     #define LED_OFF             GPIO_PIN_RESET
     // -------------------
-    #define MAX_CAN_BAUDRATE    8 // CAN transceiver chip limits to 8 Mbaud
+    #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1044 limits to 5 Mbaud
     // -------------------
-    #define ALLOW_DISABLE_BOOT0 1 // allow disable pin BOOT0 (indispensable for correct operation)
+    #define ALLOW_DISABLE_BOOT0 1  // allow disable pin BOOT0 (indispensable for correct operation)
     
 #elif defined(WeActStudioV1)
 
@@ -171,9 +175,9 @@ typedef enum // sent as 8 bit
     #define LED_PWR_PIN         GPIO_PIN_2 // red
     #define LED_PWR_PORT        GPIOA    
     // -------------------
-    #define MAX_CAN_BAUDRATE    5 // CAN transceiver chip limits to 5 Mbaud
+    #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip SIT 1044 limits to 5 Mbaud
     // -------------------
-    #define ALLOW_DISABLE_BOOT0 0 // do not allow to disable pin BOOT0 (not required for this processor) 
+    #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required for this processor) 
     
 #elif defined(WeActStudioV2)    
 
@@ -192,9 +196,9 @@ typedef enum // sent as 8 bit
     #define CAN_TRX_ENABLE_PORT GPIOB
     #define CAN_TRX_ENABLE_ON   GPIO_PIN_RESET
     // -------------------
-    #define MAX_CAN_BAUDRATE    5 // CAN transceiver chip limits to 5 Mbaud
+    #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip CA-IS2062A limits to 5 Mbaud
     // -------------------
-    #define ALLOW_DISABLE_BOOT0 0 // do not allow to disable pin BOOT0 (not required due to correct hardware design)
+    #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required due to correct hardware design)
     
 #else
     
