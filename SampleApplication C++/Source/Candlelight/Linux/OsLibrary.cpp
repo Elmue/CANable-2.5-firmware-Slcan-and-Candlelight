@@ -324,23 +324,30 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
                     break; // not a valid Candlelight device
 
                 const libusb_interface_descriptor* pk_InterfDesc = &pk_Interface->altsetting[0];
-				
+
 				// get string descriptor from the kernel without opening the device
 				// This comand requires libusb version 1.0.31
 				char s8_Interface[256];
-				s32_Error = libusb_get_interface_string(pi_UsbDevice, pk_ConfigDesc->bConfigurationValue, 
+				s32_Error = libusb_get_interface_string(pi_UsbDevice, pk_ConfigDesc->bConfigurationValue,
 				                                        pk_InterfDesc->bInterfaceNumber, pk_InterfDesc->bAlternateSetting,
 				                                        s8_Interface, sizeof(s8_Interface));
 				if (s32_Error < 0)
-					return (uint32_t)s32_Error;
-				
+					snprintf(s8_Interface, sizeof(s8_Interface), "Error %s", libusb_strerror(s32_Error));
+
+                // On Windows k_UsbDev.ms_DevicePath is the real Windows NT device path used by the kernel.
+                // But libusb does not offer an API that returns the Linux device path that is stored internally in priv->sysfs_dir.
+                // We build a string here that is just an information about the USB device for the user.
+                char s8_Device[100];
+                snprintf(s8_Device, sizeof(s8_Device), "Bus number: %u, Device address: %u", 
+                         libusb_get_bus_number(pi_UsbDevice), libusb_get_device_address(pi_UsbDevice));
+
                 kUsbDevice k_UsbDev;
                 k_UsbDev.mpi_LinuxDevice = pi_UsbDevice;
+                k_UsbDev.ms_DevicePath   = s8_Device;                
                 k_UsbDev.ms32_Interface  = I;
                 k_UsbDev.ms_Product      = s8_Product;
                 k_UsbDev.ms_SerialNo     = s8_Serial;
                 k_UsbDev.ms_Interface    = s8_Interface;
-                k_UsbDev.ms_DevicePath   = "not implemeted in libusb"; // https://github.com/libusb/libusb/issues/1854				
 
                 pi_Devices->push_back(k_UsbDev);
             }

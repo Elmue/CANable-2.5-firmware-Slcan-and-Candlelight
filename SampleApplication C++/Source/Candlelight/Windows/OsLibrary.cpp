@@ -684,10 +684,13 @@ void OsLibrary::PrintConsole(uint16_t u16_Color, string s_Format, ...)
 
     char s8_Buffer[2000];
     uint32_t u32_Len = vsnprintf_s(s8_Buffer, 2000, s_Format.c_str(), args);
+    
+    // Revert USB device strings that have been converted from Unicode to UTF8.
+    wstring s_Unicode = ToUnicode(s8_Buffer, u32_Len);
 
     // WriteConsole() is significantly faster than wprinf() or vwprintf(), which need 10 ms per line!
     uint32_t u32_Written;
-    WriteConsoleA(gh_ConsoleOut, s8_Buffer, u32_Len, &u32_Written, NULL);
+    WriteConsoleW(gh_ConsoleOut, s_Unicode.c_str(), s_Unicode.length(), &u32_Written, NULL);
 }
 
 // Check if the user has pressed the ENTER key in the console (non-blocking function)
@@ -748,13 +751,26 @@ string OsLibrary::GetErrorMessage(uint32_t u32_Error)
     return cUtils::TrimRight(c_Buffer);
 }
 
-string OsLibrary::ToUtf8(wchar_t* s_Unicode, int s32_StrLen) // s32_StrLen = - 1
+// Unicode -> UTF8
+string OsLibrary::ToUtf8(const wchar_t* s_Unicode, int s32_StrLen) // s32_StrLen = - 1
 {
     if (s32_StrLen < 0)
         s32_StrLen = wcslen(s_Unicode);
 
     string s_Utf8;
     s_Utf8.resize(s32_StrLen * 5);
-    int s32_Written = WideCharToMultiByte(CP_UTF8, 0, s_Unicode, s32_StrLen, (LPSTR)s_Utf8.data(), s32_StrLen, NULL, NULL);
+    int s32_Written = WideCharToMultiByte(CP_UTF8, 0, s_Unicode, s32_StrLen, (LPSTR)s_Utf8.data(), s_Utf8.size(), NULL, NULL);
     return s_Utf8.substr(0, s32_Written);
+}
+
+// UTF8 -> Unicode
+wstring OsLibrary::ToUnicode(const char* s_Utf8, int s32_StrLen) // s32_StrLen = -1
+{
+    if (s32_StrLen < 0)
+        s32_StrLen = strlen(s_Utf8);
+
+    wstring s_Unicode;
+    s_Unicode.resize(s32_StrLen);
+    int s32_Written = MultiByteToWideChar(CP_UTF8, 0, s_Utf8, s32_StrLen, (LPWSTR)s_Unicode.data(), s_Unicode.size());
+    return s_Unicode.substr(0, s32_Written);
 }

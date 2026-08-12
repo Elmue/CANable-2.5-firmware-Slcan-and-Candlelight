@@ -44,7 +44,9 @@ class OsLibrary
 public:
     static uint32_t EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_Devices);
     static string   GetErrorMessage(uint32_t u32_Error);
-    static string   ToUtf8(wchar_t* s_Unicode, int s32_StrLen = -1);
+    static string   ToUtf8(const wchar_t* s_Unicode, int s32_StrLen = -1);
+    static wstring  ToUnicode(const char* s_Utf8,    int s32_StrLen = -1);
+    
     // Console
     static void     SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, string s_Title);
     static void     PrintConsole(uint16_t u16_Color, string s_Format, ...);
