@@ -2084,7 +2084,7 @@
 <h3>Compiling STM32 code on Linux</h3>
 <div>Install the ARM compiler: <code>sudo apt install build-essential gcc-arm-none-eabi</code><div>
 <div>You can use GNU tools for STM32 version 10.3.1 or higher.</div>
-<div>Compile the firmware: <code>make -s -f Make_G431_Candle_Multiboard</code></div>
+<div>To compile the firmware, type at the root directory level: <code>make -s -f Build/Make_G431_Candle_Multiboard</code></div>
 <div>The compiler generates a BIN, HEX and ELF file.</div>
 <div>The make file contains a command (<b>dfu-util</b>) that automatically uploads the compiled firmware to the CANable.</div>
 

@@ -1,23 +1,29 @@
 
-# CANable Slcan Makefile
+# CANable Candlelight Makefile
 
 ######################################
 #
 # This makefile compiles for the CANable board from Walfront and several other brands, 
 # which is identical with Multiboard, but has a STM32G473
 #
-# Compile this by typing:
-# make -s -f Make_G473_Slcan_Multiboard
+# Windows:
+# --------
+# Run the script Build.cmd in the root directory
+#
+# Linux:
+# ------
+# Compile this by typing in the root directory:
+# make -s -f Build/Make_G473_Candle_Multiboard
 #
 #######################################
 
-# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters.
 
-TARGET_FIRMWARE = Slcan
+TARGET_FIRMWARE = Candlelight
 TARGET_BOARD    = Multiboard
 TARGET_MCU      = STM32G473
 
 # This board has no quartz. It uses the RC oscillator in the processor.
 QUARTZ_FREQU    = 0
 
-include GCC_Rules.mk
+include Build/GCC_Rules.mk

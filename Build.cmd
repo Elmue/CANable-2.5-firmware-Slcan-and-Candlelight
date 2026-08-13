@@ -38,10 +38,10 @@ choice /C XABCDEFGHIJKLMNOPQ /N /M "Press a key: "
 
 cls
 
-rem The compiler fails to correctly detect changes in sourcecode --> always built from scratch.
-rem Delete all subfolders "Build_STM*"
-for /D %%i in ("Build_STM*") do (
-    rmdir /S /Q "%%~nxi"
+rem The compiler fails to correctly detect changes in sourcecode --> always re-build from scratch.
+rem Delete all subfolders "Build\STM32*"
+for /D %%i in ("Build\STM*") do (
+    rmdir /S /Q "Build\%%~nxi"
 )
 
 rem 'X'
@@ -50,32 +50,32 @@ if %errorlevel% == 1 exit
 rem 'A'
 if %errorlevel% == 2 (
     rem compile all files "Make_*" in the current folder
-    for %%f in ("Make_*") do (
+    for %%f in ("Build\Make_*") do (
         call :Compile %%f
     )
 )
 
 rem 'B', 'C',...
-if %errorlevel% ==  3 call :Compile  Make_G431_Slcan_Multiboard
-if %errorlevel% ==  4 call :Compile  Make_G473_Slcan_Multiboard
-if %errorlevel% ==  5 call :Compile  Make_G431_Slcan_Jhoinrch
-if %errorlevel% ==  6 call :Compile  Make_G431_Slcan_Openlightlabs
-if %errorlevel% ==  7 call :Compile  Make_G431_Slcan_OleksiiSolo
-if %errorlevel% ==  8 call :Compile  Make_G473_Slcan_OleksiiDual
-if %errorlevel% ==  9 call :Compile  Make_G0B1_Slcan_WeActStudioV1
-if %errorlevel% == 10 call :Compile  Make_G431_Slcan_WeActStudioV2
-if %errorlevel% == 11 call :Compile  Make_G431_Candle_Multiboard
-if %errorlevel% == 12 call :Compile  Make_G473_Candle_Multiboard
-if %errorlevel% == 13 call :Compile  Make_G431_Candle_Jhoinrch
-if %errorlevel% == 14 call :Compile  Make_G431_Candle_Openlightlabs
-if %errorlevel% == 15 call :Compile  Make_G431_Candle_OleksiiSolo
-if %errorlevel% == 16 call :Compile  Make_G473_Candle_OleksiiDual
-if %errorlevel% == 17 call :Compile  Make_G0B1_Candle_WeActStudioV1
-if %errorlevel% == 18 call :Compile  Make_G431_Candle_WeActStudioV2
+if %errorlevel% ==  3 call :Compile  Build\Make_G431_Slcan_Multiboard
+if %errorlevel% ==  4 call :Compile  Build\Make_G473_Slcan_Multiboard
+if %errorlevel% ==  5 call :Compile  Build\Make_G431_Slcan_Jhoinrch
+if %errorlevel% ==  6 call :Compile  Build\Make_G431_Slcan_Openlightlabs
+if %errorlevel% ==  7 call :Compile  Build\Make_G431_Slcan_OleksiiSolo
+if %errorlevel% ==  8 call :Compile  Build\Make_G473_Slcan_OleksiiDual
+if %errorlevel% ==  9 call :Compile  Build\Make_G0B1_Slcan_WeActStudioV1
+if %errorlevel% == 10 call :Compile  Build\Make_G431_Slcan_WeActStudioV2
+if %errorlevel% == 11 call :Compile  Build\Make_G431_Candle_Multiboard
+if %errorlevel% == 12 call :Compile  Build\Make_G473_Candle_Multiboard
+if %errorlevel% == 13 call :Compile  Build\Make_G431_Candle_Jhoinrch
+if %errorlevel% == 14 call :Compile  Build\Make_G431_Candle_Openlightlabs
+if %errorlevel% == 15 call :Compile  Build\Make_G431_Candle_OleksiiSolo
+if %errorlevel% == 16 call :Compile  Build\Make_G473_Candle_OleksiiDual
+if %errorlevel% == 17 call :Compile  Build\Make_G0B1_Candle_WeActStudioV1
+if %errorlevel% == 18 call :Compile  Build\Make_G431_Candle_WeActStudioV2
 
 if exist "%COPY_DIRECTORY%" (
-    rem Copy all BIN files to HUD ECU Hacker
-    for /D %%i in ("Build_STM*") do (
+    rem Copy all BIN files to HUD ECU Hacker's firmware update directory
+    for /D %%i in ("Build\STM*") do (
         echo:
         copy /Y "%%~fi\*.bin" "%COPY_DIRECTORY%"
         echo Copied to: "%COPY_DIRECTORY%"

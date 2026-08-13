@@ -31,7 +31,7 @@ endif
 
 
 # directory to place output files in
-BUILD_DIR = Build_$(TARGET_MCU)_$(TARGET_FIRMWARE)_$(TARGET_BOARD)
+BUILD_DIR = Build/$(TARGET_MCU)_$(TARGET_FIRMWARE)_$(TARGET_BOARD)
 
 # File trunk (without extension) of build files: *.bin, *.hex, *.elf
 # Example: Trunk = "STM32G431_Slcan2.5_Multiboard_0x250914"
