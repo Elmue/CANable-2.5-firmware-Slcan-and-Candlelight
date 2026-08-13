@@ -95,6 +95,27 @@ typedef enum // sent as 8 bit
     // -------------------    
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
 
+#elif defined(BTTU2CV2)
+
+    // The BigTreeTech U2C V2 has a STM32G0B1 processor and a 8 MHz quartz
+    #define CHANNEL_COUNT       1
+    // -------------------
+    #define CAN_INTERFACES      FDCAN2
+    #define CAN_PINS            GPIO_PIN_5 | GPIO_PIN_6  // Rx = PB5, Tx = PB6
+    #define CAN_PORTS           GPIOB                    // Port B
+    #define CAN_ALTERNATES      GPIO_AF3_FDCAN2          // switch pin 5,6 multiplexer to CAN module
+    // -------------------
+    // The LED labelled as "STATUS" is used as a DFU LED (ON when powered up, OFF when firmware is running)
+    #define LED_PWR_PIN         GPIO_PIN_13 // blue
+    #define LED_PWR_PORT        GPIOA
+    #define LED_MODE            GPIO_MODE_OUTPUT_PP
+    #define LED_ON              GPIO_PIN_RESET // The LED is active-high but we're going to turn it off
+    #define LED_OFF             GPIO_PIN_SET
+    // -------------------
+    #define MAX_CAN_BAUDRATE    1  // CAN transceiver chip SN65HVD1050 limits to 1 Mbaud
+    // -------------------
+    #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required for this processor)
+    
 #elif defined(Jhoinrch)
 
     // Jhoinrch puts a 25 MHz quartz on all their boards since 2026

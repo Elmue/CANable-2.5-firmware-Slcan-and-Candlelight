@@ -1,0 +1,22 @@
+
+# CANable Candlelight Makefile
+
+######################################
+#
+# This makefile compiles for the BigTreeTech U2C adapter
+#
+# Compile this by typing:
+# make -s -f Make_G0B1_Candle_BTTU2CV2
+#
+#######################################
+
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
+
+TARGET_FIRMWARE = Candlelight
+TARGET_BOARD    = BTTU2CV2
+TARGET_MCU      = STM32G0B1
+
+# This board has a 8 MHz quartz.
+QUARTZ_FREQU    = 8000000
+
+include GCC_Rules.mk
