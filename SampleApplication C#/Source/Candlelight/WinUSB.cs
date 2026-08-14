@@ -628,7 +628,7 @@ public class WinUSB : IDisposable
         // But when this operation is aborted by an elapsed timeout, any USB IN packet that was about to arrive will be dropped.
         // WinUSB does NOT have an internal buffer to store packets that arrive between calls to WinUsb_ReadPipe().
         // So the unusual is here that we use an overlapped read operation with an INFINITE timeout.
-        // This requires to run in a thread and the overlapped event is required to abort the thread.
+        // This requires to run in a high priority thread and the overlapped event is required to abort the thread.
         // ------------------------------------------------------------------------------------------------------------------------------------
         private void ReadPipeThread()
         {

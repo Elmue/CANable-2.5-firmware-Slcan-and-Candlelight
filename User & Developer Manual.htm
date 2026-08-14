@@ -2072,7 +2072,7 @@
 <a name="Compiling"></a>
 <h3>Firmware Upload on Linux</h3>
 <div>Install the DFU Util: <code>sudo apt install dfu-util </code></div>
-<div>Download the correct <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/blob/main/Binay%20Files/" target="_blank">DFU file</a> for your adapter. (See <a href="#Firmware_Updater">explanation</a> of DFU files)</div>
+<div>Download the correct <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/blob/main/Binary%20Files/" target="_blank">DFU file</a> for your adapter. (See <a href="#Firmware_Updater">explanation</a> of DFU files)</div>
 <div>Flash the new firmware: <code>sudo dfu-util -w -c 1 -i 0 -a 0 -D "STM32G431 - Candlelight2.5 - Multiboard.dfu"</code></div>
 <div><b>ATTENTION:</b> On Linux it is not possible to upload the new firmware to a factory default <b>WeActStudio v1</b> adapter.</div>
 <div>You must use the HUD ECU Hacker Firmware Programmer to <a href="#WeActStudioV1">remove the preinstalled crap</a> from the adapter.</div>
