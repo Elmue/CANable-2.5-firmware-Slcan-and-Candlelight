@@ -1,0 +1,29 @@
+
+# CANable Candlelight Makefile
+
+######################################
+#
+# This makefile compiles for the 3D printer CAN adapter U2C v2
+# from BigTreeTech which has a 8 MHz quartz
+#
+# Windows:
+# --------
+# Run the script Build.cmd in the root directory
+#
+# Linux:
+# ------
+# Compile this by typing in the root directory:
+# make -s -f Build/Make_G0B1_Candlelight_BigTreeTechU2C
+#
+#######################################
+
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
+
+TARGET_FIRMWARE = Candlelight
+TARGET_BOARD    = BigTreeTechU2C
+TARGET_MCU      = STM32G0B1
+
+# This board has a 8 MHz quartz.
+QUARTZ_FREQU    = 8000000
+
+include Build/GCC_Rules.mk

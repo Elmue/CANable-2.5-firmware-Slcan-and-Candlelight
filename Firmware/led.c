@@ -63,7 +63,12 @@ bool led_init()
     GPIO_InitStruct.Pin = LED_PWR_PIN;
     HAL_GPIO_Init(LED_PWR_PORT, &GPIO_InitStruct);
     
-    // Turn on red Power LED on WeActStudio v1 adapter
+    // WeActStudio v1 adapter:
+    // Turn ON the red Power LED. It is OFF in DFU mode.
+    // --------------------------------------------------
+    // BigTreeTech U2C v2 adapter:
+    // Turn OFF the blue Status LED. 
+    // It is ON in DFU mode, because by default PA13 is internally pulled up by the STM32G0B1 processor.
     led_set_Pwr(true);
 #endif
     return true;

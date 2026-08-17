@@ -92,16 +92,16 @@ typedef enum // sent as 8 bit
 
     // MKS Makerbase + Walfront + DSD Tech + Jhoinrch before 2026 use default settings and there is no quartz.
     #define MAX_CAN_BAUDRATE    10 // Makerbase supports 10 Mbaud, Walfront and DS-Tech only 5 Mbaud.
-    // -------------------    
+    // -------------------
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
 
 #elif defined(Jhoinrch)
 
     // Jhoinrch puts a 25 MHz quartz on all their boards since 2026
     #define MAX_CAN_BAUDRATE    10  // maximum is 10 Mbaud (The RH02 has the transceiver ADM 3050)
-    // -------------------    
+    // -------------------
     #define ALLOW_DISABLE_BOOT0 1   // allow to disable pin BOOT0
-    
+
 #elif defined(OpenlightLabs)
 
     // OpenlightLabs has the Tx LED at pin B11
@@ -110,8 +110,8 @@ typedef enum // sent as 8 bit
     // -------------------
     #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1051 limits to 5 Mbaud
     // -------------------
-    #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0    
-    
+    #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
+
 #elif defined(OleksiiSolo)
 
     // Oleksii puts a 8 MHz quartz on the single channel board
@@ -127,7 +127,7 @@ typedef enum // sent as 8 bit
     #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1044 limits to 5 Mbaud
     // -------------------
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0 (indispensable for correct operation)
-    
+
 #elif defined(OleksiiDual)
 
     // Oleksii puts a 8 MHz quartz on the dual channel board
@@ -139,13 +139,13 @@ typedef enum // sent as 8 bit
     #define CAN_PORTS           GPIOB,                   GPIOB                   // CANFD Port
     #define CAN_ALTERNATES      GPIO_AF9_FDCAN1,         GPIO_AF9_FDCAN2  // switch pin multiplexer to CAN module
     // -------------------
-    #define LED_TX_PINS         GPIO_PIN_5,              GPIO_PIN_3 
+    #define LED_TX_PINS         GPIO_PIN_5,              GPIO_PIN_3
     #define LED_TX_PORTS        GPIOA,                   GPIOA
-    #define LED_RX_PINS         GPIO_PIN_6,              GPIO_PIN_4 
+    #define LED_RX_PINS         GPIO_PIN_6,              GPIO_PIN_4
     #define LED_RX_PORTS        GPIOA,                   GPIOA
     // -------------------
     #define TERMINATOR_PINS     -1,                      -1  // termination resistor is switched by a manual jumper
-    #define TERMINATOR_PORTS    GPIOB,                   GPIOB    
+    #define TERMINATOR_PORTS    GPIOB,                   GPIOB
     // ---------------------------------------------------------
     #define LED_MODE            GPIO_MODE_OUTPUT_PP
     #define LED_ON              GPIO_PIN_SET             // The LED's cathode is connected to ground
@@ -154,7 +154,7 @@ typedef enum // sent as 8 bit
     #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1044 limits to 5 Mbaud
     // -------------------
     #define ALLOW_DISABLE_BOOT0 1  // allow disable pin BOOT0 (indispensable for correct operation)
-    
+
 #elif defined(WeActStudioV1)
 
     // The WeActStudio USB2CANFD v1 has a STM32G0B1 processor and a 16 MHz quartz
@@ -168,26 +168,26 @@ typedef enum // sent as 8 bit
     #define LED_RX_PINS         GPIO_PIN_0 // green
     #define LED_RX_PORTS        GPIOA
     #define LED_TX_PINS         GPIO_PIN_1 // blue
-    #define LED_TX_PORTS        GPIOA    
+    #define LED_TX_PORTS        GPIOA
     // The third LED is used by the WeAct firmware to show that the device is in firmware update mode.
     // But WeActStudio uses their own proprietary firmware updater which is CRAP and is erased when uploading this firmware.
     // The ElmueSoft firmware uses the third LED as Power LED to show that the firmware is running (Off in DFU mode)
     #define LED_PWR_PIN         GPIO_PIN_2 // red
-    #define LED_PWR_PORT        GPIOA    
+    #define LED_PWR_PORT        GPIOA
     // -------------------
     #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip SIT 1044 limits to 5 Mbaud
     // -------------------
-    #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required for this processor) 
-    
-#elif defined(WeActStudioV2)    
+    #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required for this processor)
+
+#elif defined(WeActStudioV2)
 
     // The WeActStudio USB2CANFD v2 has a STM32G431 processor and a 16 MHz quartz
     #define LED_RX_PINS         GPIO_PIN_0
     #define LED_RX_PORTS        GPIOA
     #define LED_TX_PINS         GPIO_PIN_1
-    #define LED_TX_PORTS        GPIOA    
+    #define LED_TX_PORTS        GPIOA
     #define LED_PWR_PIN         GPIO_PIN_2 // see comment of WeActStudioV1
-    #define LED_PWR_PORT        GPIOA    
+    #define LED_PWR_PORT        GPIOA
     // -------------------
     // This board has a more intelligent hardware design than most boards for the STM32G431.
     // The shared processor pin CAN RXD + BOOT0 is held low by hardware to avoid entering BOOT mode when USB power is connected.
@@ -199,11 +199,32 @@ typedef enum // sent as 8 bit
     #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip CA-IS2062A limits to 5 Mbaud
     // -------------------
     #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required due to correct hardware design)
-    
+
+#elif defined(BigTreeTechU2C)
+
+    // The BigTreeTech U2C v2 CAN adapter has a STM32G0B1 processor and a 8 MHz quartz.
+    #define CHANNEL_COUNT       1
+    // -------------------
+    #define CAN_INTERFACES      FDCAN2
+    #define CAN_PINS            GPIO_PIN_5 | GPIO_PIN_6  // Rx = PB5, Tx = PB6
+    #define CAN_PORTS           GPIOB                    // Port B
+    #define CAN_ALTERNATES      GPIO_AF3_FDCAN2          // Switch pin 5,6 multiplexer to CAN module
+    // -------------------
+    // The blue "Status" LED is connected between PA13 and Ground.
+    // After Reset it is ON by internal pull up resistor in the processor.
+    // The firmware switches the Power LED output pin PA13 to Ground with LED_ON = GPIO_PIN_RESET (defined below)
+    // The result is that that the Status LED will be ON in DFU mode and OFF in application mode.
+    #define LED_PWR_PIN         GPIO_PIN_13
+    #define LED_PWR_PORT        GPIOA
+    // -------------------
+    #define MAX_CAN_BAUDRATE    1  // CAN transceiver chip TJA 1050 limits to 1 Mbaud
+    // -------------------
+    #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required for this processor)
+
 #else
-    
+
     #error "TARGET_BOARD not implemented"
-    
+
 #endif
 
 
@@ -236,7 +257,7 @@ typedef enum // sent as 8 bit
 #ifndef TERMINATOR_PINS
     #define TERMINATOR_PINS     -1
     #define TERMINATOR_PORTS    GPIOB
-#endif    
+#endif
 #ifndef TERMINATOR_MODE
     #define TERMINATOR_MODE     GPIO_MODE_OUTPUT_PP
     #define TERMINATOR_ON       GPIO_PIN_SET        // turn on termination resistor
