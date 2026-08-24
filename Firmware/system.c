@@ -171,7 +171,7 @@ bool system_init(void)
 
     HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 
-    canfd_clock = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_FDCAN); // 160 or 64 MHz
+    canfd_clock = HAL_RCCEx_GetPeriphCLKFreq(RCC_PERIPHCLK_FDCAN); // 160 or 60 MHz
 
     if (!system_init_timestamp())
         return false;
