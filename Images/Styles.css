@@ -1,0 +1,71 @@
+
+body          { font-family:Verdana; font-size:13px; background-color:#F9F8F1; position:relative; max-width:100%; overflow-x:hidden; }
+h1            { font-size:25px; font-weight:bold; background-color:#007799; color:white; padding:8px 8px 8px 16px; margin-top:35px; border:solid 2px #77CCDD; border-radius: 10px; width:95%; box-shadow: 4px 4px 4px #999; }
+h2            { font-size:20px; font-weight:bold; background-color:#007799; color:white; padding:5px 3px 5px 8px; margin-top:10px; border:solid 1px #77CCDD; border-radius: 10px; width:75%; box-shadow: 4px 4px 4px #999;}
+h3            { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:22px; margin-bottom:5px; }
+h4            { font-size:13px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:12px; margin-bottom:2px; }
+hr            { border: 3px solid #007799; border-radius: 5px; }
+ul, ol        { padding-inline-start: 25px; }
+li            { padding-top:1px; padding-bottom:1px;}
+code          { color:brown; font-size:14px; }
+/* Modern browsers read this ":root". IE8 completely ignores it, otherwise it would cripple all images. */
+:root img     { max-width: 100%; height: auto;}
+a:hover       { color: #AA00FF; }
+pre           { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:#FFFFDD; width:690px; }
+.Pre          { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:white; }
+.WhiteSpace   { white-space:pre; nowrap; }
+.Link:hover   { color: #AA00FF; }
+.Link, a      { color: blue; cursor:pointer; font-family:Verdana; font-size:12px; font-weight:bold; text-decoration:none; }
+.DivFullSize  { position:absolute; max-width:100%; display:none; background-color:#DDDDDD; padding:0px 10px 10px 10px; border:1px solid black; box-shadow:6px 6px 6px #777; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.Warning      { border:2px solid red; padding:5px; font-weight:bold; }
+.WarningTable { border:2px solid red; padding:5px; font-weight:bold; border-radius:10px; margin-top:10px; margin-bottom:10px; box-shadow: 4px 4px 4px #999; }
+.Error        { color:red; font-weight:bold; }
+.TblImage     { border:1px solid #CCCCCC; border-spacing: 0px; margin-top:15px; margin-bottom:15px; }
+.TblImage td  { padding:0px; }
+.TblImage th  { background-color:#777777; color:#FFFFFF; padding:1px 5px 2px 5px; font-weight:bold; }
+.NoTopMargin  { margin-top:0px; }
+.Highlight    { background-color:#FFFFAA; }
+.Center       { text-align:center; }
+.Right        { text-align:right; }
+.Green        { color:green; }
+.Red          { color:red; }
+.Orange       { color:orange; }
+.DarkRed      { color:#AA0000; }
+.Blue         { color:blue; }
+.Magenta      { color:magenta; }
+.Cyan         { color:#0088AA; }
+.Gray         { color:#888888; }
+.Time         { color:#775533; }
+.Big          { font-size:15px; font-weight:bold; }
+.Img          { border:1px solid #CCCCCC;  }
+.Photo        { border:2px solid #555555; }
+.LineTop      { border-top:1px solid #CCCCCC; }
+.LineBot      { border-bottom:1px solid #CCCCCC; }
+.Translate    { background-color: #007799; border:2px solid #77CCDD; border-radius: 10px; }
+.Translate td { color:white; padding:10px; }
+.Assembler    { border:1px solid gray; padding:5px; }
+.Assembler b  { color:blue; }
+.Assembler code  { color:#DD8800; }
+.Over         { text-decoration:overline; }
+.OrangeSquare { background-color:#FFCC99; font-weight:bold; border-width:1px; border-style:solid; border-color:black; padding:1px; line-height:22px; }
+
+.DataTable    { background-color:#333333; margin-top:10px; margin-bottom:10px; box-shadow: 4px 4px 4px #999; }
+.DataTable th { background-color:#777777; color:#FFFFFF; padding:1px 5px 2px 5px; font-weight:bold; }
+.DataTable tr { background-color:#F8F8F8; }
+.DataTable td { background-color:#FFFFF8; padding:3px; }
+.DataTable h3 { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:8px; margin-bottom:0px; }
+
+.PopupMenu { position:fixed; top:0px; right:0px; border:2px solid #77CCDD; z-index: 999; padding:5px; background-color:#007799; color:white; font-weight:bold; font-family:Arial,Helvetica,Sans-serif; font-size:13px; cursor:default; }
+.Menu      { color:white; text-decoration:none; font-family:Verdana; line-height:1.1; }
+.MenuLink { color:white; text-decoration:none; font-family:Verdana; }
+.MenuLink:hover { color:#CCCCFF; }
+
+.TableContainer { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+
+.ContentTable { width:100%; }
+@media (min-width:1000px)
+{
+    .ContentTable { width:60%; }
+}
+
+

@@ -11,76 +11,9 @@
     <meta name="Author" content="ElmüSoft">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="index, follow">
+    <link rel="stylesheet" href="Images/Styles.css">
+    <script src="Images/Script.js"></script>   
     <style>
-    body          { font-family:Verdana; font-size:13px; background-color:#F9F8F1; position:relative; max-width:100%; overflow-x:hidden; }
-    h1            { font-size:25px; font-weight:bold; background-color:#007799; color:white; padding:8px 8px 8px 16px; margin-top:35px; border:solid 2px #77CCDD; border-radius: 10px; width:95%; box-shadow: 4px 4px 4px #999; }
-    h2            { font-size:20px; font-weight:bold; background-color:#007799; color:white; padding:5px 3px 5px 8px; margin-top:10px; border:solid 1px #77CCDD; border-radius: 10px; width:75%; box-shadow: 4px 4px 4px #999;}
-    h3            { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:22px; margin-bottom:5px; }
-    h4            { font-size:13px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:12px; margin-bottom:2px; }
-    hr            { border: 3px solid #007799; border-radius: 5px; }
-    ul, ol        { padding-inline-start: 25px; }
-    li            { padding-top:1px; padding-bottom:1px;}
-    code          { color:brown; font-size:14px; }
-    /* Modern browsers read this ":root". IE8 completely ignores it, otherwise it would cripple all images. */
-    :root img     { max-width: 100%; height: auto;}
-    a:hover       { color: #AA00FF; }
-    pre           { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:#FFFFDD; width:690px; }
-    .Pre          { border:1px solid #AAAAAA; padding:2px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:white; }
-    .WhiteSpace   { white-space:pre; nowrap; }
-    .Link:hover   { color: #AA00FF; }
-    .Link, a      { color: blue; cursor:pointer; font-family:Verdana; font-size:12px; font-weight:bold; text-decoration:none; }
-    .DivFullSize  { position:absolute; max-width:100%; display:none; background-color:#DDDDDD; padding:0px 10px 10px 10px; border:1px solid black; box-shadow:6px 6px 6px #777; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .Warning      { border:2px solid red; padding:5px; font-weight:bold; }
-    .WarningTable { border:2px solid red; padding:5px; font-weight:bold; border-radius:10px; margin-top:10px; margin-bottom:10px; box-shadow: 4px 4px 4px #999; }
-    .Error        { color:red; font-weight:bold; }
-    .TblImage     { border:1px solid #CCCCCC; border-spacing: 0px; margin-top:15px; margin-bottom:15px; }
-    .TblImage td  { padding:0px; }
-    .TblImage th  { background-color:#777777; color:#FFFFFF; padding:1px 5px 2px 5px; font-weight:bold; }
-    .NoTopMargin  { margin-top:0px; }
-    .Highlight    { background-color:#FFFFAA; }
-    .Center       { text-align:center; }
-    .Right        { text-align:right; }
-    .Green        { color:green; }
-    .Red          { color:red; }
-    .Orange       { color:orange; }
-    .DarkRed      { color:#AA0000; }
-    .Blue         { color:blue; }
-    .Magenta      { color:magenta; }
-    .Cyan         { color:#0088AA; }
-    .Gray         { color:#888888; }
-    .Time         { color:#775533; }
-    .Big          { font-size:15px; font-weight:bold; }
-    .Img          { border:1px solid #CCCCCC; }
-    .Photo        { border:2px solid #555555; }
-    .LineTop      { border-top:1px solid #CCCCCC; }
-    .LineBot      { border-bottom:1px solid #CCCCCC; }
-    .Translate    { background-color: #007799; border:2px solid #77CCDD; border-radius: 10px; }
-    .Translate td { color:white; padding:10px; }
-    .Assembler    { border:1px solid gray; padding:5px; }
-    .Assembler b  { color:blue; }
-    .Assembler code  { color:#DD8800; }
-    .Over         { text-decoration:overline; }
-    .OrangeSquare { background-color:#FFCC99; font-weight:bold; border-width:1px; border-style:solid; border-color:black; padding:1px; line-height:22px; }
-
-    .DataTable    { background-color:#333333; margin-top:10px; margin-bottom:10px; box-shadow: 4px 4px 4px #999; }
-    .DataTable th { background-color:#777777; color:#FFFFFF; padding:1px 5px 2px 5px; font-weight:bold; }
-    .DataTable tr { background-color:#F8F8F8; }
-    .DataTable td { background-color:#FFFFF8; padding:3px; }
-    .DataTable h3 { font-size:17px; font-weight:bold; text-decoration:underline; color:#007799; margin-top:8px; margin-bottom:0px; }
-
-    .PopupMenu { position:fixed; top:0px; right:0px; border:2px solid #77CCDD; z-index: 999; padding:5px; background-color:#007799; color:white; font-weight:bold; font-family:Arial,Helvetica,Sans-serif; font-size:13px; cursor:default; }
-    .Menu      { color:white; text-decoration:none; font-family:Verdana; line-height:1.1; }
-    .MenuLink { color:white; text-decoration:none; font-family:Verdana; }
-    .MenuLink:hover { color:#CCCCFF; }
-
-    .TableContainer { width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-
-    .ContentTable { width:100%; }
-    @media (min-width:1000px)
-    {
-        .ContentTable { width:60%; }
-    }
-
     .TimeBk { padding-left:3px; padding-right:3px; margin-right:5px; font-family:"Courier New", Courier, monospace; font-size:13px; background-color:#EEEEEE; }
     .TimeWt { padding-left:3px; padding-right:3px; margin-right:5px; font-family:"Courier New", Courier, monospace; font-size:13px; }
     .Grey { color:#888888; }
@@ -103,122 +36,11 @@
     .DebugDark { color: #444444; font-family:"Courier New", Courier, monospace; font-size:14px; }
     .Comment { color: #8B4513; font-weight:bold; text-decoration:underline; }
     .Macro { color: #4B0082; font-family:"Courier New", Courier, monospace; font-size:14px; }
-
     .DataNarrow    { background-color:#AAAAAA; margin-top:10px; margin-bottom:10px; }
     .DataNarrow th { background-color:#777777; color:#FFFFFF; padding:1px 5px 1px 5px; font-weight:bold; }
     .DataNarrow tr { background-color:#F8F8F8; }
     .DataNarrow td { background-color:#FFFFF8; padding:0px 5px 0px 5px; }
     </style>
-
-    <script>
-    var LastLink = null;
-    var LastDiv  = null;
-    var LastTop  = 0;
-    var LastUrl  = null;
-    function ShowFullSize(Link, ImgFile, DivLeft=20)
-    {
-        if (Link == LastLink)
-        {
-            HideFullSize(); // sets LastLink = null
-            return;
-        }
-
-        HideFullSize();
-
-        var Div = document.getElementById("DivFullSize");
-        var Img = document.getElementById("ImgFullSize");
-        var Scr = document.getElementById("DivScrollable");
-
-        var Top = (window.pageYOffset || // best option, but not available on IE 8
-                   document.documentElement.scrollTop || // quirks mode
-                   document.body.scrollTop) + 15;        // strict mode
-
-        Div.style.top  = Top + "px";
-        Div.style.left = DivLeft + "px";
-        Div.style.display = "block";
-
-        // AFTER Div
-        Scr.style.overflow = "auto";
-        Scr.scrollLeft = 0;
-        Scr.scrollTop  = 0;
-
-        Link.innerHTML = "Hide Full Size";
-        LastLink = Link;
-        LastDiv  = Div;
-
-        Img.style.maxWidth = "none";
-        Img.onload = function()
-        {
-            var MaxWidth  = (window.innerWidth || // best option, but not available on IE 8
-                             document.documentElement.clientWidth ||  // quirks mode
-                             document.body.clientWidth)  - DivLeft - 60;        // strict mode
-
-            var MaxHeight = (window.innerHeight || // best option, but not available on IE 8
-                             document.documentElement.clientHeight || // quirks mode
-                             document.body.clientHeight) - DivLeft - 60;        // strict mode
-        
-            var ImgWidth  = Img.width  + 4;
-            var ImgHeight = Img.height + 4;
-
-            var HScroll = (ImgWidth  > MaxWidth);
-            var VScroll = (ImgHeight > MaxHeight);
-
-            if (VScroll) ImgWidth  += 18;
-            if (HScroll) ImgHeight += 18;
-
-            if (HScroll) Scr.style.width  = MaxWidth  + "px";
-            else         Scr.style.width  = ImgWidth  + "px";
-            if (VScroll) Scr.style.height = MaxHeight + "px";
-            else         Scr.style.height = ImgHeight + "px";
-        }
-
-        Img.src = ImgFile;
-    }
-    function HideFullSize()
-    {
-        if (LastLink != null)
-        {
-            LastDiv.style.display = "none";
-            LastLink.innerHTML = "Show Full Size";
-            LastDiv  = null;
-            LastLink = null;
-        }
-        ShowMenu(false);
-    }
-
-    function ShowMenu(bShow)
-    {
-        var MenuHead = document.getElementById("MenuHead");
-        var MenuCont = document.getElementById("MenuContent");
-
-        if (MenuHead != null && MenuCont != null)
-        {
-            MenuHead.style.display = bShow ? "none"  : "block";
-            MenuCont.style.display = bShow ? "block" : "none";
-        }
-    }
-
-    function onScrollCallback(e)
-    {
-        var Top = (window.pageYOffset || // best option, but not available on IE 8
-                   document.documentElement.scrollTop || // quirks mode
-                   document.body.scrollTop);             // strict mode
-
-        if (Math.abs(LastTop - Top) > 50) // Workaround for buggy Firefox 79
-        {
-            if (LastUrl == window.location.href)
-                HideFullSize(); // also hide menu
-
-            LastTop = Top;
-            LastUrl = window.location.href;
-        }
-    }
-
-    if (window.addEventListener) // Modern browsers
-        window.addEventListener('scroll', onScrollCallback, false);
-    else if (window.attachEvent) // Internet Explorer 8
-        window.attachEvent('onscroll', onScrollCallback);
-    </script>
 </head>
 <body background="Images/Bkgnd.jpg">
 <div id="DivFullSize" class="DivFullSize" OnClick="ShowMenu(false)">
@@ -349,7 +171,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>MKS Makerbase</b></td></tr>
         <tr><td><img src="Images/Adapter MKS Makerbase.jpg" alt="CANable - MKS Makerbase, Openlight Labs Adapter" width="219" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter MKS Makerbase.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter MKS Makerbase.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -357,7 +179,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>MKS Makerbase</b></td></tr>
         <tr><td><img src="Images/Board MKS Makerbase.jpg" alt="CANable - MKS Makerbase CANable board" width="239" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Board MKS Makerbase.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Board MKS Makerbase.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -365,7 +187,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>Walfront</b></td></tr>
         <tr><td><img src="Images/Adapter Walfront.jpg" alt="CANable - Walfontboard" width="188" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Walfront.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter Walfront.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 </tr></table>
@@ -387,7 +209,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>RH02 Plus</b></td></tr>
         <tr><td><img src="Images/Adapter Jhoinrch RH02 Plus.jpg" alt="CANable - Jhoinrch RH02" width="239" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Jhoinrch RH02 Plus.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter Jhoinrch RH02 Plus.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -395,7 +217,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>RH02 Elite</b></td></tr>
         <tr><td><img src="Images/Adapter Jhoinrch RH02 Elite.jpg" alt="CANable - Jhoinrch RH02" width="239" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Jhoinrch RH02 Elite.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter Jhoinrch RH02 Elite.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 </tr></table>
@@ -410,7 +232,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>SH-C31A</b></td></tr>
         <tr><td><img src="Images/Adapter DSD-Tech 31A.jpg" alt="CANable - DSD-Tech" width="189" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter DSD-Tech 31A.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter DSD-Tech 31A.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -418,7 +240,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>SH-C31G</b></td></tr>
         <tr><td><img src="Images/Adapter DSD-Tech 31G.jpg" alt="CANable - DSD-Tech" width="113" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter DSD-Tech 31G.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter DSD-Tech 31G.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 </tr></table>
@@ -431,7 +253,7 @@
 <h3>WeActStudio USB2CANFD v1</h3>
 <table class="TblImage">
     <tr><td><img src="Images/Adapter WeActStudioV1.jpg" alt="CANable - Jhoinrch RH02" width="155" height="90"></td></tr>
-    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter WeActStudioV1.jpg')">Show Full Size</span></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter WeActStudioV1.jpg')">Show Full Size</span></td></tr>
 </table>
 <div>The <a href="https://www.aliexpress.com/store/910567080" target="_blank">WeActStudio</a> USB2CANFD v1 is a cheap (see <a href="#Firmware_Updater">details</a>) and small (4 x 2 cm) adapter with STM32G0B1 processor.</div>
 <div>They have published the <a href="Images/Diagram WeActStudio USB2CANFD v1.pdf" target="_blank">diagram</a> (PDF).</div>
@@ -462,7 +284,7 @@
 <h3>WeActStudio USB2CANFD v2</h3>
 <table class="TblImage">
     <tr><td><img src="Images/Adapter WeActStudioV2.jpg" alt="CANable - Jhoinrch RH02" width="189" height="90"></td></tr>
-    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter WeActStudioV2.jpg')">Show Full Size</span></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter WeActStudioV2.jpg')">Show Full Size</span></td></tr>
 </table>
 <div>The successor USB2CANFD version 2 is cheap (see <a href="#Firmware_Updater">details</a>) and has a STM32G431 processor.</div>
 <div>It has a BOOT0 button and a correctly designed hardware. You will have no problems with this board.</div>
@@ -475,7 +297,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>Solo</b></td></tr>
         <tr><td><img src="Images/Adapter Oleksii Solo.jpg" alt="CANable - Jhoinrch RH02" width="216" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Oleksii Solo.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter Oleksii Solo.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -483,7 +305,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>Dual</b></td></tr>
         <tr><td><img src="Images/Adapter Oleksii Dual.jpg" alt="CANable - Jhoinrch RH02" width="200" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Adapter Oleksii Dual.jpg')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Adapter Oleksii Dual.jpg')">Show Full Size</span></td></tr>
     </table>
 </td>
 </tr></table>
@@ -520,14 +342,14 @@
     <table class="TblImage">
         <tr><td align="center"><b>Wrong Hardware</b></td></tr>
         <tr><td><img src="Images/Hardware Design Wrong.png" alt="STM32G4xx Wrong Hardware Design" width="147" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Hardware Design Wrong.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Hardware Design Wrong.png')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>
     <table class="TblImage">
         <tr><td align="center"><b>Correct Hardware</b></td></tr>
         <tr><td><img src="Images/Hardware Design Correct.png" alt="STM32G4xx Correct Hardware Design" width="118" height="90"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Hardware Design Correct.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Hardware Design Correct.png')">Show Full Size</span></td></tr>
     </table>
 </td></tr>
 </table>
@@ -558,7 +380,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>canable.io &nbsp; Web Updater</b></td></tr>
         <tr><td><img src="Images/Canable.io Firmware Update.png" alt="Official CANable firmware update" width="335" height="120"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Canable.io Firmware Update.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Canable.io Firmware Update.png')">Show Full Size</span></td></tr>
     </table>
 </td></tr>
 </table>
@@ -609,7 +431,7 @@
 <table class="TblImage">
     <tr><td align="center"><b>USB Full Speed Transfer</b></td></tr>
     <tr><td><img src="Images/USB FS Oscilloscope.png" alt="USB Full Speed Oscilloscope Capture" width="252" height="100"></td></tr>
-    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/USB FS Oscilloscope.png')">Show Full Size</span></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/USB FS Oscilloscope.png')">Show Full Size</span></td></tr>
 </table>
 <div>This oscilloscope capture and analysis has been created with the open source <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer" target="_blank">Oszi Waveform Analyzer</a>.</div>
 <div>To transfer 4 payload bytes over USB an overhead of SYNC, DATA1, CRC, EOP and an ACK packet is requried.</div>
@@ -688,7 +510,7 @@
 <table class="TblImage">
     <tr><td align="center"><b>Driver Registry Correction</b></td></tr>
     <tr><td><img src="Images/Zadig Error.png" alt="Zadig creates regsitry corruption" width="189" height="100"></td></tr>
-    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Zadig Error.png')">Show Full Size</span></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Zadig Error.png')">Show Full Size</span></td></tr>
 </table>
 <p>
 <div><b>Never</b> use Zadig! It will screw up your registry.</div>
@@ -703,7 +525,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>HUD ECU Hacker</b></td></tr>
         <tr><td><img src="Images/HudEcuHacker Update CANable Firmware.png" alt="HUD ECU Hacker - CANAble Firmware Update" width="178" height="150"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/HudEcuHacker Update CANable Firmware.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/HudEcuHacker Update CANable Firmware.png')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -711,7 +533,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>Firmware Programmer</b></td></tr>
         <tr><td><img src="Images/CANable STM32 Firmware Updater.png" alt="HUD ECU Hacker - CANAble Firmware Update" width="178" height="150"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CANable STM32 Firmware Updater.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/CANable STM32 Firmware Updater.png')">Show Full Size</span></td></tr>
     </table>
 </td>
 </tr>
@@ -737,7 +559,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://weactstudio.aliexpress.com/store/910567080/pages/all-items.html?SearchText=can+bus+analyzer" target="_blank">WeActSudio</a><br><nowrap>USB2CANFD v1</nowrap><br><span class="Red">deprecated</span></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter WeActStudioV2.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter WeActStudioV2.jpg')"></td>
         <td rowspan="2">16 MHz</td>
         <td rowspan="2"><span class="Red">60 MHz</span></td>
         <td rowspan="2">Single</td>
@@ -751,7 +573,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://weactstudio.aliexpress.com/store/910567080/pages/all-items.html?SearchText=can+bus+analyzer" target="_blank">WeActSudio</a><br><nowrap>USB2CANFD v2</nowrap></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter WeActStudioV2.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter WeActStudioV2.jpg')"></td>
         <td rowspan="2">16 MHz</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -765,7 +587,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.aliexpress.com/w/wholesale-canable-makerbase.html" target="_blank">MKS<br>Makerbase</a></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter MKS Makerbase.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter MKS Makerbase.jpg')"></td>
         <td rowspan="2"><span class="Red">None</span></td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -779,7 +601,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD Tech</a><br>SH-C31A</td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter DSD-Tech 31A.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter DSD-Tech 31A.jpg')"></td>
         <td rowspan="2"><span class="Red">None</span></td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -793,7 +615,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD Tech</a><br>SH-C31G</td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter DSD-Tech 31G.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter DSD-Tech 31G.jpg')"></td>
         <td rowspan="2"><span class="Red">None</span></td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -807,7 +629,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/Jhoinrch/page/BEC6FB30-6DA6-421E-80B6-1904FA0C0783" target="_blank">Jhoinrch</a><br>RH02 Plus</td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter Jhoinrch RH02 Plus.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Jhoinrch RH02 Plus.jpg')"></td>
         <td rowspan="2">25 MHz<br>since 2026</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -821,7 +643,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/Jhoinrch/page/BEC6FB30-6DA6-421E-80B6-1904FA0C0783" target="_blank">Jhoinrch</a><br>RH02 Elite</td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter Jhoinrch RH02 Elite.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Jhoinrch RH02 Elite.jpg')"></td>
         <td rowspan="2">25 MHz<br>since 2026</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -835,7 +657,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a> with<br> 431 processor<br><span class="Red">naked board</span></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter Walfront.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Walfront.jpg')"></td>
         <td rowspan="2"><span class="Red">None</span></td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -849,7 +671,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a> with<br>473 processor<br><span class="Red">naked board</span></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter Walfront.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Walfront.jpg')"></td>
         <td rowspan="2"><span class="Red">None</span></td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -863,7 +685,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://can-module.com/#solo" target="_blank">Oleksii Solo</a><br><span class="Red">naked board</span></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter Oleksii Solo.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Oleksii Solo.jpg')"></td>
         <td rowspan="2">8 MHz</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -877,7 +699,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://can-module.com/#dual" target="_blank">Oleksii Dual</a><br><span class="Red">naked board</span></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter Oleksii Dual.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Oleksii Dual.jpg')"></td>
         <td rowspan="2">8 MHz</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Dual</td>
@@ -891,7 +713,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://openlightlabs.com/collections/frontpage/products/canable-2-0" target="_blank">Openlight Labs</a><br><span class="Red">sold out</span></td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter Openlightlabs.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Openlightlabs.jpg')"></td>
         <td rowspan="2"><span class="Red">None</span></td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
@@ -905,7 +727,7 @@
 
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/BIGTREETECH-Supports-Connection-Interface-Raspberry/dp/B0BVQQ82SP" target="_blank">BigTreeTech</a><br><nowrap>U2C v2</nowrap><br>for 3D printer</td>
-        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 'Images/Adapter BigTreeTech U2C.jpg', 180)"></td>
+        <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter BigTreeTech U2C.jpg')"></td>
         <td rowspan="2">8 MHz</td>
         <td rowspan="2"><span class="Red">60 MHz</span></td>
         <td rowspan="2">Single</td>
@@ -1023,7 +845,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>CAN Raw Terminal</b></td></tr>
         <tr><td><img src="Images/CAN Raw Terminal.png" alt="HUD ECU Hacker - CAN Raw Terminal" width="180" height="150"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CAN Raw Terminal.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/CAN Raw Terminal.png')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -1031,7 +853,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>J1939 Protocol</b></td></tr>
         <tr><td><img src="Images/J1939 Protocol.png" alt="HUD ECU Hacker - J1939 Protocol" width="154" height="150"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/J1939 Protocol.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/J1939 Protocol.png')">Show Full Size</span></td></tr>
     </table>
 </td>
 <td>&nbsp;</td>
@@ -1039,7 +861,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>NMEA 2000 Protocol</b></td></tr>
         <tr><td align="center"><img src="Images/NMEA 2000 Protocol.png" alt="HUD ECU Hacker - J1939 Protocol" width="93" height="150"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/NMEA 2000 Protocol.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/NMEA 2000 Protocol.png')">Show Full Size</span></td></tr>
     </table>
 </td></tr>
 </table>
@@ -1276,13 +1098,13 @@
     <table class="TblImage NoTopMargin">
         <tr><td align="center"><b>Termination</b></td></tr>
         <tr><td><img src="Images/CAN Bus Termination.png" alt="CAN Bus termination" width="229" height="100"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CAN Bus Termination.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/CAN Bus Termination.png')">Show Full Size</span></td></tr>
     </table>
 </td><td>
     <table class="TblImage NoTopMargin">
         <tr><td align="center"><b>Transceiver Chip</b></td></tr>
         <tr><td><img src="Images/CAN Transceiver.png" alt="CAN Bus transceiver MCP2551" width="165" height="100"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/CAN Transceiver.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/CAN Transceiver.png')">Show Full Size</span></td></tr>
     </table>
 </td></tr></table>
 
@@ -1452,7 +1274,7 @@
 
 <table class="TblImage">
     <tr><td><img src="Images/Timing Diagram.png" alt="CANable CAN / USB Timing" width="148" height="90"></td></tr>
-    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/Timing Diagram.png')">Show Full Size</span></td></tr>
+    <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/Timing Diagram.png')">Show Full Size</span></td></tr>
 </table>
 
 <div>Sending a packet from sender to receiver takes approx. 80 + 35 + 10 + 240 + 10 + 35 + 80 = 490 µs.</div>
@@ -1954,7 +1776,7 @@
     <table class="TblImage">
         <tr><td align="center"><b>RS232 Terminal</b></td></tr>
         <tr><td><img src="Images/HudEcuHacker RS232 Terminal Slcan.png" alt="CANable 2.0 diagram" width="186" height="160"></td></tr>
-        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 'Images/HudEcuHacker RS232 Terminal Slcan.png')">Show Full Size</span></td></tr>
+        <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/HudEcuHacker RS232 Terminal Slcan.png')">Show Full Size</span></td></tr>
     </table>
 </td><td>&nbsp;</td><td>
     <div>Here you see the initialization sequence sent manually to the adapter.</div>
