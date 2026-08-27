@@ -275,7 +275,7 @@
 <div>Cube Programmer is a garbage that mostly does not connect to the adapter without even showing an error message.</div>
 <p>
 <div>But you are lucky: The HUD ECU Hacker <a href="#Firmware_Updater">Firmware Programmer</a> removes all this WeAct stuff with <b>one click</b>.</div>
-<div>To achieve this I had to write a firmware that I upload with the <b>Y-Modem</b> protocol through their firmware updater.<//div>
+<div>To achieve this I had to write a firmware that I upload with the <b>Y-Modem</b> protocol through their firmware updater.</div>
 <div>My 'ElmüSoft Restore Adapter' firmware removes all this crap and leaves a clean and unprotected flash memory.</div>
 <div>Just click the button <b>Enter DFU Mode</b>, then you can upload the CANable 2.5 firmware via DFU protocol.</div>
 
@@ -1225,7 +1225,7 @@
 
 <a name="Echo_Marker"></a>
 <h3>Transmit Echo Markers</h3>
-<div>The legacy Slcan firmware never gave you any feedback if a packet was sent or not.</div></div>
+<div>The legacy Slcan firmware never gave you any feedback if a packet was sent or not.</div>
 <div>The legacy Candlelight firmware had a wrongly designed feedback mechanism for Tx packets:</div>
 <div>When the firmware received a Tx packet it has sent the entire Tx packet in a <b>fake event</b> back to the host.</div>
 <div>This feedback was immediate, no matter if the packet was really sent to CAN bus or not.</div>
@@ -1439,7 +1439,7 @@
     <tr><td>"OS\r"</td><td>Closed</td><td>100</td><td>Open in silent mode</td><td>Ignore settings with M0 / M1</td></tr>
     <tr><td>"OI\r"</td><td>Closed</td><td>100</td><td>Open in internal loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
     <tr><td>"OE\r"</td><td>Closed</td><td>100</td><td>Open in external loopback mode</td><td>Ignore settings with M0 / M1</td></tr>
-    <tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns seven key/value pairs. See <a href="#Slcan_Version_Info">Version Info</a></td></tr>
+    <tr><td>"V\r"</td><td>Open/Closed</td><td>legacy</td><td>Return detailed info: Version/Board/MCU/Limits</td><td>Returns multiple key/value pairs. See <a href="#Slcan_Version_Info">Version Info</a></td></tr>
 
     <tr><th>Set Modes</th><th>Condition</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
     <tr><td>"M1\r"</td><td>Closed</td><td>legacy</td><td>Enable silent mode</td><td>The next command "O\r" will open in bus monitoring mode</td></tr>
@@ -1527,10 +1527,9 @@
 
 <div><span class="Error">ATTENTION:</span> Do not use the commands <code>S</code> and <code>Y</code> for CAN FD. They do not allow to chose the correct samplepoint.</div>
 <div>You can use them to make tests between 2 adapters on your desk, but not if you want to connect to a <b>real CAN FD bus</b>.</div>
-<div>If you want to connect for example to a car that uses CAN FD, you MUST know the TWO samplepoints that the CAN bus uses.<div>
+<div>If you want to connect for example to a car that uses CAN FD, you MUST know the TWO samplepoints that the CAN bus uses.</div>
 <div>Then you must calculate the Prescaler, Segment 1 and Segment 2 for the required baudrates and samplepoints and use commands <code>s</code> and <code>y</code>.</div>
 <div>If you connect with wrong settings to a CAN FD bus you will get <b>Bus Passive</b> or even <b>Bus Off</b> errors. Read chapter <a href="#Sample_Baud">Baudrates</a>.</div>
-<div>
 
 <a name="Slcan_Responses"></a>
 <h3>Slcan Responses and Events</h3>
@@ -1658,7 +1657,7 @@
 <a name="Slcan_Packets"></a>
 <h3>Slcan Packets</h3>
 
-<div>All packets are transmitted using this pattern:
+<div>All packets are transmitted using this pattern:</div>
 <ul>
 <li><div><b><span class="Cyan">Channel</span></b>: empty, &amp;, $</div>
 <li><div><b><span class="Magenta">Packet type</span></b>: T, t, R, r, D, d, B or b (see tables above)</div>
@@ -1902,7 +1901,7 @@
 <div>ST Microelectronics gives us a HAL that is scatterd over eleven files calling from one file into another.</div>
 <div>All the USB stuff is called from multiple interrupt handlers.</div>
 <p>
-<div>If you don't know what is a <b>SETUP request</b>, what is an <b>OUT endpoint</b> or what <b>stalling</b> an endpoint means,
+<div>If you don't know what is a <b>SETUP request</b>, what is an <b>OUT endpoint</b> or what <b>stalling</b> an endpoint means,</div>
 <div>I recommend that you read the exellent <b>USB tutorial</b> in subfolder <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/Documentation" target="_blank">Documentation</a>.</div>
 
 
@@ -1917,11 +1916,11 @@
 <h3>Firmware Upload on Windows</h3>
 <div>When you install the latest <b>HUD ECU Hacker</b> you always get the latest DFU firmware files.</div>
 <div>If HUD ECU Hacker is already installed you can also download the correct <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/blob/main/Binary%20Files/" target="_blank">DFU file</a> and save it to</div>
-<div> C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmware Update\Firmware
+<div>C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmware Update\Firmware</div>
 <div>Read chapter <a href="#Firmware_Updater">The new Firmware Programmer</a> how to flash the new firmware into your CANable with one click.</div>
 
 <h3>Compiling STM32 code on Linux</h3>
-<div>Install the ARM compiler: <code>sudo apt install build-essential gcc-arm-none-eabi</code><div>
+<div>Install the ARM compiler: <code>sudo apt install build-essential gcc-arm-none-eabi</code></div>
 <div>You can use GNU tools for STM32 version 10.3.1 or higher.</div>
 <div>To compile the firmware, type at the root directory level: <code>make -s -f Build/Make_G431_Candle_Multiboard</code></div>
 <div>The compiler generates a BIN, HEX and ELF file.</div>
@@ -1989,7 +1988,7 @@
 <li><div><b>06.Jun.2026</b>: Legacy Slcan <a href="#Slcan_Responses">feedback</a> sent by default: CR / BEL character.</div>
 <li><div><b>18.Jun.2026</b>: Added support for Candlelight <code>GS_ReqGetErrorState</code>.</div>
 <li><div><b>03.Aug.2026</b>: Bugfix for fake echo ID in Candlelight legacy mode. Added compiled binary files. Simplified Linux C++ demo.</div>
-<li><div><span class="Grey">Any future versions will be listed here.</div>
+<li><div class="Grey">Any future versions will be listed here.</div>
 </ul>
 
 <p>
