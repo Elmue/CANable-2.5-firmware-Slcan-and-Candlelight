@@ -14,6 +14,7 @@ It works also on the STM32G473 dual CAN channel board from Oleksii.
 The WeActStudio v1 firmware is compiled for the STM32G0B1 processor.
 The firmware has been designed to be easily expandable for future processors and boards.
 Precompiled binary firmware files can be uploaded to the CANable with the new Firmware Updater.
+You can write your own CAN Application based on the ready-to-use classes in the C++, C# and Python demo projects for Windows or Linux.
 
 <img width="577" height="484" alt="CANable STM32 Firmware Updater" src="https://github.com/user-attachments/assets/1364398f-fcd4-430e-aa8b-06cde32ce895" />
 
@@ -31,7 +32,4 @@ Latest Updates:
 https://netcult.ch/elmue/CANable%20Firmware%20Update#Source_Code
 
 IMPORTANT:
-If you get blocked by the firewall on netcult.ch, please write an email to the website owner: office@netcult.ch and send him a screenshot of the block.
-The firewall is far too restrictive and the more people report this problem, the more probable it becomes that he will finally fix the wrong configuration.
-
-You can also read the "User & Developer Manual.htm" after downloading this Github repository.
+If you get blocked by the firewall on netcult.ch, you can also read the "User & Developer Manual.htm" after downloading this Github repository.
