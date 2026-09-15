@@ -366,8 +366,11 @@ eFeedback control_parse_str(uint8_t channel, char buf[], int len)
 
         // ----------------------------
 
-        // Set baudrate (always samplepoint nominal: 87.5%, data: 75%)
-        // ATTENTION: Deprecated! Read the manual.
+        // Set baudrate 
+        // For samplepoints read the chapter "Slcan Developer Manual" in the manual.
+        // ATTENTION: The command 'Y' is deprecated!
+        // For CAN FD always use commands 's' and 'y' instead of 'S' and 'Y'.
+        // Read the manual!
         case 'S': // nominal
         case 'Y': // data
             if (len == 2) e_Ret = control_set_baudrate(channel, buf[0] == 'Y', buf[1]);
@@ -581,12 +584,13 @@ eFeedback control_parse_str(uint8_t channel, char buf[], int len)
 
 // ================================================================================================================
 
-// ATTENTION: Deprecated! Read the manual.
-// Set the nominal / data bitrate of the CAN peripheral
-// Always samplepoint 75%. (In previous versions 87.5% was used which may produce Rx/Tx errors)
-// IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
 // set_data = false -> Set the nominal baudrate configuration of the CAN peripheral
 // set_data = true  -> Set the data    baudrate configuration of the CAN peripheral
+// ---------------------------------------------------------------------------------
+// For samplepoints read the chapter "Slcan Developer Manual" in the manual.
+// ATTENTION: The command 'Y' is deprecated!
+// For CAN FD always use commands 's' and 'y' instead of 'S' and 'Y'.
+// IMPORTANT: Read the chapter "Samplepoint & Baudrate" in the HTML manual.
 eFeedback control_set_baudrate(uint8_t channel, bool set_data, char baud_chr)
 {
     uint64_t timing_values;
@@ -791,10 +795,10 @@ eFeedback control_parse_flash(uint8_t channel, char buf[])
     }
 }
 
-// This function is called approx 100 times in one millisecond from the main loop
+// This function is called approx 100 times in one millisecond from can_process()
 // if the error state has changed, report it every 100 ms
 // if the error state did not change, report the same state only every 3000 ms.
-void control_process(uint8_t channel, uint32_t tick_now)
+void control_report_errors(uint8_t channel, uint32_t tick_now)
 {
     if (!error_is_report_due(channel, tick_now))
         return;
@@ -810,9 +814,6 @@ void control_process(uint8_t channel, uint32_t tick_now)
                                             (uint8_t)state->rx_err_count);
     buf_enqueue_cdc(channel, tempbuf, 10);
     error_clear(channel);
-
-    // Revover BusOff AFTER printing error BusOff to the Trace output!
-    can_recover_bus_off(channel);
 }
 
 // send the busload in percet to the host in the user defined interval

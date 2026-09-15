@@ -91,13 +91,12 @@ OsLibrary::~OsLibrary()
 // pk_Device->ms_WinNtPath = "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
 uint32_t OsLibrary::Open(kUsbDevice* pk_Device)
 {
-    ms64_PerfTimeStart  = 0;
-    mu32_RxPipeErrors   = 0;
-    mu32_TxPipeErrors   = 0;
-    ms32_FifoCount      = 0;
-    ms32_FifoReadIdx    = 0;
-    mb_FifoOverflow     = false;
-    mb_AbortThread      = false;
+    mu32_RxPipeErrors = 0;
+    mu32_TxPipeErrors = 0;
+    ms32_FifoCount    = 0;
+    ms32_FifoReadIdx  = 0;
+    mb_FifoOverflow   = false;
+    mb_AbortThread    = false;
     mk_Info.Clear();
 
     // IMPORTANT:
@@ -264,12 +263,13 @@ uint32_t OsLibrary::ReadStringDescriptor(uint8_t u8_Index, uint16_t u16_Language
 
 // ===================================== CTRL Pipe =====================================
 
-// ATTENTION: returns ERROR_NOACCESS if u8_Buffer is not in RAM !
 // Send SETUP packet and optionally additional data bytes as IN or OUT transfer.
 // Timeout has been set to 500 ms in Open()
-uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t* pu32_Transferred)
+// ATTENTION: returns ERROR_NOACCESS if u8_Buffer is not writable !
+// For IN transfers the received bytes from USB are written into the buffer that is passed in p_Data
+uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, void* p_Data, uint32_t* pu32_Transferred)
 {
-    if (!WinUsb_ControlTransfer(mh_WinUsb, *(WINUSB_SETUP_PACKET*)pk_Setup, u8_Buffer, pk_Setup->wLength, pu32_Transferred, NULL))
+    if (!WinUsb_ControlTransfer(mh_WinUsb, *(WINUSB_SETUP_PACKET*)pk_Setup, (PUCHAR)p_Data, pk_Setup->wLength, pu32_Transferred, NULL))
         return GetLastError();
 
     return NO_ERROR;
@@ -278,6 +278,7 @@ uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32
 // ===================================== OUT Pipe ======================================
 
 // Timeout has been set to 500 ms in StartPipes()
+// ATTENTION. In u8_TxData you must pass a writable buffer, otherwise ERROR_NOACCESS from WinUSB!
 uint32_t OsLibrary::WritePipeOut(uint8_t* u8_TxData, uint32_t u32_TxLen)
 {
     uint32_t u32_Transferred;
@@ -350,7 +351,10 @@ void OsLibrary::PipeThreadMember()
 
         uint32_t u32_Read  = 0;
         uint32_t u32_Error = NO_ERROR;
-        if (!WinUsb_ReadPipe(mh_WinUsb, mk_Info.mu8_EndpointIN, pk_FifoWrite->mu8_Buffer, sizeof(pk_FifoWrite->mu8_Buffer), NULL, &k_Overlapped))
+        if (WinUsb_ReadPipe(mh_WinUsb, mk_Info.mu8_EndpointIN, pk_FifoWrite->mu8_Buffer, 
+                            sizeof(pk_FifoWrite->mu8_Buffer), NULL, &k_Overlapped))
+            assert(FALSE); // Error WinUsb_ReadPipe terminated synchronously
+        else
         {
             u32_Error = GetLastError();
             if (u32_Error == ERROR_IO_PENDING)
@@ -375,18 +379,16 @@ void OsLibrary::PipeThreadMember()
                             u32_Error = GetLastError();
                         break;
 
-                    default: // WAIT_FAILED (I have never seen this error, but just in case...)
+                    default: // WAIT_FAILED (This should never happen)
                         u32_Error = GetLastError();
                         break;
                 }
             }
-            else assert(FALSE); // this should never happen
         }
-        else assert(FALSE); // this should never happen
 
         pk_FifoWrite->mu32_BytesRead   = u32_Read;
         pk_FifoWrite->mu32_Error       = u32_Error;
-        pk_FifoWrite->ms64_OsTimestamp = GetTimestamp();
+        pk_FifoWrite->ms64_OsTimestamp = GetOsTimestamp();
 
         // Increment write index for the next ReadPipe, leave read index unchanged
         EnterCriticalSection(&mk_Critical);
@@ -461,7 +463,7 @@ uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacke
 // All legacy fimrware versions were buggy and unable to send the two Microsoft OS descriptors correctly, so the driver is not installed.
 uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_Devices)
 {
-    cStringMap i_Serials;
+    unordered_map<string, string> i_Serials;
     uint32_t u32_Error = EnumSerialNumbers(i_Serials);
     if (u32_Error)
         return u32_Error;
@@ -488,6 +490,7 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
 
     uint8_t u8_DetailBuf[2000];
     SP_DEVICE_INTERFACE_DETAIL_DATA_A* pk_DetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA_A*)u8_DetailBuf;
+    // cbSize if 5 for 32 bit applications and 8 for 64 bit applications
     pk_DetailData->cbSize = sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA_A);
 
     DEVPROPTYPE u32_PropType;
@@ -594,8 +597,8 @@ uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_De
 // Get the serial numbers of all Candlelight devices
 // "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\VID_1D50&PID_606F\2066349E39455006"
 // The last part is the serial number: "2066349E39455006"
-// return a Map with ContainerID --> Serial Number
-uint32_t OsLibrary::EnumSerialNumbers(cStringMap& i_Serials)
+// Fills a Map with ContainerID --> Serial Number
+uint32_t OsLibrary::EnumSerialNumbers(unordered_map<string, string>& i_Serials)
 {
     string s_RootPath = "System\\CurrentControlSet\\Enum\\USB\\VID_1D50&PID_606F";
 
@@ -657,7 +660,7 @@ uint32_t OsLibrary::RegReadString(HKEY h_Class, const char* s8_Path, const char*
     return u32_Error;
 }
 
-// ===================================== Console =====================================
+// ===================================== Console OUT =====================================
 
 // Set console title, buffer size and window size
 void OsLibrary::SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, string s_Title)
@@ -693,6 +696,8 @@ void OsLibrary::PrintConsole(uint16_t u16_Color, string s_Format, ...)
     WriteConsoleW(gh_ConsoleOut, s_Unicode.c_str(), s_Unicode.length(), &u32_Written, NULL);
 }
 
+// ===================================== Console IN =====================================
+
 // Check if the user has pressed the ENTER key in the console (non-blocking function)
 bool OsLibrary::CheckConsoleEnterPressed()
 {
@@ -718,37 +723,50 @@ int OsLibrary::WaitConsoleChar()
     return _getch();
 }
 
+// -------------------
+
+// static
+void OsLibrary::SwitchTerminalToNonCanonical()
+{
+    // only needed for Linux
+}
+
+// static
+void OsLibrary::RestoreTerminal()
+{
+    // only needed for Linux
+}
+
 // ===================================== Helpers =====================================
 
 // Create a timestamp with 1 µs precision.
-// The returned timestamp starts at zero when the device is opened.
 // It is recommended to turn off transimssion of timestamps (not set GS_DevFlagTimestamp) to reduce USB traffic.
 // Then this function is used as a replacement to generate a timestamp on reception of a USB packet and when sending a packet.
-int64_t OsLibrary::GetTimestamp()
+int64_t OsLibrary::GetOsTimestamp()
 {
-    static int64_t s64_Frequency = 0; 
-
     // The performance counter runs inside the CPU and the frequency is identical over all CPU cores and never changes.
     // The performance counter frequency depends on the CPU and the operating system, mostly above 3 MHz
-    if (s64_Frequency == 0 || ms64_PerfTimeStart == 0)
-    {
+    static int64_t s64_Frequency = 0; 
+    if (s64_Frequency == 0)
 	    QueryPerformanceFrequency((LARGE_INTEGER*)&s64_Frequency);
-        QueryPerformanceCounter  ((LARGE_INTEGER*)&ms64_PerfTimeStart);
-    }
 
 	int64_t s64_Counter;
 	QueryPerformanceCounter((LARGE_INTEGER*)&s64_Counter);
-	return (s64_Counter - ms64_PerfTimeStart) * 1000000 / s64_Frequency;
+	return s64_Counter * 1000000 / s64_Frequency;
 }
 
 // Format Windows API error
 // u32_Error = ERROR_ACCESS_DENIED --> returns "Access is denied" in the language of the operating system.
 string OsLibrary::GetErrorMessage(uint32_t u32_Error)
 {
-    const uint32_t FLAGS = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+    // Replace stupid message "A device attached to the system is not functioning." when an endpoint has been stalled.
+    if (IsOpen() && u32_Error == ERROR_GEN_FAILURE)
+        return "API Error 31: No response from the WinUSB device";
+
     char c_Buffer[1000];
-    FormatMessageA(FLAGS, 0, u32_Error, 0, c_Buffer, 1000, 0);
-    return cUtils::TrimRight(c_Buffer);
+    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, 
+                   0, u32_Error, 0, c_Buffer, 1000, 0);
+    return cUtils::Format("API Error %u: %s", u32_Error, cUtils::TrimRight(c_Buffer).c_str());
 }
 
 // Unicode -> UTF8

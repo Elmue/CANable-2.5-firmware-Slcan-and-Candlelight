@@ -1,5 +1,5 @@
 /*
-    This class is part of the CANable 2.5 firmware, adapted to Visual Studio
+    These definititions are part of the CANable 2.5 firmware, adapted to Visual Studio
     https://netcult.ch/elmue/CANable Firmware Update
     
     The enums and structs of the Linux Kernel GS driver can be found here:
@@ -142,7 +142,7 @@ typedef enum // sent as 8 bit
     FBK_AdapterMustBeOpen,        // The command cannot be executed before opening the adapter
     FBK_AdapterMustBeClosed,      // The command cannot be executed after  opening the adapter
     FBK_ErrorFromHAL,             // The HAL from ST Microelectronics has reported an error
-    FBK_UnsupportedFeature,       // The feature is not implemented or not supported by the board
+    FBK_UnsupportedFeature,       // The feature is not implemented or not supported by the adapter
     FBK_TxBufferFull,             // Sending is not possible because the buffer is full (only Slcan)
     FBK_BusIsOff,                 // Sending is not possible because the processor is blocked in the BusOff state
     FBK_NoTxInSilentMode,         // Sending is not possible because the adapter is in Bus Monitoring mode
@@ -171,11 +171,11 @@ typedef enum // sent as 4 bit
 typedef enum // sent as 8 bit 
 {
     APP_NoError         = 0x00, // no error
-    APP_CanRxFail       = 0x01, // the HAL reports an error receiving a CAN packet.
+    APP_CanRxFail       = 0x01, // CAN packets arrive faster than the firmware can process them
     APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or invalid Tx packet or HAL error
     APP_CanTxOverflow   = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
     APP_UsbInOverflow   = 0x08, // a USB IN packet could not be sent because CAN traffic is faster than USB transfer.
-    APP_CanTxTimeout    = 0x10, // A packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
+    APP_CanTxTimeout    = 0x10, // a packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
 } eErrorAppFlags;
 
 // ==============================================================================
@@ -410,6 +410,7 @@ typedef enum // 3 bit
     CAN_ID_Error = 0x20000000, // the frame is an error frame which does not contain CAN bus data (only used in kHostFrameLegacy).
     CAN_ID_RTR   = 0x40000000, // the frame is a Remote Transmission Request
     CAN_ID_29Bit = 0x80000000, // the frame has an extended CAN ID with 29 bit
+    // ----------------------
     CAN_MASK_11  = 0x000007FF, // Mask for standard 11 bit ID
     CAN_MASK_29  = 0x1FFFFFFF, // Mask for extended 29 bit ID
 } eCanIdFlags;

@@ -7,7 +7,7 @@
 #pragma once
 
 // Classic CAN / CANFD nominal bitrates
-// always samplepoint 87.5%
+// For samplepoints read the chapter "Slcan Developer Manual" in the manual.
 typedef enum 
 {
     CAN_NOM_BAUDRATE_10K   = '0', // S0
@@ -27,7 +27,10 @@ typedef enum
 } can_nom_baudrate;
 
 // CANFD data bitrates
-// always samplepoint 87.5%
+// For samplepoints read the chapter "Slcan Developer Manual" in the manual.
+// ATTENTION: The command 'Y' is deprecated!
+// For CAN FD always use commands 's' and 'y' instead of 'S' and 'Y'.
+// Read the manual!
 typedef enum 
 {
     CAN_DATA_BAUDRATE_500K = '0', // Y0
@@ -41,7 +44,7 @@ typedef enum
 
 void control_init();
 void control_parse_command(char* buf, int len);
-void control_process(uint8_t channel, uint32_t tick_now);
+void control_report_errors(uint8_t channel, uint32_t tick_now);
 void control_report_busload(uint8_t channel, uint8_t busload_percent);
 bool control_send_debug_mesg(uint8_t channel, const char* message);
 

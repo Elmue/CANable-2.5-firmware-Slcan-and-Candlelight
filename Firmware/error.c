@@ -22,7 +22,7 @@ void error_init(uint8_t channel)
 
 // sets an error flag
 // use report_immediately = true only if it is a very important error.
-// this is used for Tx buffer full to inform the host without delay that no more Tx packets can be received.
+// this is used for Tx buffer full to inform the host without delay that it must not send more Tx packets.
 // report_immediately == false --> report in usual intervals of 100 ms or 3 seconds
 void error_assert(uint8_t channel, eErrorAppFlags flag, bool report_immediately)
 {

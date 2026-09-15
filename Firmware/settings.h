@@ -39,7 +39,7 @@ typedef enum // sent as 8 bit
     FBK_NoTxInSilentMode,         // "#9" = Sending is not possible because the adapter is in Bus Monitoring mode
     FBK_BaudrateNotSet,           // "#:" = Opening the adapter is not possible if no baudrate has been set
     FBK_OptBytesProgrFailed,      // "#;" = Programming the Option Bytes failed
-    FBK_ResetRequired,            // "#<" = The user must disconnect and reconnect the USB cable to enter boot mode
+    FBK_ResetRequired,            // "#<" = The user must reconnect the USB cable or press the Reset button to enter boot mode
     FBK_ParamOutOfRange,          // "#=" = A paramter is outside the valid range
 } eFeedback;
 
@@ -61,7 +61,7 @@ typedef enum // sent as 4 bit
 // Candlelight sends this in a special error packet with a flag (legacy: CAN_ID_Error, ElmüSoft: MSG_Error)
 typedef enum // sent as 8 bit
 {
-    APP_CanRxFail       = 0x01, // the HAL reports an error receiving a CAN packet.
+    APP_CanRxFail       = 0x01, // CAN packets arrive faster than the firmware can process them
     APP_CanTxFail       = 0x02, // trying to send while in silent mode, while bus off or adaper not open or invalid Tx packet or HAL error
     APP_CanTxOverflow   = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
     APP_UsbInOverflow   = 0x08, // a USB IN packet could not be sent because CAN traffic is faster than USB transfer.

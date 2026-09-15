@@ -97,7 +97,7 @@ void can_reset(uint8_t channel)
 
     // clear all bridge filters
     can_set_bridge_filter(channel, 0, 0xFF, false, false, false, 0, 0);
-    
+
     // this is indispensable here, otherwise Slcan is dead after a Tx buffer overlow and closing the adapter.
     buf_clear_can_buffer(channel);
 }
@@ -120,18 +120,15 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
         // Reset all CAN instances FDCAN1, FDCAN2, FDCAN3 only if no channel is open
         __HAL_RCC_FDCAN_FORCE_RESET();
         __HAL_RCC_FDCAN_RELEASE_RESET();
-        
-        // If all CAN channels are closed -> start the timestamps at zero
-        system_reset_timestamps();
     }
 
     buf_clear_can_buffer(channel);
     error_init(channel);
-    
+
     // stop identify blinking on all channels
     for (int C=0; C<CHANNEL_COUNT; C++)
     {
-        led_blink_identify(C, false); 
+        led_blink_identify(C, false);
     }
 
     FDCAN_InitTypeDef* init = &inst->handle.Init;
@@ -330,8 +327,8 @@ void can_process(uint8_t channel, uint32_t tick_now)
     if (!inst->is_open)
         return;
 
-    uint8_t can_data_buf[64] = {0};
-    char    dbg_msg_buf[100];
+    uint8_t  can_data_buf[64] = {0};
+    char     dbg_msg_buf[100];
 
     // -------------------------- Tx Event ------------------------------------
 
@@ -348,11 +345,9 @@ void can_process(uint8_t channel, uint32_t tick_now)
         // A marker of zero must not send an echo to the host! (forwarded bridge packets)
         if ((GLB_UserFlags[channel] & USR_TxEcho) && tx_event.MessageMarker > 0)
         {
-            // convert 16 bit timestamp --> 32 bit
-            tx_event.TxTimestamp = (system_get_timewrap() << 16) | tx_event.TxTimestamp;
             buf_store_tx_echo(channel, &tx_event);
         }
-
+        
         // In loopback mode do not count the same packet twice (Tx == Rx at the same time without delay)
         // In bus montoring mode and restricted mode sending packets is not possible.
         if (inst->handle.Init.Mode == FDCAN_MODE_NORMAL)
@@ -376,8 +371,6 @@ void can_process(uint8_t channel, uint32_t tick_now)
     FDCAN_RxHeaderTypeDef rx_header;
     if (HAL_FDCAN_GetRxMessage(&inst->handle, FDCAN_RX_FIFO0, &rx_header, can_data_buf) == HAL_OK)
     {
-        // convert 16 bit timestamp --> 32 bit
-        rx_header.RxTimestamp = (system_get_timewrap() << 16) | rx_header.RxTimestamp;
         buf_store_rx_packet(channel, &rx_header, can_data_buf);
 
 #if CHANNEL_COUNT > 1
@@ -406,21 +399,21 @@ void can_process(uint8_t channel, uint32_t tick_now)
 
     // -------------------------- Rx / Tx Errors ------------------------------------
 
-    // Tx Event FIFO packet lost
+    // Tx Event FIFO packet lost (this should never happen)
     if (__HAL_FDCAN_GET_FLAG(&inst->handle, FDCAN_FLAG_TX_EVT_FIFO_ELT_LOST))
     {
         error_assert(channel, APP_CanTxFail, false);
         __HAL_FDCAN_CLEAR_FLAG(&inst->handle, FDCAN_FLAG_TX_EVT_FIFO_ELT_LOST);
     }
 
-    // Rx FIFO 0 packet lost
+    // Rx FIFO 0 packet lost (CAN traffic is faster than the fimrware can process it)
     if (__HAL_FDCAN_GET_FLAG(&inst->handle, FDCAN_FLAG_RX_FIFO0_MESSAGE_LOST))
     {
         error_assert(channel, APP_CanRxFail, false);
         __HAL_FDCAN_CLEAR_FLAG(&inst->handle, FDCAN_FLAG_RX_FIFO0_MESSAGE_LOST);
     }
 
-    // Rx FIFO 1 packet lost
+    // Rx FIFO 1 packet lost (CAN traffic is faster than the fimrware can process it)
     if (__HAL_FDCAN_GET_FLAG(&inst->handle, FDCAN_FLAG_RX_FIFO1_MESSAGE_LOST))
     {
         error_assert(channel, APP_CanRxFail, false);
@@ -480,6 +473,12 @@ void can_process(uint8_t channel, uint32_t tick_now)
             control_send_debug_mesg(channel, dbg_msg_buf);
         }
     }
+
+    // Report pending errors to the host, if they are due.
+    control_report_errors(channel, tick_now);
+
+    // Revover Bus Off AFTER printing error Bus Off to the debug output!
+    can_recover_bus_off(channel);
 }
 
 // ATTENTION:
@@ -764,12 +763,12 @@ eFeedback can_set_bridge_filter(uint8_t src_channel, uint8_t dest_channel, uint8
 {
 #if CHANNEL_COUNT > 1
     can_class* inst = &can_inst[src_channel];
-    
+
     if (enable) // set filter
     {
         if (dest_channel == src_channel || dest_channel >= CHANNEL_COUNT)
             return FBK_ParamOutOfRange;
-        
+
         uint32_t maximum = extended ? 0x1FFFFFFF : 0x7FF;
         if (filter > maximum || mask > maximum)
             return FBK_ParamOutOfRange;
@@ -805,8 +804,8 @@ eFeedback can_set_bridge_filter(uint8_t src_channel, uint8_t dest_channel, uint8
             break;
         }
     }
-    
-    // The variable bridge_active is only for speed optimization if bridge mode is not used.    
+
+    // The variable bridge_active is only for speed optimization if bridge mode is not used.
     inst->bridge_active = active;
     return FBK_Success;
 #else
@@ -850,10 +849,10 @@ void can_forward_bridge_packet(can_class* inst, FDCAN_RxHeaderTypeDef* rx_header
     {
         if (!pass_chan[C] || block_chan[C] || !can_is_open(C))
             continue;
-        
+
         if (can_using_FD(C))
         {
-            tx_header.FDFormat      = rx_header->FDFormat;            
+            tx_header.FDFormat      = rx_header->FDFormat;
             tx_header.BitRateSwitch = rx_header->BitRateSwitch;
         }
         else
@@ -861,12 +860,12 @@ void can_forward_bridge_packet(can_class* inst, FDCAN_RxHeaderTypeDef* rx_header
             // a packet with more than 8 data bytes cannot be forwarded to a classic CAN bus
             if (tx_header.DataLength > 8)
                 continue;
-            
+
             // convert FD packet into classic packet
-            tx_header.FDFormat      = FDCAN_CLASSIC_CAN;            
+            tx_header.FDFormat      = FDCAN_CLASSIC_CAN;
             tx_header.BitRateSwitch = FDCAN_BRS_OFF;
         }
-        
+
         buf_store_tx_packet(C, &tx_header, rx_data);
     }
 }

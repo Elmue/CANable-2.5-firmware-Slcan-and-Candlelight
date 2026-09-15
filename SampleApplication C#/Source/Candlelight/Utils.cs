@@ -55,18 +55,19 @@ public class Utils
 
     public enum eApiError : uint
     {
-        ACCESS_DENIED        =          5,
-        GEN_FAILURE          =         31, // A device attached to the system is not functioning.
-        INVALID_PARAMETER    =         87,
-        SEM_TIMEOUT          =        121,
-        NO_MORE_ITEMS        =        259,
-        NO_SUCH_DEVICE       =        433,
-        OPERATION_ABORTED    =        995,
-        ERROR_IO_INCOMPLETE  =        996,
-        ERROR_IO_PENDING     =        997, 
-        ERROR_TIMEOUT        =       1460,
-        WSAEHOSTUNREACH      =      10065,
-        ReflectionTypeLoadEx = 0x80131602,
+        ACCESS_DENIED           =          5,
+        ERROR_NOT_ENOUGH_MEMORY =          8,
+        GEN_FAILURE             =         31, // A device attached to the system is not functioning.
+        INVALID_PARAMETER       =         87,
+        SEM_TIMEOUT             =        121,
+        NO_MORE_ITEMS           =        259,
+        NO_SUCH_DEVICE          =        433,
+        OPERATION_ABORTED       =        995,
+        ERROR_IO_INCOMPLETE     =        996,
+        ERROR_IO_PENDING        =        997, 
+        ERROR_TIMEOUT           =       1460,
+        WSAEHOSTUNREACH         =      10065,
+        ReflectionTypeLoadEx    = 0x80131602,
     }
 
     public enum eWaitObject : int
@@ -174,17 +175,13 @@ public class Utils
     // Create a timestamp with 1 µs precision.
     // It is recommended to turn off transmssion of timestamps (not set GS_DevFlagTimestamp) to reduce USB traffic.
     // Then this function is used as a replacement to generate a timestamp on reception of a packet and when sending a packet.
-    public static Int64 GetWinTimestamp()
+    public static Int64 GetOsTimestamp()
     {
         mi_Timestamp.Start(); // start when called for the first time
 
-        double d_Time = mi_Timestamp.ElapsedTicks;
-        d_Time *= 1000000.0; // µs per second
-
         // The performance counter runs inside the CPU and the frequency is identical over all CPU cores and never changes.
         // The performance counter frequency depends on the CPU and the operating system, mostly above 3 MHz
-        d_Time /= Stopwatch.Frequency;
-        return (Int64)d_Time;
+        return mi_Timestamp.ElapsedTicks * 1000000 / Stopwatch.Frequency;
     }
 
     // ------------------------------------------------
@@ -372,6 +369,7 @@ public class Utils
                 return String.Format("{0:X}.{1}.{2:X2}", u8_Day, s_MonthName, u8_Year);
         }
 
+        // regular BCD version number "3.14.5" (skip leading zeroes)
         String s_Version = "";
         for (int s32_Shift = 24; s32_Shift >= 0; s32_Shift -= 8)
         {

@@ -226,7 +226,7 @@ public class SetupApi
                                                     out s32_ReqSize, ref k_DeviceInfo))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                continue;
+                break;
             }
 
             // Get the 'ContainerID' GUID string (since Windows 7) which is identical for all interfaces of the same device
@@ -234,7 +234,7 @@ public class SetupApi
                                                    s_ContainerBuf, s_ContainerBuf.Capacity * 2, out s32_ReqSize))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                continue;
+                break;
             }
 
             // Get the Interface string from Interface Descriptor (max USB string descriptor length = 127 Unicode chars)
@@ -243,7 +243,7 @@ public class SetupApi
                                           s_InterfaceBuf, s_InterfaceBuf.Capacity * 2, out s32_ReqSize, 0))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                continue;
+                break;
             }
 
             // Go one level up from USB interface to USB device --> c_Parent = "USB\VID_1D50&PID_606F\208A347D4B4550142"
@@ -251,13 +251,13 @@ public class SetupApi
                                            s_ParentBuf, s_ParentBuf.Capacity * 2, out s32_ReqSize, 0))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                continue;
+                break;
             }
 
             if (!SetupDiOpenDeviceInfoW(h_ParentInfo, s_ParentBuf.ToString(), IntPtr.Zero, 0, out k_DeviceInfo))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                continue;
+                break;
             }
 
             // Get the Product string from Device Descriptor (max USB string descriptor length = 127 Unicode chars)
@@ -265,7 +265,7 @@ public class SetupApi
                                            s_ProductBuf, s_ProductBuf.Capacity * 2, out s32_ReqSize, 0))
             {
                 s32_Error = Marshal.GetLastWin32Error();
-                continue;
+                break;
             }
 
             // --------------------

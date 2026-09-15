@@ -50,7 +50,7 @@ string cUtils::MakeUpper(string s_String)
 }
 
 // The std library is primitive. It has no replacement for Microsoft's CString.TrimRight()
-string cUtils::TrimRight(string s_String, char* s_Remove) // s_Remove = " \n\r\t"
+string cUtils::TrimRight(string s_String, const char* s_Remove) // s_Remove = " \n\r\t"
 {
     int s32_Len = (int)s_String.length();
     for (int S = s32_Len - 1; S >= 0; S--)
@@ -73,13 +73,13 @@ string cUtils::TrimRight(string s_String, char* s_Remove) // s_Remove = " \n\r\t
 
 // The std library is primitive. It has no replacement for Microsoft's CString.Format()
 // This function supports max 5000 characters which will never be exceeded by this class.
-string cUtils::Format(char* c_Format, ...)
+string cUtils::Format(const char* c_Format, ...)
 {
     va_list args;
     va_start(args, c_Format);
 
     char s_Buffer[5000];
-    int s32_Len = vsnprintf_s(s_Buffer, sizeof(s_Buffer), c_Format, args);
+    int s32_Len = vsnprintf(s_Buffer, sizeof(s_Buffer), c_Format, args);
     va_end(args);
 
     if (s32_Len < 0)
@@ -93,7 +93,7 @@ string cUtils::Format(char* c_Format, ...)
 }
 
 // The std library is primitive. It has no replacement for Microsoft's CMapStringToString.Lookup()
-string cUtils::MapLookup(cStringMap& i_Map, string& s_Key)
+string cUtils::MapLookup(unordered_map<string, string>& i_Map, string& s_Key)
 {
     auto it = i_Map.find(s_Key);
     if (it == i_Map.end())
@@ -117,7 +117,7 @@ string cUtils::FormatHexBytes(uint8_t u8_Data[], int s32_DataLen)
     for (int i=0; i<s32_DataLen; i++)
     {
         char c_Buf[5];
-        sprintf_s(c_Buf, "%02X ", u8_Data[i]);
+        snprintf(c_Buf, sizeof(c_Buf), "%02X ", u8_Data[i]);
         s_Hex += c_Buf;
     }
     return s_Hex;
@@ -140,7 +140,7 @@ string cUtils::FormatBcdVersion(uint32_t u32_Version)
         uint8_t u8_Month = (uint8_t)(u32_Version >> 8);
         uint8_t u8_Year  = (uint8_t)(u32_Version >> 16);
 
-        char* c_MonthName = NULL;
+        const char* c_MonthName = NULL;
         switch (u8_Month)
         {
             case 0x01: c_MonthName = "Jan"; break;
@@ -161,6 +161,7 @@ string cUtils::FormatBcdVersion(uint32_t u32_Version)
             return cUtils::Format("%X.%s.%02X", u8_Day, c_MonthName, u8_Year);
     }
 
+    // regular BCD version number "3.14.5" (skip leading zeroes)
     char c_Buf[10];
     string s_Version;
     for (int s32_Shift = 24; s32_Shift >= 0; s32_Shift -= 8)
@@ -168,12 +169,12 @@ string cUtils::FormatBcdVersion(uint32_t u32_Version)
         uint8_t u8_Part = (uint8_t)(u32_Version >> s32_Shift);
         if (s_Version.length())
         {
-            sprintf_s(c_Buf, ".%X", u8_Part);
+            snprintf(c_Buf, sizeof(c_Buf), ".%X", u8_Part);
             s_Version += c_Buf;
         }
         else if (u8_Part > 0)
         {
-            sprintf_s(c_Buf, "%X", u8_Part);
+            snprintf(c_Buf, sizeof(c_Buf), "%X", u8_Part);
             s_Version += c_Buf;
         }
     }

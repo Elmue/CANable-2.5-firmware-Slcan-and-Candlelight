@@ -553,16 +553,15 @@ void control_setup_OUT_data()
 
 // ========================= Errors ===========================
 
-// This function is called approx 100 times in one millisecond from the main loop
+// This function is called approx 100 times in one millisecond from can_process()
 // if the error state has changed, report it every 100 ms
 // if the error state did not change, report the same state only every 3000 ms.
-void control_process(uint8_t channel, uint32_t tick_now)
+void control_report_errors(uint8_t channel, uint32_t tick_now)
 {
-    if (error_is_report_due(channel, tick_now))
-        buf_store_error(channel);
-
-    // Revover BusOff AFTER printing error BusOff to the Trace output!
-    can_recover_bus_off(channel);
+    if (!error_is_report_due(channel, tick_now))
+        return;
+    
+    buf_store_error(channel);
 }
 
 void control_report_busload(uint8_t channel, uint8_t busload_percent)

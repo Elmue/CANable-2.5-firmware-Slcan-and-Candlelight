@@ -236,7 +236,6 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
         rx_header.ErrorStateIndicator = obj_to_can->header.ErrorStateIndicator;
         rx_header.BitRateSwitch       = obj_to_can->header.BitRateSwitch;
         rx_header.FDFormat            = obj_to_can->header.FDFormat;
-        rx_header.RxTimestamp         = system_get_timestamp(); // 32 bit
 
         buf_store_rx_packet_echo(channel, &rx_header, obj_to_can->data, obj_to_can->header.MessageMarker);
     }
@@ -407,12 +406,14 @@ void buf_store_rx_packet(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint
 // private function
 // fake_echo is only used for legacy mode
 void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo)
-{
+{   
     buf_class* usb_buf = buf_get_inst_for_usb(channel);
 
     kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
     if (!obj_to_host)
         return; // buffer overflow! buf_process() will report this error to the host
+    
+    uint32_t u32_Timestamp = system_get_timestamp();    
 
     uint32_t can_id;
     if (rx_header->IdType == FDCAN_EXTENDED_ID)
@@ -451,8 +452,9 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
         frame->header.msg_type = MSG_RxFrame;
         frame->flags           = flags;
         frame->can_id          = can_id;
-        frame->timestamp       = rx_header->RxTimestamp; // 32 bit
+        frame->timestamp       = u32_Timestamp;
 
+        // Append only the data bytes that are in use.
         if (GLB_UserFlags[channel] & USR_Timestamp)
         {
             memcpy(frame->data_use_stamp, rx_data, byte_count);
@@ -474,10 +476,12 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
         frame->echo_id  = fake_echo;
         memcpy(frame->raw_data, rx_data, 64);
 
+        // In the inefficient legacy GS protocol the timestamp comes behind the data bytes
+        // For CAN FD always 64 bytes are sent over USB although only 3 data bytes may be in use.
         if (rx_header->FDFormat == FDCAN_FD_CAN)
-            frame->pack_FD.timestamp_us = rx_header->RxTimestamp; // 32 bit
+            frame->pack_FD.timestamp_us = u32_Timestamp;
         else // classic frame
-            frame->pack_classic.timestamp_us = rx_header->RxTimestamp; // 32 bit
+            frame->pack_classic.timestamp_us = u32_Timestamp;
     }
 
     // add the frame to list_to_host with IRQs disabled
@@ -501,7 +505,7 @@ void buf_store_tx_echo(uint8_t channel, FDCAN_TxEventFifoTypeDef* tx_event)
     frame->header.size     = sizeof(kTxEchoElmue);
     frame->header.msg_type = MSG_TxEcho;
     frame->marker          = tx_event->MessageMarker;
-    frame->timestamp       = tx_event->TxTimestamp; // 32 bit
+    frame->timestamp       = system_get_timestamp();
 
     if ((GLB_UserFlags[channel] & USR_Timestamp) == 0)
         frame->header.size -= 4;
@@ -518,6 +522,8 @@ void buf_store_error(uint8_t channel)
     kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
     if (!obj_to_host)
         return; // buffer overflow! buf_process() will report this error to the host
+    
+    uint32_t u32_Timestamp = system_get_timestamp();
 
     kHostFrameLegacy* frame_gs    = (kHostFrameLegacy*)obj_to_host->frame;
     kErrorElmue*      frame_elmue = (kErrorElmue*)     obj_to_host->frame;
@@ -600,7 +606,7 @@ void buf_store_error(uint8_t channel)
         frame_elmue->header.size     = sizeof(kErrorElmue);
         frame_elmue->header.msg_type = MSG_Error;
         frame_elmue->err_id          = can_id; // the flag CAN_ID_Error is not needed as we have MSG_Error
-        frame_elmue->timestamp       = system_get_timestamp();
+        frame_elmue->timestamp       = u32_Timestamp;
 
         if ((GLB_UserFlags[channel] & USR_Timestamp) == 0)
             frame_elmue->header.size -= 4;
@@ -611,7 +617,7 @@ void buf_store_error(uint8_t channel)
         frame_gs->echo_id = ECHO_RxData;
         frame_gs->can_id  = can_id | CAN_ID_Error;
         frame_gs->can_dlc = 8;
-        frame_gs->pack_classic.timestamp_us = system_get_timestamp();
+        frame_gs->pack_classic.timestamp_us = u32_Timestamp;
     }
 
     // add the frame to list_to_host with IRQs disabled

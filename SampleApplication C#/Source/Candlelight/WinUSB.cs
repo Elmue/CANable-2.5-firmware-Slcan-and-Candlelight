@@ -544,6 +544,7 @@ public class WinUSB : IDisposable
 
         /// <summary>
         /// Timeout must be set with SetTransferTimeout() !
+        /// ATTENTION. In u8_TxData you must pass a writable buffer, otherwise ERROR_NOACCESS from WinUSB!
         /// </summary>
         public void Send(Byte[] u8_TxData)
         {
@@ -555,7 +556,7 @@ public class WinUSB : IDisposable
             if (!WinUsb_WritePipe(mh_Handle, Endpoint, u8_TxData, u8_TxData.Length, out s32_Transferred, IntPtr.Zero))
             {
                 ms32_PipeErrors ++;
-                mi_WinUSB.ThrowLastError("Error writing to pipe");
+                mi_WinUSB.ThrowLastError("Error writing WinUSB pipe");
             }
 
             if (s32_Transferred != u8_TxData.Length)
@@ -669,7 +670,9 @@ public class WinUSB : IDisposable
 
                 int s32_Read  = 0;
                 int s32_Error = 0;
-                if (!WinUsb_ReadPipe(mh_Handle, Endpoint, h_RxBuffer, u8_RxBuffer.Length, IntPtr.Zero, ref k_Overlapped))
+                if (WinUsb_ReadPipe(mh_Handle, Endpoint, h_RxBuffer, u8_RxBuffer.Length, IntPtr.Zero, ref k_Overlapped))
+                    Debug.Assert(false, "Error WinUsb_ReadPipe terminated synchronously");
+                else
                 {
                     s32_Error = Marshal.GetLastWin32Error();
                     if (s32_Error == (int)eApiError.ERROR_IO_PENDING)
@@ -701,7 +704,7 @@ public class WinUSB : IDisposable
                     }
                 }
 
-                i_FifoWrite.ms64_WinTimestamp = Utils.GetWinTimestamp();
+                i_FifoWrite.ms64_WinTimestamp = Utils.GetOsTimestamp();
                 i_FifoWrite.ms32_BytesRead    = s32_Read;
                 i_FifoWrite.ms32_Error        = s32_Error;
                 i_FifoWrite.mu8_Buffer        = null;
@@ -783,7 +786,7 @@ public class WinUSB : IDisposable
             }
 
             if (i_FifoRead.ms32_Error != 0)
-                Utils.ThrowApiError(i_FifoRead.ms32_Error, "Error {0} reading WinUSB pipe: {1}");
+                mi_WinUSB.ThrowLastError("Error reading WinUSB pipe", i_FifoRead.ms32_Error);
 
             return i_FifoRead;
         }
@@ -873,23 +876,27 @@ public class WinUSB : IDisposable
         // IMPORTANT: Do NOT set FileShare.Read or FileShare.Write here.
         // When the device is used here, any other software that tries to open it will get an Access Denied error.
         mi_FileHandle = Utils.CreateFileW(s_NtPath, eFileAccess.GenericRead | eFileAccess.GenericWrite, 
-                                            eFileShare.None, IntPtr.Zero, eFileCreate.OpenExisting, 
-                                            eFileFlags.AttributeNormal | eFileFlags.FlagOverlapped, IntPtr.Zero);
+                                          eFileShare.None, IntPtr.Zero, eFileCreate.OpenExisting, 
+                                          eFileFlags.AttributeNormal | eFileFlags.FlagOverlapped, IntPtr.Zero);
 
         // Also invalid if device is disconnected
         if (mi_FileHandle.IsInvalid)
         {
             int s32_Error = Marshal.GetLastWin32Error();
             if (s32_Error == (int)eApiError.ACCESS_DENIED)
-                throw new Exception("Error opening the WinUSB device. It is probably already open elsewhere.");
+                throw new Exception("Access denied. The device is probably already open elsewhere.");
             else
                 ThrowLastError("Error opening the WinUSB device", s32_Error);
         }
 
-        // ERROR_NOT_ENOUGH_MEMORY if the wrong interface in s_NtPath. (MI_00 interface for Candlelight, MI_01 for DFU)
-        // ERROR_INVALID_HANDLE if file was not opened with FlagOverlapped
         if (!WinUsb_Initialize(mi_FileHandle, out mh_WinUSB))
-            ThrowLastError("Error initializing the WinUSB device");
+        {
+            int s32_Error = Marshal.GetLastWin32Error();
+            if (s32_Error == (int)eApiError.ERROR_NOT_ENOUGH_MEMORY)
+                throw new Exception("The WinUSB driver is not installed correctly");
+            else
+                ThrowLastError("Error initializing the WinUSB device", s32_Error);
+        }
 
         // Set timeout for control pipe (Endpoint 00)
         if (!WinUsb_SetPipePolicy(mh_WinUSB, 0, ePipePolicy.PipeTransferTimeout, 4, ref s32_ControlTimeout))
@@ -1017,6 +1024,7 @@ public class WinUSB : IDisposable
         k_Setup.mu16_Index   = u16_Index;
         k_Setup.mu16_Length  = 0; // ignored, set by WinUSB
 
+        // ATTENTION: WinUsb_ControlTransfer() returns ERROR_NOACCESS if u8_Buffer is not writable !
         int s32_Transferred;
         if (!WinUsb_ControlTransfer(mh_WinUSB, k_Setup, u8_Buffer, u8_Buffer.Length, out s32_Transferred, IntPtr.Zero))
             return Marshal.GetLastWin32Error();
@@ -1030,18 +1038,18 @@ public class WinUSB : IDisposable
     /// <summary>
     /// s_Mesg = "Error setting control pipe timeout."
     /// </summary>
-    void ThrowLastError(String s_Mesg, int s32_Error = 0)
+    public void ThrowLastError(String s_Mesg, int s32_Error = 0)
     {
         if (s32_Error <= 0) 
             s32_Error = Marshal.GetLastWin32Error();
 
         // Replace stupid message "A device attached to the system is not functioning." when an endpoint has been stalled.
         if (mb_IsOpen && s32_Error == (int)eApiError.GEN_FAILURE)
-            throw new Exception(s_Mesg + ".  No response from the WinUSB device");
+            throw new Exception(s_Mesg + ". API Error 31: No response from the WinUSB device");
             
         // Let Windows translate the error code
         Win32Exception i_WinEx = new Win32Exception(s32_Error);
-        s_Mesg += ".  Error " + s32_Error + ": " + i_WinEx.Message;
+        s_Mesg += ". API Error " + s32_Error + ": " + i_WinEx.Message;
 
         // All errors before mb_IsOpen == true are WinUSB errors
         // Error 121 "The semaphore has timed out" while reading string descriptor 0 after firmware has crashed.

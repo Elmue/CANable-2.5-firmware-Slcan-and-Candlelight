@@ -54,6 +54,7 @@
     <div id="MenuHead" style="display:none;" onMouseover="ShowMenu(true)">Menu</div>
     <div id="MenuContent" class="Menu">
         <div><a href="#User_Manual"                   class="MenuLink" onClick="ShowMenu(false)">1.) User Manual</a></div>
+        <div>— &nbsp; <a href="#FirmwareComparison"   class="MenuLink" onClick="ShowMenu(false)">Firmware Comparison</a></div>        
         <div>— &nbsp; <a href="#Adapters"             class="MenuLink" onClick="ShowMenu(false)">CANable Adapters</a></div>
         <div>— &nbsp; <a href="#Hardware"             class="MenuLink" onClick="ShowMenu(false)">Hardware Misdesign</a></div>
         <div>— &nbsp; <a href="#WebUpdater"           class="MenuLink" onClick="ShowMenu(false)">Official Firmware</a></div>
@@ -88,8 +89,7 @@
         <div>— &nbsp; <a href="#Slcan_Errors"         class="MenuLink" onClick="ShowMenu(false)">Error Reports</a></div>
         <div>— &nbsp; <a href="#Slcan_Initialization" class="MenuLink" onClick="ShowMenu(false)">Initialization</a></div>
         <div><a href="#Candlelight_Manual"            class="MenuLink" onClick="ShowMenu(false)">3.) Candlelight Developer Manual</a></div>
-        <div>— &nbsp; <a href="#Demo_Application"     class="MenuLink" onClick="ShowMenu(false)">Demo Applications C++ and C#</a></div>
-        <div>— &nbsp; <a href="#Candle_NewProto"      class="MenuLink" onClick="ShowMenu(false)">The New Protocol</a></div>
+        <div>— &nbsp; <a href="#Demo_Application"     class="MenuLink" onClick="ShowMenu(false)">Demos C++, C#, Python</a></div>
         <div>— &nbsp; <a href="#Candle_DFU"           class="MenuLink" onClick="ShowMenu(false)">Enter DFU mode</a></div>
         <div><a href="#Firmware_Manual"               class="MenuLink" onClick="ShowMenu(false)">4.) Firmware Developer Manual</a></div>
         <div>— &nbsp; <a href="#Compiling"            class="MenuLink" onClick="ShowMenu(false)">Compile &amp; Upload Firmware</a></div>
@@ -109,7 +109,7 @@
 <div>The official firmware that you find on Github and that comes with the adapters bought in China is of <b>low quality</b>.</div>
 <div>Here you find the first CANable firmware that can be used for <b>professional</b> CAN bus applications.</div>
 <p>
-<div>This firmware can be used with all adapters that are listed in the <a href="#Firmware_Updater">Table of CANable 2.5 firmware versions</a>.</div>
+<div>This firmware can be used at least with all adapters that are listed in the <a href="#Firmware_Updater">Table of CANable 2.5 firmware versions</a>.</div>
 <ol>
     <li><div>I united 2 formerly separate firmware projects <b>Slcan</b> and <b>Candlelight</b> into one project with a <b>common code base</b>.</div>
     <li><div>The new CANable 2.5 firmware is <b>high quality</b> and <b>open-source</b>.</div>
@@ -144,6 +144,111 @@
 <p>&nbsp;
 <h2>1.) User Manual</h2>
 
+<p>
+<a name="FirmwareComparison"></a>
+<h3>Firmware Comparison</h3>
+<div>The legacy firmware on Github had many bugs and the legacy Candlelight protocol had several <b>design errors</b>.</div>
+<div>Therfore I have created a <b>new efficient protocol</b>: The <b>ElmüSoft protocol</b>.</div>
+<div>By default the firmware 2.5 works in legacy mode and is <b>backward compatible</b> with all legacy software on Windows, Linux, MAC.</div>
+<div>The <b>new features</b> are only available if the computer software switches the firmware into ElmüSoft mode.</div>
+
+<div class="TableContainer">
+    <table class="DataTable" style="max-width:1000px;">
+    <tr><th>Feature</th><th>Legacy Firmware (Candlelight / Slcan)</th><th>ElmüSoft Firmware (Candlelight / Slcan)</th></tr>
+    <tr>
+        <td>Quality</td>
+        <td>Many bugs. In the worst case resulting in a firmware crash.</td>
+        <td>All bugs have been fixed. <nobr>See <a href="#Bugfixes">Bugfixes</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Driver</td>
+        <td>Slcan: No problem<br>Candlelight: The legacy firmware is so buggy that Windows cannot install the WinUSB driver.</td>
+        <td>The WinUSB driver is installed automatically in less than a second. <nobr>See <a href="#Ms_OS_Descriptor">MS OS Descriptor</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Error Handling</td>
+        <td>Candlelight: Very basic.<br>Slcan: Not existent</td>
+        <td>The firmware sends detailed error and status messages to the computer. <nobr>See <a href="#CAN_Errors">CAN bus Errors</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Feedback</td>
+        <td>Not implemented.<br>You will never know why the adapter does not work.</td>
+        <td>If the firmware receives an invalid command it responds with a feedback error code. <nobr>See <a href="#Slcan_Responses">Feedback Codes</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Tx Echo</td>
+        <td>Slcan: Not available<br>Candlelight: Geschwister Schneider send a useless <b>Fake Echo</b></td>
+        <td>The firmware can send a Tx echo marker which informs the computer when a CAN packet has been acknowledged on CAN bus. <nobr>See <a href="#Echo_Marker">Echo Marker</a></nobr></td>
+    </tr>
+    <tr>
+        <td>USB Transfer Speed</td>
+        <td>Candlelight uses the slow and misdesigned Geschwister Schneider protocol that sends always <b>80 bytes</b> over USB for any CAN FD packet no matter how many data bytes it has.</td>
+        <td>The ElmüSoft Candlelight protocol adds only a <b>2 byte header</b> to transfer a CAN packet as fast as possible over USB. Additionally multiple CAN packets can be sent without USB overhead in one <b>USB blob</b>. <nobr>See <a href="#Speed_Comparison">Speed Comparison</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Hardware CAN Filter</td>
+        <td>Not implemented.<br>All received CAN Packets are sent to the computer.</td>
+        <td>The user can define in up to 8 CAN filters which packets are sent to the computer. <nobr>See <a href="#Filter">Host Filter</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Busload Report</td>
+        <td>Not implemented.</td>
+        <td>The firmware calculates and reports the current <a href="#Busload">Busload</a>.</td>
+    </tr>
+    <tr>
+        <td>Baudrate / Samplepoint</td>
+        <td>No feedback if your calculation of Prescaler, Segment 1 and Segment 2 are correct.</td>
+        <td>The firmware calculates and reports the actual <a href="#Sample_Baud">Baudrate and Samplepoint</a> from your settings and if nominal / data settings match correctly.</td>
+    </tr>
+    <tr>
+        <td>Pin BOOT0</td>
+        <td>Wrongly designed hardware with legacy firmware lets the adapter go into Firmware Update (DFU) mode <b>alone</b> when rebooting the computer. This really sucks!</td>
+        <td>As a workaround the firmware allows to disable processor pin BOOT0, so the adapter never enters boot mode, except you want it. <nobr>See <a href="#Hardware">Hardware Misdesign</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Enter DFU mode</td>
+        <td>Slcan: Not implemented<br>Candlelight: Wrong implementation. Does not work on Windows</td>
+        <td>The computer software can switch the adapter into Firmware Update mode by command. A boot mode jumper or hardware switch are not needed anymore. <nobr>See <a href="#Enter_DFU">Enter DFU Mode</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Multi-Channel Adapters</td>
+        <td>Slcan: Not supported<br>Candlelight: Supported, but limited by inefficient USB transfer speed</td>
+        <td>Full support of multi-channel adapters. Each channel creates it's own USB interface, so each channel can be opened independently by another application on Windows/Linux. <nobr>See <a href="#Multi_Channel">Multi Channel Adapters</a></nobr></td>
+    </tr>
+    <tr>
+        <td>CAN Bridge</td>
+        <td>Not available</td>
+        <td>Adapters with multiple CAN channels can act as a CAN bridge that automatically forwards packets to another CAN channel configurable with 20 filters. <nobr>See <a href="#Bridge">CAN Bridge</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Read / Write Flash Memory</td>
+        <td>Not available</td>
+        <td>The firmware occupies only a small part of the processor's flash memory. You can write your own data into the free space and read it back. <nobr>See <a href="#RW_Flash">Read/Write Flash Memory </a></nobr></td>
+    </tr>
+    <tr>
+        <td>Future Expansions</td>
+        <td>Slcan: Possible<br>Candlelight: Geschwister Schneider designed a totally inflexible protocol that makes future expansions impossible.</td>
+        <td>The ElmüSoft protocol has been designed to be flexible and expandable. New features can be added easily in the future (e.g. LIN bus).</td>
+    </tr>
+    <tr>
+        <td>Software Support</td>
+        <td>Any legacy software: SavvyCAN, gs_usb, can-utils, ttyACM, SocketCAN, python-can, etc. Legacy software also works with the new ElmüSoft firmware in legacy mode.</td>
+        <td><a href="#HUD_ECU_Hacker">HUD ECU Hacker</a> and the C++, C# and Python <a href="#Demo_Application">Demo Applications</a> for Windows and Linux switch the adapter into ElmüSoft mode and fully support the new features.</td>
+    </tr>
+    <tr>
+        <td>Firmware Update</td>
+        <td>Extremely clumsy on Windows with the ugly ST Cube Programmer. Many legacy Github projects do not offer pre-compiled binary files for download.</td>
+        <td>Windows: Ultra easy firmware update with one click in the <a href="#Firmware_Updater">Firmware Programmer</a><br>Linux: <nobr>See <a href="#Compiling">Firmware Upload</a></nobr></td>
+    </tr>
+    <tr>
+        <td>Sourcecode</td>
+        <td>Sloppy code without comments.</td>
+        <td>You get very clean <a href="#Source_Code">Firmware Sourcecode</a> and three <a href="#Demo_Application">ready-to-use classes</a> for host software in C++, C# and Python for Windows and Linux with plenty detailed comments.</td>
+    </tr>
+    </table>
+</div>
+
+<p>
 <a name="Adapters"></a>
 <h3>CANable v1.0 Adapters</h3>
 <div>The older CANable 1.0 adapters with STM32<span class="Error">F</span>xxx processors are not supported by this firmware.</div>
@@ -247,6 +352,7 @@
 <div><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD-Tech</a> in China uses my CANable 2.5 as stock firmware for their USB to CAN adapters (see <a href="#Firmware_Updater">details</a>).</div>
 <div>They provided me with the <b>diagrams</b> of the <a href="Images/Diagram DSD-Tech SH-C31A.pdf" target="_blank">SH-C31A</a> and the
 <a href="Images/Diagram DSD-Tech SH-C31G.pdf" target="_blank">SH-C31G</a> (PDF).</div>
+<div>They even publish the schematic, open source PCB layout, datasheet and a manual on <a href="https://github.com/dsdtech-official/can-adapters" target="_blank">Github</a>.</div>
 
 
 <a name="WeActStudioV1"></a>
@@ -328,7 +434,7 @@
 <div>In Boot Mode the processor runs it's internal factory bootloader and is ready to receive a <b>firmware update</b>.</div>
 <div>In Boot Mode only the power LED is on.</div>
 <p>
-<div>To switch your adapter to <b>operation mode</b> try to disconnect the USB cable, wait 5 seconds and reconnect.</div>
+<div>To switch your adapter to <b>CAN bus mode</b> try to disconnect the USB cable, wait 5 seconds and reconnect.</div>
 <div>If this does not work (Oleksii adapters) you must use the <a href="#Firmware_Updater">Firmware Programmer</a> to disable pin BOOT0.</div>
 <p>
 <div>In a correctly designed hardware the boot mode should only be enabled when the Boot Mode <b>jumper</b> is set.</div>
@@ -457,7 +563,7 @@
 
 <a name="Ms_OS_Descriptor"></a>
 <h3>Microsoft OS Descriptor Request</h3>
-<div>The new Candlelight 2.5 firmware is the first Candlelight firmware that <b>works 100% correctly</b> on Windows.</div>
+<div>My new Candlelight 2.5 firmware is the first Candlelight firmware that <b>works 100% correctly</b> on Windows.</div>
 <div>Now you can test this on your own: Open your adapter with HUD ECU Hacker and you see all details in the Trace pane.</div>
 <div>HUD ECU Hacker sends the Microsoft OS descriptor requests to the adapter and <b>shows the adapter responses</b>.</div>
 <div>There are 3 requests that the adapter must answer correctly for 2 interfaces.</div>
@@ -768,7 +874,6 @@
 <div>If you have other firmware formats, like <b>BIN</b>, <b>HEX</b> or <b>S19</b> you can copy them into the subfolder 'Firmware'.</div>
 <div>The firmware programmer will convert the files automatically into DFU files that match the currently selected device.</div>
 <p>
-<div>Before clicking the button <b>Upload</b> you must select the target <b>Internal Flash</b>.</div>
 <div>The firmware programmer can also write the Option Bytes and the One Time Programmable memory. But this is only for experts.</div>
 <p>
 <div>When you click the button <b>Identify</b> the LED's on the CANable will blink, and with the next click they stop blinking.</div>
@@ -1227,7 +1332,7 @@
 <h3>Transmit Echo Markers</h3>
 <div>The legacy Slcan firmware never gave you any feedback if a packet was sent or not.</div>
 <div>The legacy Candlelight firmware had a wrongly designed feedback mechanism for Tx packets:</div>
-<div>When the firmware received a Tx packet it has sent the entire Tx packet in a <b>fake event</b> back to the host.</div>
+<div>When the firmware received a Tx packet it has sent the entire Tx packet in a <b>fake echo event</b> back to the host.</div>
 <div>This feedback was immediate, no matter if the packet was really sent to CAN bus or not.</div>
 <div>For a CAN FD packet with 8 data bytes the firmware sent a fake event of <b>80 bytes</b> over USB back to the host.</div>
 <div>These fake events produced a lot of <b>useless USB traffic</b>, could not be turned off and the timestamps were wrong.</div>
@@ -1377,6 +1482,7 @@
 <div><b>Candlelight</b>: The <a href="#Demo_Application">C++ and C# Demo Projects</a> show how to read/write flash data.</div>
 <div><b>Slcan</b>: Use commands "*Flash:XX=Data" and "*Flash:XX?"</div>
 
+<a name="Busload"></a>
 <h3>Bus Load</h3>
 <div>The new firmware can <b>calculate the bus load</b>. It is displayed in percent in an interval that the user can define.</div>
 <div>If the interval is for example 5 seconds, the bus load is calculated as the average of 5 seconds.</div>
@@ -1398,14 +1504,17 @@
 <p>
 <div>Normally transceiver chips have a delay around 50 ns.</div>
 <div>But the isolated chip in the MKS Makerbase that you see here is slower. (<a href="Images/Datasheet ADM3050E Isolated CAN Transceiver.pdf" target="_blank">Datasheet</a>).</div>
+<div>This delay is no problem at all because the processor measures and compensates it automatically.</div>
 
+<a name="Bugfixes"></a>
 <h3>Bugfixes</h3>
-<div>I fixed several bugs in the legacy firmware. The top worst bugs were:</div>
+<div>I fixed several bugs in the legacy firmware:</div>
 <ol>
 <li><div>The Candlelight firmware could crash completely after a buffer overflow.</div>
-<li><div>Candlelight had a misdesign: it used only one buffer for CAN Rx and Tx.</div>
+<li><div>Candlelight had a severe misdesign: it used only one buffer for CAN Rx and Tx.</div>
     <div>The consequence was that after a CAN buffer overflow it could not even send the error status to the host.</div>
 <li><div>Candlelight did not send USB traffic correctly. USB Packets with exactly 64 bytes arrived crippled.</div>
+<li>These are only 3 examples of the worst bugs. All bugfixes are documented in the sourcecode.
 </ol>
 
 
@@ -1587,7 +1696,7 @@
 
 <a name="Slcan_Version_Info"></a>
 <h3>Slcan Version Info</h3>
-<div>In the new firmware the command "V\r" returns one string with <b>multiple key/value pairs</b> separatad by <b>tab characters</b>.</div>
+<div>In the new firmware the command <code>"V\r"</code> returns one string with <b>multiple key/value pairs</b> separatad by <b>tab characters</b>.</div>
 <div>It starts with a <b>plus character</b> that indicates a command response with text content, rather than a feedback response (#).</div>
 <p>
 <table class="Pre WhiteSpace" cellspacing=0 cellpadding=0>
@@ -1802,9 +1911,22 @@
 <div>There are lots of structures and enums. Explaining them all here would explode this manual.</div>
 
 <a name="Demo_Application"></a>
-<h3>Demo Applications C++ and C#</h3>
-<div>Therefore I wrote <b>ready-to-use C++ and C# Candlelight classes</b> that you can copy and paste into your project.</div>
-<div>This robust and well tested classes implement all the features that the new firmware offers:</div>
+<h3>Demo Applications</h3>
+<div>Therefore I wrote several open-source demo applications:</div>
+
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>OS</th><th>Demo App</th><th>USB Library</th><th>Comment</th></tr>
+    <tr><td>Windows</td><td>C#</td><td>WinUSB</td><td>Tested on Windows 7 to 11</td></tr>    
+    <tr><td>Windows</td><td>C++</td><td>WinUSB</td><td>Tested on Windows 7 to 11</td></tr>
+    <tr><td>Windows</td><td>Python</td><td>WinUSB</td><td>Tested on Windows with Python 3.8</td></tr>    
+    <tr><td>Linux</td><td>C++</td><td>libusb 1.0.30</td><td>Tested on Fedora 44</td></tr>
+    <tr><td>Linux</td><td>Python</td><td>libusb 1.0.30</td><td>Tested on Fedora with Python 3.14</td></tr>
+    </table>
+</div>
+<p>
+<div>These contain <b>ready-to-use Candlelight classes</b> that you copy to easily write your own CAN bus software.</div>
+<div>They implement and demonstrate all firmware features of the new <b>ElmüSoft Candlelight protocol</b>:</div>
 <ul>
 <li>Detect and enumerate all connected Candlelight devices
 <li>Obtain details about the connected device: USB descriptor, board, processor, version numbers,.....
@@ -1814,43 +1936,21 @@
 <li>Send packet / Send blob / Receive packet / Receive blob / Process Tx echo marker
 <li>Decode and display CAN bus errors
 <li>Use of multiple CAN channels
-<li>Disable boot pin / Enter DFU mode
+<li>Disable pin BOOT0 / Enter DFU mode
 <li>Write and read user data to the flash memory
 </ul>
 <div>The <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/SampleApplication%20C%2B%2B" target="_blank">source code</a> is full of <b>detailed comments</b> so you can easily understand how it works.</div>
 <p>
-<div>The demo also shows how to use <b>WinUSB</b> correctly which is more complex than it seems at the first look.</div>
+<div>The Windows code also shows how to use <b>WinUSB</b> correctly which is more complex than it seems at the first look.</div>
 <div>For example in Cangaroo and in Candle.NET they use WinUSB wrongly which results in packet loss or wrong packet order.</div>
 <div>WinUSB requires an unusal programming that is not documented by Microsoft.</div>
 <p>
-<div>In the Candlelight C++ project the operating system calls are in a separate class.</div>
-<div>The code in the file <code>Windows/OsLibrary.cpp</code> is tested and functioning.</div>
-<div>The code in the file <code>Linux/OsLibrary.cpp</code> is 100% ready but not yet tested.</div>
-<div>If you are a <b>Linux</b> C++ developer you can finish the class and send it to me.</div>
-<p>
-<div>This is the output of the C++ and C# demo applications on <b>Windows</b>:</div>
+<div>The output of the C++ and C# and Python demo applications looks identical:</div>
 <p>
 <img src="Images/Candlelight Cpp demo.png" alt="Candlelight demo project" width="733" height="935">
 <p>
 
-<a name="Candle_NewProto"></a>
-<h3>The new ElmüSoft Protocol</h3>
-<div>The legacy Candlelight protocol had several <b>design errors</b>.</div>
-<div>For example when a CAN FD packet was transmitted to the host they sent the timestamp behind a fix array of 64 data bytes.</div>
-<div>Adding more unneccessary overhead resulted in sending <b>always 80 bytes</b> over USB, even for a packet with only 4 data bytes.</div>
-<p>
-<div>Additionally the legacy protocol was never designed to transmit anything else than CAN packets.</div>
-<div>It was impossible to transfer other data to the host, like for example an ASCII <b>debug string</b>.</div>
-<p>
-<div>Therfore I had to design a <b>new efficient protocol</b>: The <b>ElmüSoft protocol</b>.</div>
-<div>It adds only 2 additional bytes to the CAN packet payload while transmitting over USB.</div>
-<div>It uses a <b>minimalistic data transfer</b> and is additionally very easy to expand for any future requirements.</div>
-<p>
-<div>The new firmware 2.5 still implements the legacy <b>Geschwister Schneider</b> protocol, but can be switched to the new protocol.</div>
-<div>The new protocol sends <b>optimized structs</b> for Tx and Rx packtes, Echo Markers, Debug Messages, Error reports, Bus load events.</div>
-<div>You can test all this in the demo application.</div>
-<p>
-<div>The screenshot above uses <b>timestamps</b> from the computer CPU with 1 µs precision.</div>
+<div>This screenshot uses <b>timestamps</b> from the computer CPU with 1 µs precision.</div>
 <div>When you set the flag <code>GS_DevFlagTimestamp</code> the demo switches to <b>firmware timestamps</b> generated in the adapter.</div>
 <div>They have no advantage at all. They produce more USB traffic and you will see several lines with <b>"No Timestamp"</b>.</div>
 <div>The reason is that firmware timestamps are only available for events <b>received from</b> the firmware.</div>
@@ -1875,7 +1975,7 @@
 <div>The new CANable 2.5 firmware uses the <b>same code base</b> to compile Slcan and Candlelight.</div>
 <div>The CAN interface, error handling, LED control, entering DFU mode, etc... use common code.</div>
 <div>Only the USB interface and the command executer are implemented individually.</div>
-<div>Each project has an own <b>Make file</b> that inculdes the corresponding subfolder: Slcan or Candlelight.</div>
+<div>Each project has an own <b>Makefile</b> that inculdes the corresponding subfolder: Slcan or Candlelight.</div>
 
 <h3>Caveat</h3>
 <div>The code in this project is not for beginners.</div>
@@ -1911,7 +2011,7 @@
 <div>Download the correct <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/blob/main/Binary%20Files/" target="_blank">DFU file</a> for your adapter. (See <a href="#Firmware_Updater">explanation</a> of DFU files)</div>
 <div>Flash the new firmware: <code>sudo dfu-util -w -c 1 -i 0 -a 0 -D "STM32G431 - Candlelight2.5 - Multiboard.dfu"</code></div>
 <div><b>ATTENTION:</b> On Linux it is not possible to upload the new firmware to a factory default <b>WeActStudio v1</b> adapter.</div>
-<div>You must use the HUD ECU Hacker Firmware Programmer to <a href="#WeActStudioV1">remove the preinstalled crap</a> from the adapter.</div>
+<div>You must use the HUD ECU Hacker Firmware Programmer to <a href="#WeActStudioV1">remove the preinstalled crap</a> from this adapter.</div>
 
 <h3>Firmware Upload on Windows</h3>
 <div>When you install the latest <b>HUD ECU Hacker</b> you always get the latest DFU firmware files.</div>
@@ -1919,14 +2019,14 @@
 <div>C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmware Update\Firmware</div>
 <div>Read chapter <a href="#Firmware_Updater">The new Firmware Programmer</a> how to flash the new firmware into your CANable with one click.</div>
 
-<h3>Compiling STM32 code on Linux</h3>
+<h3>Compiling Firmware on Linux</h3>
 <div>Install the ARM compiler: <code>sudo apt install build-essential gcc-arm-none-eabi</code></div>
 <div>You can use GNU tools for STM32 version 10.3.1 or higher.</div>
 <div>To compile the firmware, type at the root directory level: <code>make -s -f Build/Make_G431_Candle_Multiboard</code></div>
 <div>The compiler generates a BIN, HEX and ELF file.</div>
 <div>The make file contains a command (<b>dfu-util</b>) that automatically uploads the compiled firmware to the CANable.</div>
 
-<h3>Compiling STM32 code on Windows</h3>
+<h3>Compiling Firmware on Windows</h3>
 <div>You find a lot of instructions in internet how to compile the firmware on Linux.</div>
 <div>But there is nothing for Windows developers, although it is quite simple.</div>
 <p>
@@ -1987,7 +2087,8 @@
 <li><div><b>31.May.2026</b>: Support for <a href="#WeActStudioV2">WeActStudio v2</a> adapter.</div>
 <li><div><b>06.Jun.2026</b>: Legacy Slcan <a href="#Slcan_Responses">feedback</a> sent by default: CR / BEL character.</div>
 <li><div><b>18.Jun.2026</b>: Added support for Candlelight <code>GS_ReqGetErrorState</code>.</div>
-<li><div><b>03.Aug.2026</b>: Bugfix for fake echo ID in Candlelight legacy mode. Added compiled binary files. Simplified Linux C++ demo.</div>
+<li><div><b>03.Aug.2026</b>: Bugfix for fake echo ID in Candlelight legacy mode. Added compiled <b>binary</b> DFU files. Simplified <b>Linux</b> C++ demo.</div>
+<li><div><b>14.Sep.2026</b>: <span class="Red">Anniversary Release</span> Bugfix: Hardware timestamps were sometimes jumping backwards. Added <a href="#Demo_Application">Python demo</a>.</div>
 <li><div class="Grey">Any future versions will be listed here.</div>
 </ul>
 

@@ -61,8 +61,7 @@ int main(void)
         uint32_t tick_now = HAL_GetTick();        
         led_process    (channel, tick_now);
         buf_process    (channel, tick_now);
-        control_process(channel, tick_now); // calls error_is_report_due() --> First report the error "Bus Off"
-        can_process    (channel, tick_now); // AFTER control!              --> After recover from Bus Off
+        can_process    (channel, tick_now);
         
         if (tick_now - tick_last >= 100)
         {

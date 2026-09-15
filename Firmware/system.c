@@ -12,8 +12,8 @@
 // Linker symbol points to end of firmware (.text section)
 extern uint32_t _etext;
 
-uint32_t canfd_clock;
-uint32_t timestamp_wrap = 0;
+uint32_t          canfd_clock;
+TIM_HandleTypeDef timer2 = {0};
 
 // private functions
 bool system_init_timestamp();
@@ -183,45 +183,38 @@ bool system_init(void)
 
 // --------------------------------------------
 
-// Configure Timer 3 as 1 탎 timer (1 MHz). Timer 3 uses PCLK1 input.
-// The FDCAN Rx and Tx Echo timestamps are based on this timer.
-// HAL_FDCAN_TimestampWraparoundCallback is required to extend this 16 bit timer to 32 bit when it wraps around every 65 ms.
+// Configure 32 bit Timer 2 as 1 탎 timer (1 MHz). 
 bool system_init_timestamp()
 {
-    __HAL_RCC_TIM3_CLK_ENABLE();
+    __HAL_RCC_TIM2_CLK_ENABLE();
 
-    TIM_HandleTypeDef Timer3  = {0};
-    Timer3.Instance           = TIM3;
-    Timer3.Init.Prescaler     = (SystemCoreClock / 1000000) - 1; // 1 MHz tick
-    Timer3.Init.Period        = 0xFFFFFFFF;
-    Timer3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+    // Timer 2 uses PCLK1
+    // STM32G431:
+    //     PCLK1 = 160 MHz / (APB1CLKDivider == 2) = 80 MHz
+    //     But there is a special rule that this timer runs at 2 x PCLK1 if APB1CLKDivider == 2
+    //     Timer Clock = PCLK1 x 2 = 160 MHz = SystemCoreClock
+    // STM32G0B1: 
+    //     PCLK1 = 60 MHz / (APB1CLKDivider == 1) = 60 MHz
+    //     Timer Clock = PCLK1 x 1 = 60 MHz = SystemCoreClock
+    timer2.Instance               = TIM2;
+    timer2.Init.Prescaler         = (SystemCoreClock / 1000000) - 1; // 1 MHz tick
+    timer2.Init.Period            = 0xFFFFFFFF;
+    timer2.Init.ClockDivision     = TIM_CLOCKDIVISION_DIV1;
+    timer2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
-    if (HAL_TIM_Base_Init    (&Timer3) != HAL_OK ||
-        HAL_TIM_Base_Start_IT(&Timer3) != HAL_OK)
-        return false;
-
-    // Enable the FDCAN interrupts that increment the Timer 3 wrap around counter.
-    // Timer 16 and FDCAN line 0 share the same interrupt on the STM32G0xx serie.
-    // G4 serie: FDCAN1_IT0_IRQn      -> FDCAN1_IT0_IRQHandler      -> HAL_FDCAN_IRQHandler -> HAL_FDCAN_TimestampWraparoundCallback
-    // G0 serie: TIM16_FDCAN_IT0_IRQn -> TIM16_FDCAN_IT0_IRQHandler -> HAL_FDCAN_IRQHandler -> HAL_FDCAN_TimestampWraparoundCallback
-    HAL_NVIC_SetPriority(FDCAN1_IT0_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ  (FDCAN1_IT0_IRQn);
-    return true;
+    return (HAL_TIM_Base_Init (&timer2) == HAL_OK &&
+            HAL_TIM_Base_Start(&timer2) == HAL_OK);
 }
 
-// Overwrite weak callback function
-// This callback is called by interrupt every 65.536 ms from HAL_FDCAN_IRQHandler()
-// It extends Timer 3 from 16 bit to 32 bit.
-void HAL_FDCAN_TimestampWraparoundCallback(FDCAN_HandleTypeDef *hfdcan)
+// Get timestamp with 1 탎 precision
+uint32_t system_get_timestamp()
 {
-    timestamp_wrap ++;
+    return TIM2->CNT;
 }
 
-// Reset timer 3 (CAN packet timestamps) to zero
-void system_reset_timestamps()
+uint32_t system_get_can_clock()
 {
-    TIM3->CNT = 0;
-    timestamp_wrap = 0;
+    return canfd_clock;
 }
 
 // ===================================================================================================
@@ -257,28 +250,6 @@ eMcuSerie system_get_mcu_serie()
 #endif
     }
     return e_Serie;
-}
-
-// --------------------------------------------
-
-uint32_t system_get_can_clock()
-{
-    return canfd_clock;
-}
-
-// get timestamp with 1 탎 precision
-// Timer3 must be used because this is written into FDCAN_TxEventFifoTypeDef.TxTimestamp and FDCAN_RxHeaderTypeDef.RxTimestamp
-// Timer3 provides only the low 16 bit. The high 16 bit come from the wrap around callback.
-uint32_t system_get_timestamp()
-{
-    // timer_3 has the same value as HAL_FDCAN_GetTimestampCounter()
-    return (timestamp_wrap << 16) | TIM3->CNT;
-}
-
-// get only the high 16 bit of the timestamp counter
-uint32_t system_get_timewrap()
-{
-    return timestamp_wrap;
 }
 
 // ----------------------------- Option Bytes ----------------------------------

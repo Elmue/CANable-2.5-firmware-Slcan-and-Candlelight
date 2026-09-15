@@ -56,6 +56,7 @@ using cErrorElmue         = CANable.Candlelight.cErrorElmue;
 using cStringElmue        = CANable.Candlelight.cStringElmue;
 using cBusloadElmue       = CANable.Candlelight.cBusloadElmue;
 using cDetail             = CANable.Candlelight.cDetail;
+using AbortException      = CANable.Candlelight.AbortException;
 using Utils               = CANable.Utils;
 using INPUT_KEY_RECORD    = CANable.Utils.INPUT_KEY_RECORD;
 
@@ -65,11 +66,15 @@ class Program
 {
     // true  --> run Candlelight demo (send and receive CAN packets)
     // false --> run DFU demo (switch a device in Candlelight mode into DFU mode, fails if already in DFU mode)
-    static bool CANDLELIGHT_DEMO = true; 
+    static bool CANDLELIGHT_DEMO   = true; 
+    
+    // true  --> set data baudrate        -> CAN FD ackets can be sent and received
+    // false --> do not set data baudrate -> CAN FD ackets cannot be sent and received
+    static bool ENABLE_CAN_FD      = true;
 
     // true  --> only packets with the 11 bit CAN ID 0x7E8 will be sent to the host.
     // false --> all packets are sent to the host
-    static bool SET_HOST_FILTERS = false;
+    static bool SET_HOST_FILTERS   = false;
 
     // true  --> Received packets with CAN ID 0x7E5 will be forwarded from channel 0 to channel 1 (only multi-channel adapters)
     // false --> Do not use brdige mode
@@ -77,13 +82,13 @@ class Program
 
     // true  --> enable transfer of timestamps from the firmware (deprecated!)
     // false --> create performance counter timestamps 
-    static bool HW_TIMESTAMP = false;
+    static bool HW_TIMESTAMP       = false;
 
     // true --> test writing/reading user data to/from flash memory
-    static bool FLASH_MEMORY_TEST = false;
+    static bool FLASH_MEMORY_TEST  = false;
 
     // true --> send 3 Tx packets in one blob
-    static bool SEND_TX_BLOB = false;
+    static bool SEND_TX_BLOB       = false;
 
     static Candlelight mi_Candle = new Candlelight();
     static kDevInfo    mk_Info;
@@ -112,7 +117,7 @@ class Program
 
         mi_Candle.Dispose(); // Always disconnect from CAN bus, stop pipe thread
 
-        Print(ConsoleColor.Gray, "\nPress a key to exit ...");
+        Print(ConsoleColor.Gray, "\nPress a key to exit ...\n");
         Console.ReadKey();
 
         Process.GetCurrentProcess().Kill();
@@ -130,28 +135,52 @@ class Program
 
         // -----------------------------------------
 
-        // Test flash writing / reading
-        if (FLASH_MEMORY_TEST)
-            FlashMemoryTest();
-
-        // -----------------------------------------
-
         String s_Action = "";
         try
         {
+            s_Action = "Error from flash memory test.";
+            
+            // Test flash writing / reading
+            if (FLASH_MEMORY_TEST)
+                FlashMemoryTest();
+            
+            // -----------------------------------------            
+            
             s_Action = "Error setting nominal bitrate.";
-
             String s_Display;
 
             // Set 500 kBaud and samplepoint 60%
+            // Use the smallest possible prescaler!
+            // Urgently read: https://netcult.ch/elmue/CANable%20Firmware%20Update
             switch (mk_Info.mk_Capability.ms32_CanClock / 1000000)
             {
-                case  60: mi_Candle.SetBitrate(false, 1, 71, 48, out s_Display); break; // STM32G0B1
-                case 160: mi_Candle.SetBitrate(false, 2, 95, 64, out s_Display); break; // STM32G431
+                case  60: mi_Candle.SetBitrate(false, 1, 71, 48, out s_Display); break; // STM32G0B1: CAN clock  60 MHZ
+                case 160: mi_Candle.SetBitrate(false, 2, 95, 64, out s_Display); break; // STM32G431: CAN clock 160 MHZ
                 default: throw new Exception("CAN Clock not implemented!");
             }
 
             Print(ConsoleColor.DarkYellow, "\nSet {0}\n", s_Display);
+
+            // -----------------------------------------
+
+            // Optionally you can set a CAN FD data bitrate here.
+            // This will automatically enable CAN FD mode. GS_DevFlagCAN_FD is not required.
+            if (ENABLE_CAN_FD)
+            {
+                s_Action = "Error setting data bitrate.";
+
+                // Set 2 MBaud and samplepoint 60%
+                // Use the same prescaler as for nominal baudrate!
+                // Urgently read: https://netcult.ch/elmue/CANable%20Firmware%20Update
+                switch (mk_Info.mk_Capability.ms32_CanClock / 1000000)
+                {
+                    case  60: mi_Candle.SetBitrate(true, 1, 17, 12, out s_Display); break; // STM32G0B1: CAN clock  60 MHZ
+                    case 160: mi_Candle.SetBitrate(true, 2, 23, 16, out s_Display); break; // STM32G431: CAN clock 160 MHZ
+                    default: throw new Exception("CAN Clock not implemented!");
+                }
+
+                Print(ConsoleColor.DarkYellow, "Set {0}\n", s_Display);
+            }
 
             // -----------------------------------------
 
@@ -162,26 +191,8 @@ class Program
             
             // -----------------------------------------
             
+            // Never throws an exception
             mi_Candle.EnableTxEcho(true);           
-
-            // -----------------------------------------
-
-            // Optionally you can set a CAN FD data bitrate here.
-            // This will automatically enable CAN FD mode. GS_DevFlagCAN_FD is not required.
-            if (true)
-            {
-                s_Action = "Error setting data bitrate.";
-
-                // Set 2 MBaud and samplepoint 60%
-                switch (mk_Info.mk_Capability.ms32_CanClock / 1000000)
-                {
-                    case  60: mi_Candle.SetBitrate(true, 1, 17, 12, out s_Display); break; // STM32G0B1
-                    case 160: mi_Candle.SetBitrate(true, 2, 23, 16, out s_Display); break; // STM32G431
-                    default: throw new Exception("CAN Clock not implemented!");
-                }
-
-                Print(ConsoleColor.DarkYellow, "Set {0}\n", s_Display);
-            }
 
             // -----------------------------------------
 
@@ -198,17 +209,20 @@ class Program
 
             // -----------------------------------------
 
-            // The adapter must have at least 2 channels
-            if (SET_BRIDGE_FILTERS && 
-                mk_Info.mk_DeviceVersion.ChannelCount >= 2 && 
-                mk_Info.mu8_Channel == 0)
+            // The adapter must have at least 2 channels. Set filter on channel 0
+            if (SET_BRIDGE_FILTERS)
             {
-                s_Action = "Error setting bridge filter.";
+                if (mk_Info.mk_DeviceVersion.ChannelCount >= 2 && mk_Info.mu8_Channel == 0)
+                {
+                    s_Action = "Error setting bridge filter.";
 
-                // Set filter Nº 09 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
-                mi_Candle.SetBridgeFilter(9, 1, true, false, false, 0x7E5, 0x7FF);
+                    // Set filter Nº 09 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
+                    mi_Candle.SetBridgeFilter(9, 1, true, false, false, 0x7E5, 0x7FF);
 
-                Print(ConsoleColor.DarkYellow, "Set bridge filter 7E5\n");
+                    Print(ConsoleColor.DarkYellow, "Set bridge filter 7E5\n");
+                }
+                else
+                    Print(ConsoleColor.Red, "The condition to set a bridge filter is not given\n");
             }
 
             // -----------------------------------------
@@ -220,12 +234,13 @@ class Program
             // e_DevFlags |= eDeviceFlags.ListenOnly; // silent mode
             // e_DevFlags |= eDeviceFlags.Loopback;   // loopback mode
 
-            // If you turn off eDeviceFlags.Timestamp, Windows timestamps will be used.
+            // If you turn off eDeviceFlags.Timestamp, operating system timestamps will be used.
             // Firmware timestamps produce more USB traffic and are not available for sent packets.
-            // Read the comment of GetWinTimestamp()
+            // Read the comment of GetOsTimestamp()
             if (HW_TIMESTAMP)
                 e_DevFlags |= eDeviceFlags.HwTimestamp;
 
+            // Open the adapter, start FDCAN module in the processor
             mi_Candle.Start(e_DevFlags);
 
             Print(ConsoleColor.Yellow, "\nThe device has been opened. Please send CAN packets now.\n");
@@ -256,7 +271,7 @@ class Program
         // -----------------------------------------
 
         CanPacket i_TxPacket = new CanPacket();
-        i_TxPacket.ms32_ID = 0x7E0 + ms32_DeviceIndex;
+        i_TxPacket.ms32_ID = 0x7E0 + ms32_DeviceIndex; // Each USB adapter has it's own ID
         i_TxPacket.mi_Data.AddRange(Encoding.ASCII.GetBytes("ElmuSoft"));
 
         // Used to send 3 packets in one blob
@@ -272,22 +287,22 @@ class Program
 
         // -----------------------------------------
 
-        Int64 s64_LastStamp = 0;
+        Int64 s64_LastStamp = Utils.GetOsTimestamp();
 
         while (true)
         {
-            // Read the comment of GetWinTimestamp()
-            Int64 s64_Now = Utils.GetWinTimestamp();
+            // Read the comment of GetOsTimestamp()
+            Int64 s64_Now = Utils.GetOsTimestamp();
 
             // Send the Tx frame every 2 seconds (= 2000000 µs)
             if (s64_Now - s64_LastStamp >= 2000000)
             {
                 s64_LastStamp = s64_Now;
-
-                Int64 s64_TxStamp; // only valid if no error returned
-                int   s32_PackCount;
                 try
                 {
+                    Int64 s64_TxStamp; // only valid if no error returned
+                    int   s32_PackCount;
+                    
                     if (SEND_TX_BLOB) // send blob with 3 packets at once over USB
                     {
                         mi_Candle.SendPacketBlob(i_BlobPackets, out s64_TxStamp);
@@ -309,11 +324,11 @@ class Program
                 }
                 catch (Exception Ex)
                 {
-                    Print(ConsoleColor.Gray,  mi_Candle.FormatTimestamp(null, Utils.GetWinTimestamp()));
+                    Print(ConsoleColor.Gray,  mi_Candle.FormatTimestamp(null, Utils.GetOsTimestamp()));
                     Print(ConsoleColor.White, " Send");
                     Print(ConsoleColor.Red,   " {0}\n", Ex.Message);
 
-                    if (Ex is IOException)
+                    if (Ex is AbortException)
                         return; // The CANable has been disconnected
                 }
 
@@ -326,6 +341,9 @@ class Program
                 i_TxPacket.mi_Data[5] = (Byte)(i_TxPacket.mi_Data[4] * 7);
                 i_TxPacket.mi_Data[6] = (Byte)(i_TxPacket.mi_Data[5] * 23);
                 i_TxPacket.mi_Data[7] = (Byte)(i_TxPacket.mi_Data[6] * 19);
+
+                i_TxPack2 .mi_Data[0] = (Byte)(i_TxPacket.mi_Data[0] + 0x10);
+                i_TxPack3 .mi_Data[0] = (Byte)(i_TxPacket.mi_Data[0] + 0x20);
             }
 
             // Check for Rx data
@@ -343,7 +361,7 @@ class Program
                 Print(ConsoleColor.White, " Recv");
                 Print(ConsoleColor.Red,   " {0}\n", Ex.Message);
 
-                if (Ex is IOException)
+                if (Ex is AbortException)
                     return; // The CANable has been disconnected
             }
 
@@ -434,6 +452,43 @@ class Program
         } // while()
     }
 
+    // ---------------------------------------------------------------------------------------------------------------------
+
+    // Write a string and a 64 bit random into 2 flash segments, then read the data and verify that it is correct.
+    static void FlashMemoryTest()
+    {
+        Byte u8_SegmentA = 3;
+        Byte u8_SegmentB = 7;
+
+        Byte[]  u8_String = Encoding.ASCII.GetBytes("Hello World! This is flash data.");
+
+        UInt64 u64_Random = (UInt64)Environment.TickCount * 0x915B76F32;
+        Byte[]  u8_Random = Utils.StructureToBytesFix(u64_Random);
+
+        mi_Candle.WriteFlash(u8_SegmentA, u8_String);
+        mi_Candle.WriteFlash(u8_SegmentB, u8_Random);
+
+        // --------------------
+
+        Byte[] u8_Flash1 = mi_Candle.ReadFlash(u8_SegmentA);
+        if (!Utils.ByteArraysEqual(u8_String, u8_Flash1))
+        {
+            Print(ConsoleColor.Red, "\nFlash memory test 1 failed!\n");
+            return;
+        }
+
+        Byte[] u8_Flash2 = mi_Candle.ReadFlash(u8_SegmentB);
+        if (!Utils.ByteArraysEqual(u8_Random, u8_Flash2))
+        {
+            Print(ConsoleColor.Red, "\nFlash memory test 2 failed!\n");
+            return;
+        }
+
+        Print(ConsoleColor.Green, "\nFlash memory test: Success\n");
+    }
+    
+    // ---------------------------------------------------------------------------------------------------------------------
+
     /// <summary>
     /// ATTENTION:
     /// This works only if the device is in Candlelight mode.
@@ -442,7 +497,7 @@ class Program
     static void DfuDemo()
     {
         Print(ConsoleColor.Yellow, "=============================================================================\n");
-        Print(ConsoleColor.Yellow, "                 CANable 2.5 Enter DFU C# Demo by ElmüSoft                   \n");
+        Print(ConsoleColor.Yellow, "                    CANable 2.5 DFU C# Demo by ElmüSoft                      \n");
         Print(ConsoleColor.Yellow, "=============================================================================\n");
 
         // Open DFU interface
@@ -456,7 +511,7 @@ class Program
         }
         catch (Exception Ex)
         {
-            Print(ConsoleColor.Red, "\n{0}\n", Ex.Message);
+            Print(ConsoleColor.Red, "\nError switching to DFU mode. {0}\n", Ex.Message);
             #if DEBUG
                 Print(ConsoleColor.Gray, Ex.StackTrace);
             #endif
@@ -467,8 +522,8 @@ class Program
 
     /// <summary>
     /// Does not throw
-    /// CANDLELIGHT_DEMO = true  --> Candlelight
-    /// CANDLELIGHT_DEMO = false --> DFU
+    /// CANDLELIGHT_DEMO = true  --> open Candlelight interface
+    /// CANDLELIGHT_DEMO = false --> open DFU interface
     /// </summary>
     static bool OpenDevice()
     {
@@ -479,7 +534,7 @@ class Program
         }
         catch (Exception Ex)
         {
-            Print(ConsoleColor.Red, "\n{0}\n", Ex.Message);
+            Print(ConsoleColor.Red, "\nError enumerating USB devices. {0}\n", Ex.Message);
             return false;
         }
 
@@ -494,7 +549,7 @@ class Program
         // -----------------------------------------
 
         ms32_DeviceIndex = 0;
-        if (i_Devices.Count > 1) // 2 or more devices connected
+        if (i_Devices.Count > 1) // Two or more devices connected
         {
             while (true)
             {
@@ -536,16 +591,16 @@ class Program
             Print(ConsoleColor.Gray, "{0}\n", i_Detail.Format(21));
         }
 
-        mk_Info = mi_Candle.DeviceInfo;
-
         if (i_Exception != null)
         {
-            Print(ConsoleColor.Red, "\n{0}\n", i_Exception.Message);
+            Print(ConsoleColor.Red, "\nError opening device. {0}\n", i_Exception.Message);
             #if DEBUG
                 Print(ConsoleColor.Gray, i_Exception.StackTrace);
             #endif
             return false;
         }
+        
+        mk_Info = mi_Candle.DeviceInfo;        
         return true;
     }
 
@@ -587,39 +642,5 @@ class Program
         Console.Write(String.Format(s_Format, o_Param));
     }
 
-    // ---------------------------------------------------------------------------------------------------------------------
-
-    // Write a string and a random into 2 flash segments, then read the data and verify that it is correct.
-    static void FlashMemoryTest()
-    {
-        Byte u8_SegmentA = 3;
-        Byte u8_SegmentB = 7;
-
-        Byte[]  u8_String = Encoding.ASCII.GetBytes("Hello World! This is flash data.");
-
-        UInt64 u64_Random = (UInt64)Environment.TickCount * 0x915B76F32;
-        Byte[]  u8_Random = Utils.StructureToBytesFix(u64_Random);
-
-        mi_Candle.WriteFlash(u8_SegmentA, u8_String);
-        mi_Candle.WriteFlash(u8_SegmentB, u8_Random);
-
-        // --------------------
-
-        Byte[] u8_Flash1 = mi_Candle.ReadFlash(u8_SegmentA);
-        if (!Utils.ByteArraysEqual(u8_String, u8_Flash1))
-        {
-            Print(ConsoleColor.Red, "\nFlash memory test 1 failed!\n");
-            return;
-        }
-
-        Byte[] u8_Flash2 = mi_Candle.ReadFlash(u8_SegmentB);
-        if (!Utils.ByteArraysEqual(u8_Random, u8_Flash2))
-        {
-            Print(ConsoleColor.Red, "\nFlash memory test 2 failed!\n");
-            return;
-        }
-
-        Print(ConsoleColor.Green, "\nFlash memory test: Success\n");
-    }
 } // class
 } // namespace

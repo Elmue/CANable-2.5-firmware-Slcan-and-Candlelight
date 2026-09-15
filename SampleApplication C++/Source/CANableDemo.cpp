@@ -40,11 +40,15 @@ using namespace CANable;
 
 // true  --> run Candlelight demo (send and receive CAN packets)
 // false --> run DFU demo (switch a device in Candlelight mode into DFU mode, fails if already in DFU mode)
-bool CANDLELIGHT_DEMO = true; 
+bool CANDLELIGHT_DEMO   = true; 
+
+// true  --> set data baudrate        -> CAN FD ackets can be sent and received
+// false --> do not set data baudrate -> CAN FD ackets cannot be sent and received
+bool ENABLE_CAN_FD      = true;
 
 // true  --> only packets with 11 bit CAN ID 0x7E8 are sent to the host.
 // false --> all packets are sent to the host
-bool SET_HOST_FILTERS = false;
+bool SET_HOST_FILTERS   = false;
 
 // true  --> Received packets with CAN ID 0x7E5 will be forwarded from channel 0 to channel 1 (only multi-channel adapters)
 // false --> Do not use brdige mode
@@ -52,13 +56,13 @@ bool SET_BRIDGE_FILTERS = false;
 
 // true  --> enable transfer of timestamps from the firmware (deprecated!)
 // false --> create performance counter timestamps 
-bool HW_TIMESTAMP = false;
+bool HW_TIMESTAMP       = false;
 
 // true --> test writing/reading user data to/from flash memory
-bool FLASH_MEMORY_TEST = false;
+bool FLASH_MEMORY_TEST  = false;
 
 // true --> send 3 Tx packets in one blob
-bool SEND_TX_BLOB = false;
+bool SEND_TX_BLOB       = false;
 
 
 // forward declarations
@@ -75,11 +79,17 @@ int         gs32_DeviceIndex; // user selection if multiple devices connected
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
+int main(int argc, char* argv[])
 {
+    UNUSED(argc);
+    UNUSED(argv);
+
     // Increase console buffer for 3000 lines output with 300 chars per line
     // Set console window to 120 chars in 60 lines
     OsLibrary::SetUpConsole(300, 3000, 120, 60, "ElmueSoft Candlelight C++ Demo");
+    
+    // only needed for Linux
+    OsLibrary::SwitchTerminalToNonCanonical();
 
     if (CANDLELIGHT_DEMO) 
     {
@@ -94,9 +104,12 @@ int _tmain(int argc, TCHAR* argv[], TCHAR* envp[])
 
     gi_Candle.Close(); // Close CAN bus, stop pipe thread
 
-    OsLibrary::PrintConsole(GREY, "\nPress a key to exit ...");
+    OsLibrary::PrintConsole(GREY, "\nPress a key to exit ...\n");
     OsLibrary::WaitConsoleChar();
-    ExitProcess(0);
+
+    // only needed for Linux
+    OsLibrary::RestoreTerminal();   
+    return 0;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -123,10 +136,12 @@ void CandlelightDemo()
     string s_Display;
 
     // Set 500 kBaud and samplepoint 60%
+    // Use the smallest possible prescaler!
+    // Urgently read: https://netcult.ch/elmue/CANable%20Firmware%20Update
     switch (gk_Info.mk_Capability.fclk_can / 1000000)
     {
-        case  60: u32_Error = gi_Candle.SetBitrate(false, 1, 71, 48, &s_Display); break; // STM32G0B1
-        case 160: u32_Error = gi_Candle.SetBitrate(false, 2, 95, 64, &s_Display); break; // STM32G431
+        case  60: u32_Error = gi_Candle.SetBitrate(false, 1, 71, 48, &s_Display); break; // STM32G0B1: CAN clock =  60 MHz
+        case 160: u32_Error = gi_Candle.SetBitrate(false, 2, 95, 64, &s_Display); break; // STM32G431: CAN cLock = 160 MHz
         default:  OsLibrary::PrintConsole(RED, "CAN Clock not implemented.\n"); return;
     }
 
@@ -139,26 +154,17 @@ void CandlelightDemo()
 
     // -----------------------------------------
 
-    // Report bus load every 5 seconds if it is not zero.
-    u32_Error = gi_Candle.EnableBusLoadReport(5);
-    if (u32_Error)
-        OsLibrary::PrintConsole(RED, "Error enabling busload report: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
-    
-    // -----------------------------------------
-    
-    gi_Candle.EnableTxEcho(true);
-
-    // -----------------------------------------
-
     // Optionally you can set a CAN FD data bitrate here.
     // This will automatically enable CAN FD mode. GS_DevFlagCAN_FD is not required.
-    if (true)
+    if (ENABLE_CAN_FD)
     {
         // Set 2 MBaud and samplepoint 60%
+        // Use the same prescaler as for nominal baudrate!
+        // Urgently read: https://netcult.ch/elmue/CANable%20Firmware%20Update
         switch (gk_Info.mk_Capability.fclk_can / 1000000)
         {
-            case  60: u32_Error = gi_Candle.SetBitrate(true, 1, 17, 12, &s_Display); break; // STM32G0B1
-            case 160: u32_Error = gi_Candle.SetBitrate(true, 2, 23, 16, &s_Display); break; // STM32G431
+            case  60: u32_Error = gi_Candle.SetBitrate(true, 1, 17, 12, &s_Display); break; // STM32G0B1: CAN clock  60 MHZ
+            case 160: u32_Error = gi_Candle.SetBitrate(true, 2, 23, 16, &s_Display); break; // STM32G431: CAN clock 160 MHZ
             default:  OsLibrary::PrintConsole(RED, "CAN Clock not implemented.\n"); return;
         }
 
@@ -169,6 +175,18 @@ void CandlelightDemo()
         }
         OsLibrary::PrintConsole(BROWN, "Set %s\n", s_Display.c_str());
     }
+
+    // -----------------------------------------
+
+    // Report bus load every 5 seconds if it is not zero.
+    u32_Error = gi_Candle.EnableBusLoadReport(5);
+    if (u32_Error)
+        OsLibrary::PrintConsole(RED, "Error enabling busload report: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+    
+    // -----------------------------------------
+    
+    // Never returns an error
+    gi_Candle.EnableTxEcho(true);
 
     // -----------------------------------------
 
@@ -185,32 +203,36 @@ void CandlelightDemo()
 
     // -----------------------------------------
 
-    // The adapter must have at least 2 channels
-    if (SET_BRIDGE_FILTERS && 
-        gk_Info.mk_DeviceVersion.icount + 1 >= 2 && 
-        gk_Info.mu8_Channel == 0)
+    // The adapter must have at least 2 channels. Set filter on channel 0
+    if (SET_BRIDGE_FILTERS)
     {
-        // Set filter Nº 08 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
-        u32_Error = gi_Candle.SetBridgeFilter(8, 1, true, false, false, 0x7E5, 0x7FF);
-        if (u32_Error)
-            OsLibrary::PrintConsole(RED, "Error setting bridge filter: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        if (gk_Info.mk_DeviceVersion.icount + 1 >= 2 && gk_Info.mu8_Channel == 0)
+        {
+            // Set filter Nº 08 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
+            u32_Error = gi_Candle.SetBridgeFilter(8, 1, true, false, false, 0x7E5, 0x7FF);
+            if (u32_Error)
+                OsLibrary::PrintConsole(RED, "Error setting bridge filter: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+            else
+                OsLibrary::PrintConsole(BROWN, "Set bridge filter 7E5\n");
+        }
         else
-            OsLibrary::PrintConsole(BROWN, "Set bridge filter 7E5\n");
+            OsLibrary::PrintConsole(RED, "The condition to set a bridge filter is not given\n");
     }
 
     // -----------------------------------------
 
     uint32_t u32_DevFlags = GS_DevFlagNone;
-    // u32_DevFlags |= GS_DevFlagOneShot;        // turn off automatic re-transmission
-    // u32_DevFlags |= GS_DevFlagListenOnly;     // silent mode
-    // u32_DevFlags |= GS_DevFlagLoopback;       // loopback mode
+    // u32_DevFlags |= GS_DevFlagOneShot;    // turn off automatic re-transmission
+    // u32_DevFlags |= GS_DevFlagListenOnly; // silent mode
+    // u32_DevFlags |= GS_DevFlagLoopback;   // loopback mode
 
-    // If you turn off GS_DevFlagTimestamp, Windows timestamps will be used.
+    // If you turn off GS_DevFlagTimestamp, operating system timestamps will be used.
     // Firmware timestamps produce more USB traffic and are not available for sent packets.
     // Read the comment of GetOsTimestamp()
     if (HW_TIMESTAMP)
         u32_DevFlags |= GS_DevFlagTimestamp;
 
+    // Open the adapter, start FDCAN module in the processor
     u32_Error = gi_Candle.Start((eDeviceFlags)u32_DevFlags);
     if (u32_Error)
     {
@@ -238,9 +260,9 @@ void CandlelightDemo()
 
     // -----------------------------------------
 
-    kCanPacket k_TxPackets[3] = {0};
+    kCanPacket k_TxPackets[3] = {};
 
-    k_TxPackets[0].mu32_ID     = 0x7E0 + gs32_DeviceIndex;
+    k_TxPackets[0].mu32_ID     = 0x7E0 + gs32_DeviceIndex; // Each USB adapter has it's own ID
     k_TxPackets[0].mu8_DataLen = 8;
     memcpy(k_TxPackets[0].mu8_Data, "ElmuSoft", 8);
 
@@ -254,11 +276,11 @@ void CandlelightDemo()
 
     // -----------------------------------------
 
-    int64_t s64_LastStamp = 0;
+    int64_t s64_LastStamp = OsLibrary::GetOsTimestamp();
     while (true)
     {
         // Read the comment of OsLibrary::GetTimestamp()
-        int64_t s64_Now = gi_Candle.GetOsTimestamp();
+        int64_t s64_Now = OsLibrary::GetOsTimestamp();
 
         // Send the Tx frame every 2 seconds (= 2000000 µs)
         if (s64_Now - s64_LastStamp >= 2000000)
@@ -280,7 +302,7 @@ void CandlelightDemo()
 
             if (u32_Error)
             {
-                OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, gi_Candle.GetOsTimestamp()));
+                OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, OsLibrary::GetOsTimestamp()));
                 OsLibrary::PrintConsole(WHITE, " Send");
                 OsLibrary::PrintConsole(RED,   " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
 
@@ -310,6 +332,9 @@ void CandlelightDemo()
             k_TxPackets[0].mu8_Data[5] = k_TxPackets[0].mu8_Data[4] * 7;
             k_TxPackets[0].mu8_Data[6] = k_TxPackets[0].mu8_Data[5] * 25;
             k_TxPackets[0].mu8_Data[7] = k_TxPackets[0].mu8_Data[6] * 17;
+
+            k_TxPackets[1].mu8_Data[0] = k_TxPackets[0].mu8_Data[0] + 0x10;
+            k_TxPackets[2].mu8_Data[0] = k_TxPackets[0].mu8_Data[0] + 0x20;
         }
 
         // Check for Rx data
@@ -397,13 +422,69 @@ void CandlelightDemo()
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+// Write a string and a 64 bit random into 2 flash segments, then read the data and verify that it is correct.
+void FlashMemoryTest()
+{
+    uint32_t u32_Error;
+    uint32_t u32_Read;
+    uint8_t  u8_FlashData[5000];
+    uint8_t  u8_SegmentA = 2;
+    uint8_t  u8_SegmentB = 5;
+
+    const char* s8_Hello   = "Hello World of flash data!";
+    uint16_t  u16_LenHello = strlen(s8_Hello);
+
+    uint64_t u64_Random    = cUtils::GetTickMilli() * 0x815A78F3D;
+    uint16_t u16_LenRandom = sizeof(u64_Random);
+
+    // --------------------
+
+    if ((u32_Error = gi_Candle.WriteFlash(u8_SegmentA, (uint8_t*)s8_Hello, u16_LenHello)))
+        goto _Error;
+
+    if ((u32_Error = gi_Candle.WriteFlash(u8_SegmentB, (uint8_t*)&u64_Random, u16_LenRandom)))
+        goto _Error;
+
+    // --------------------
+
+    if ((u32_Error = gi_Candle.ReadFlash(u8_SegmentA, u8_FlashData, sizeof(u8_FlashData), &u32_Read)))
+        goto _Error;
+
+    if (u32_Read != u16_LenHello || memcmp(s8_Hello, u8_FlashData, u32_Read) != 0)
+    {
+        OsLibrary::PrintConsole(RED, "\nFlash memory test 1 failed!\n");
+        return;
+    }
+
+    // --------------------
+
+    if ((u32_Error = gi_Candle.ReadFlash(u8_SegmentB, u8_FlashData, sizeof(u8_FlashData), &u32_Read)))
+        goto _Error;
+
+    if (u32_Read != u16_LenRandom || memcmp(&u64_Random, u8_FlashData, u32_Read) != 0)
+    {
+        OsLibrary::PrintConsole(RED, "\nFlash memory test 2 failed!\n");
+        return;
+    }
+
+    // --------------------
+
+    OsLibrary::PrintConsole(LIME, "\nFlash memory test: Success\n");
+    return;
+
+_Error:
+    OsLibrary::PrintConsole(RED,  "\nFlash memory test Error: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 // ATTENTION:
 // This works only if the device is in Candlelight mode.
 // If the device is already in DFU mode it will fail.
 void DfuDemo()
 {
     OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
-    OsLibrary::PrintConsole(YELLOW, "                 CANable 2.5 Enter DFU C++ Demo by ElmüSoft                  \n");
+    OsLibrary::PrintConsole(YELLOW, "                    CANable 2.5 DFU C++ Demo by ElmüSoft                     \n");
     OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
 
     // Open Firmware Update interface
@@ -412,22 +493,19 @@ void DfuDemo()
 
     uint32_t u32_Error = gi_Candle.EnterDfuMode();
     if (u32_Error)
-    {
-        OsLibrary::PrintConsole(RED, "\n%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
-        return;
-    }
-
-    OsLibrary::PrintConsole(LIME, "\nDevice has been switched successfully into DFU mode.\n");
+        OsLibrary::PrintConsole(RED, "\nError switching to DFU mode. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+    else
+        OsLibrary::PrintConsole(LIME, "\nDevice has been switched successfully into DFU mode.\n");
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// CANDLELIGHT_DEMO = true  --> Candlelight
-// CANDLELIGHT_DEMO = false --> DFU
+// CANDLELIGHT_DEMO = true  --> open Candlelight interface
+// CANDLELIGHT_DEMO = false --> open DFU interface
 bool OpenDevice()
 {
     vector<kUsbDevice> i_Devices;
-    uint32_t u32_Error = OsLibrary::EnumDevices(CANDLELIGHT_DEMO, &i_Devices);
+    uint32_t u32_Error = gi_Candle.EnumDevices(CANDLELIGHT_DEMO, &i_Devices);
     if (u32_Error)
     {
         OsLibrary::PrintConsole(RED, "Error enumerating USB devices. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
@@ -437,15 +515,15 @@ bool OpenDevice()
     if (i_Devices.size() == 0)
     {
         OsLibrary::PrintConsole(RED, "\nNo Candlelight device connected or in wrong operatiom mode or WinUSB driver not installed correctly.\n"
-                          "Legacy Candlelight firmware has bugs that prevent the correct driver installation.\n"
-                          "Make sure you have the new CANable 2.5 firmware from ElmüSoft.\n");
+                                     "Legacy Candlelight firmware has bugs that prevent the correct driver installation.\n"
+                                     "Make sure you have the new CANable 2.5 firmware from ElmüSoft.\n");
         return false;
     }
 
     // -----------------------------------------
 
     gs32_DeviceIndex = 0;
-    if (i_Devices.size() > 1) // 2 or more devices connected
+    if (i_Devices.size() > 1) // Two or more devices connected
     {
         while (true)
         {
@@ -472,8 +550,8 @@ bool OpenDevice()
     // -----------------------------------------
 
     u32_Error = gi_Candle.Open(&i_Devices[gs32_DeviceIndex]);
-    gk_Info   = gi_Candle.GetDeviceInfo();
 
+    // Even after an error some of the device details may be valid --> always print
     vector<kDetail> i_Details = gi_Candle.GetDetails();
     for (size_t i=0; i<i_Details.size(); i++)
     {
@@ -482,9 +560,11 @@ bool OpenDevice()
 
     if (u32_Error)
     {
-        OsLibrary::PrintConsole(RED, "\n%s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+        OsLibrary::PrintConsole(RED, "\nError opening device. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
         return false;
     }
+    
+    gk_Info = gi_Candle.GetDeviceInfo();
     return true;
 }
 
@@ -498,9 +578,9 @@ void PrintDeviceMenu(vector<kUsbDevice>& i_Devices)
     for (size_t i=0; i<i_Devices.size(); i++)
     {
         kUsbDevice k_Device = i_Devices[i];
-        u32_ProductLen = max(u32_ProductLen, k_Device.ms_Product  .length());
-        u32_SerialLen  = max(u32_SerialLen,  k_Device.ms_SerialNo .length());
-        u32_InterfLen  = max(u32_InterfLen,  k_Device.ms_Interface.length());
+        u32_ProductLen = max(u32_ProductLen, (uint32_t)k_Device.ms_Product  .length());
+        u32_SerialLen  = max(u32_SerialLen,  (uint32_t)k_Device.ms_SerialNo .length());
+        u32_InterfLen  = max(u32_InterfLen,  (uint32_t)k_Device.ms_Interface.length());
     }
 
     for (size_t i=0; i<i_Devices.size(); i++)
@@ -521,64 +601,5 @@ void PrintDeviceMenu(vector<kUsbDevice>& i_Devices)
 
         OsLibrary::PrintConsole(WHITE, "\n");
     }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-// Write a string and a random into 2 flash segments, then read the data and verify that it is correct.
-void FlashMemoryTest()
-{
-    uint32_t u32_Error;
-    uint32_t u32_Read;
-    uint8_t  u8_Hello[50];
-    uint8_t  u8_FlashData[5000];
-    uint8_t  u8_SegmentA = 2;
-    uint8_t  u8_SegmentB = 5;
-
-    const char*   s8_Hello = "Hello World of flash data!";
-    uint16_t  u16_LenHello = strlen(s8_Hello);
-    // ATTENTION: String must be copied to RAM, otherwise ERROR_NOACCESS from WinUSB.
-    strcpy_s((char*)u8_Hello, sizeof(u8_Hello), s8_Hello);
-
-    uint64_t u64_Random    = cUtils::GetTickMilli() * 0x815A78F3D;
-    uint16_t u16_LenRandom = sizeof(u64_Random);
-
-    // --------------------
-
-    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentA, u8_Hello, u16_LenHello))
-        goto _Error;
-
-    if (u32_Error = gi_Candle.WriteFlash(u8_SegmentB, (uint8_t*)&u64_Random, u16_LenRandom))
-        goto _Error;
-
-    // --------------------
-
-    if (u32_Error = gi_Candle.ReadFlash(u8_SegmentA, u8_FlashData, sizeof(u8_FlashData), &u32_Read))
-        goto _Error;
-
-    if (u32_Read != u16_LenHello || memcmp(u8_Hello, u8_FlashData, u32_Read) != 0)
-    {
-        OsLibrary::PrintConsole(RED, "\nFlash memory test 1 failed!\n");
-        return;
-    }
-
-    // --------------------
-
-    if (u32_Error = gi_Candle.ReadFlash(u8_SegmentB, u8_FlashData, sizeof(u8_FlashData), &u32_Read))
-        goto _Error;
-
-    if (u32_Read != u16_LenRandom || memcmp(&u64_Random, u8_FlashData, u32_Read) != 0)
-    {
-        OsLibrary::PrintConsole(RED, "\nFlash memory test 2 failed!\n");
-        return;
-    }
-
-    // --------------------
-
-    OsLibrary::PrintConsole(LIME, "\nFlash memory test: Success\n");
-    return;
-
-_Error:
-    OsLibrary::PrintConsole(RED,  "\nFlash memory test Error: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
 }
 

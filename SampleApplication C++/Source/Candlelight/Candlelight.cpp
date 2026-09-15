@@ -40,7 +40,7 @@ using namespace CANable;
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251218 = 18.dec.2025)
-#define MIN_FIRMWARE      0x260803
+#define MIN_FIRMWARE      0x260914
 // must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
 #define CAN_QUEUE_SIZE    64
 
@@ -78,17 +78,18 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     if (mi_OsLibrary.IsOpen())
         return ERR_OPERATION_INVALID; // Already open
     
-    mu8_EchoMarker    = 1; // counter 1...255
-    ms64_McuRollOver  = 0;
-    ms64_LastMcuStamp = 0;
-    mu64_TxOverflow   = 0;    
-    mu32_BlobOffset   = 0;
-    ms32_BlobFrames   = 0;
-    mb_BaudFDSet      = false;
-    mb_InitDone       = false;
-    mb_Started        = false;
-    mb_EnableTxEcho   = true;
-    me_LastError      = FBK_Success;
+    mu8_EchoMarker      = 1; // counter 1...255
+    ms64_McuRollOver    = 0;
+    ms64_LastMcuStamp   = 0;
+    ms64_TimestampStart = 0;
+    mu64_TxOverflow     = 0;    
+    mu32_BlobOffset     = 0;
+    ms32_BlobFrames     = 0;
+    mb_BaudFDSet        = false;
+    mb_InitDone         = false;
+    mb_Started          = false;
+    mb_EnableTxEcho     = true;
+    me_LastError        = FBK_Success;
     
     mi_Details.clear();
     memset(&mk_EchoPackets, 0, sizeof(mk_EchoPackets));
@@ -97,7 +98,7 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     if (u32_Error)
         return u32_Error;   
     
-    mpk_Info      = mi_OsLibrary.DevInfo();
+    mpk_Info      = mi_OsLibrary.GetDevInfo();
     mu8_Interface = mpk_Info->mk_InterfDescr.bInterfaceNumber;   
 
     mi_Details.push_back(kDetail("Device Path",        pk_Device->ms_DevicePath));
@@ -128,7 +129,7 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
         return ERR_INVALID_DEVICE;
 
     // Interface 0 -> Channel 0
-    // Interface 1 -> Firmware Update
+    // Interface 1 -> Firmware Update (execution never comes here)
     // Interface 2 -> Channel 1
     // Interface 3 -> Channel 2
     mu8_Channel = mu8_Interface; 
@@ -146,11 +147,11 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     // Reset() should always be the first command.
     // The device may still be open --> close it, which resets all variables in the firmware.
     // And the CANable 2.5 firmware allows to set ELM_DevFlagProtocolElmue which enables debug messages at the very beginnning.
-    if (u32_Error = Reset())
+    if ((u32_Error = Reset()))
         return u32_Error;
 
     // GS_ReqGetCapabilities is a legacy commmand supported by all Candlelight's
-    if (u32_Error = CtrlTransfer(DIR_In, GS_ReqGetCapabilities, mu8_Channel, &mpk_Info->mk_Capability, sizeof(kCapabilityClassic)))
+    if ((u32_Error = CtrlTransfer(DIR_In, GS_ReqGetCapabilities, mu8_Channel, &mpk_Info->mk_Capability, sizeof(kCapabilityClassic))))
         return u32_Error;
 
     mpk_Info->mb_IsElmueSoft =  (mpk_Info->mk_Capability.feature & ELM_DevFlagProtocolElmue) > 0;
@@ -159,14 +160,14 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
 
     if (mpk_Info->mb_SupportsFD)
     {
-        // GS_ReqGetCapabilitiesFD is a legacy commmand supported by all Candlelight's
+        // GS_ReqGetCapabilitiesFD is a legacy commmand supported by all Candlelight's that support CAN FD
         u32_Error = CtrlTransfer(DIR_In, GS_ReqGetCapabilitiesFD, mu8_Channel, &mpk_Info->mk_CapabilityFD, sizeof(kCapabilityFD));
         if (u32_Error)
             return u32_Error;
     }
 
     // GS_ReqGetDeviceVersion is a legacy commmand supported by all Candlelight's
-    if (u32_Error = CtrlTransfer(DIR_In, GS_ReqGetDeviceVersion, mu8_Channel, &mpk_Info->mk_DeviceVersion, sizeof(kDeviceVersion)))
+    if ((u32_Error = CtrlTransfer(DIR_In, GS_ReqGetDeviceVersion, mu8_Channel, &mpk_Info->mk_DeviceVersion, sizeof(kDeviceVersion))))
         return u32_Error;
 
     mi_Details.push_back(kDetail("Hardware Version", cUtils::FormatBcdVersion(mpk_Info->mk_DeviceVersion.hw_version_bcd)));  
@@ -189,12 +190,12 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     // --------------- Here comes only ElmüSoft firmware ---------------
 
     // ELM_ReqGetBoardInfo requires ElmüSoft firmware
-    if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetBoardInfo, mu8_Channel, &mpk_Info->mk_BoardInfo, sizeof(kBoardInfo)))
+    if ((u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetBoardInfo, mu8_Channel, &mpk_Info->mk_BoardInfo, sizeof(kBoardInfo))))
         return u32_Error;
 
     // IsBootPinEnabled() cannot be called here because mb_InitDone must be set at the end of this function.
     uint16_t u16_PinStatus;
-    if (u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetPinStatus, PINID_BOOT0, &u16_PinStatus, sizeof(u16_PinStatus)))
+    if ((u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetPinStatus, PINID_BOOT0, &u16_PinStatus, sizeof(u16_PinStatus))))
         return u32_Error;
 
     mi_Details.push_back(kDetail("Target Board", mpk_Info->mk_BoardInfo.BoardName));
@@ -214,7 +215,7 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     // Update MIN_FIRMWARE to the latest firmware version! Implement new features if available in the new firmware!
     assert(mpk_Info->mk_DeviceVersion.sw_version_bcd == MIN_FIRMWARE);
 
-    if (u32_Error = mi_OsLibrary.StartPipes())
+    if ((u32_Error = mi_OsLibrary.StartPipes()))
         return u32_Error;
 
     mb_InitDone = true;
@@ -234,7 +235,7 @@ void Candlelight::EnableTxEcho(bool b_Enable)
 
 // STEP 3)
 // Please read "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder Documentation
-// returns the formatted baudrate and samplepoint in s_Display
+// returns display string with formatted baudrate and samplepoint 
 uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, string* ps_Display)
 {
     if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
@@ -260,19 +261,21 @@ uint32_t Candlelight::SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_S
     uint32_t u32_Error = CtrlTransfer(DIR_Out, e_Requ, mu8_Channel, &k_Timing, sizeof(k_Timing));
     if (u32_Error)
         return u32_Error;
+    
+    // --- Format display string ----
 
     int s32_TotTQ  = 1 + s32_Seg1 + s32_Seg2;
     int s32_Baud   = mpk_Info->mk_Capability.fclk_can / s32_BRP / s32_TotTQ;
     int s32_Sample = 1000 * (1 + s32_Seg1)  / s32_TotTQ;
 
     // Do not display 83333 baud as "83k"
-    char* c_Unit = "";
+    const char* c_Unit = "";
          if (s32_Baud >= 1000000 && (s32_Baud % 1000000) == 0) { s32_Baud /= 1000000; c_Unit = "M"; }
     else if (s32_Baud >= 1000    && (s32_Baud % 1000)    == 0) { s32_Baud /= 1000;    c_Unit = "k"; }
 
     if (ps_Display)
     {
-        char* c_Type = b_FD ? "Data   " : "Nominal";
+        const char* c_Type = b_FD ? "Data   " : "Nominal";
         *ps_Display = cUtils::Format("%s Baudrate: %u%s, Samplepoint: %u.%u%%", c_Type, s32_Baud, c_Unit, s32_Sample / 10, s32_Sample % 10);
     }
 
@@ -288,7 +291,7 @@ uint32_t Candlelight::AddHostFilter(bool b_29bit, uint32_t u32_Filter, uint32_t 
     if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
-    kFilter k_Filter = {0};
+    kFilter k_Filter = {};
     k_Filter.Operation = b_29bit ? FIL_HostPass_29 : FIL_HostPass_11;
     k_Filter.Filter    = u32_Filter;
     k_Filter.Mask      = u32_Mask;
@@ -304,7 +307,7 @@ uint32_t Candlelight::AddHostFilter(bool b_29bit, uint32_t u32_Filter, uint32_t 
 // b_Enable = true and b_Block = false --> set pass filter
 uint32_t Candlelight::SetBridgeFilter(uint8_t u8_FilterIndex, uint8_t u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, uint32_t u32_Filter, uint32_t u32_Mask)
 {
-    kFilter k_Filter = {0};
+    kFilter k_Filter = {};
     k_Filter.Operation   = FIL_BridgeClear;
     k_Filter.Filter      = u32_Filter;
     k_Filter.Mask        = u32_Mask;
@@ -402,7 +405,7 @@ uint32_t Candlelight::SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, int6
     }
 
     // Get timestamp immediately before sending the packet
-    *ps64_OsTimestamp = GetOsTimestamp();
+    *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
 
     return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
 }
@@ -424,7 +427,7 @@ uint32_t Candlelight::SendPacket(kCanPacket* pk_Packet, int64_t* ps64_OsTimestam
         return u32_Error;
 
     // Get timestamp immediately before sending the packet
-    *ps64_OsTimestamp = GetOsTimestamp();
+    *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
 
     return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
 }
@@ -490,7 +493,7 @@ uint32_t Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, uint8_t* u8_TxBuf
     else if (pk_Packet->mu8_DataLen > 12) pk_Packet->mu8_DataLen = 16;
     else if (pk_Packet->mu8_DataLen >  8) pk_Packet->mu8_DataLen = 12;
 
-    kTxFrameElmue k_TxFrame   = {0};
+    kTxFrameElmue k_TxFrame   = {};
     k_TxFrame.header.size     = sizeof(kTxFrameElmue) + pk_Packet->mu8_DataLen;
     k_TxFrame.header.msg_type = MSG_TxFrame;
     k_TxFrame.can_id          = u32_ID;
@@ -509,7 +512,7 @@ uint32_t Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, uint8_t* u8_TxBuf
     {
         mu8_EchoMarker ++;
         if (mu8_EchoMarker == 0) 
-            mu8_EchoMarker = 1;  // a marker value of zero does not send an echo
+            mu8_EchoMarker = 1;  // If k_TxFrame.marker == 0 --> firmware does not send an echo
         k_TxFrame.marker = mu8_EchoMarker;
     }
 
@@ -529,8 +532,7 @@ uint32_t Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, uint8_t* u8_TxBuf
 // pk_Header and pb_RxBlob are only valid if the function does not return an error.
 uint32_t Candlelight::ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, int64_t* ps64_RxTimestamp, bool* pb_RxBlob)
 {
-    // This timestamp is only used in case that an error is returned
-    *ps64_RxTimestamp = GetOsTimestamp();
+    *ps64_RxTimestamp = OsLibrary::GetOsTimestamp();
     *ppk_Header = 0;
     if (pb_RxBlob) *pb_RxBlob = false;
 
@@ -578,7 +580,7 @@ uint32_t Candlelight::ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, in
 
 kCanPacket Candlelight::RxFrameToCanPacket(kRxFrameElmue* pk_Frame)
 {
-    kCanPacket k_Packet = {0};
+    kCanPacket k_Packet = {};
     k_Packet.mu32_ID    = (pk_Frame->can_id & CAN_MASK_29);
     k_Packet.mb_29bit   = (pk_Frame->can_id & CAN_ID_29Bit) != 0;
     k_Packet.mb_RTR     = (pk_Frame->can_id & CAN_ID_RTR)   != 0;
@@ -609,7 +611,8 @@ string Candlelight::ConvertStringFrame(kStringElmue* pk_String)
 
 // ==========================================================================================
 
-// Flashes the Rx + Tx LEDs on the board
+// Flashes the Rx + Tx LEDs on the adapter
+// ATTENTION: When you open the adapter with Start() the firmware stops LED flashing
 uint32_t Candlelight::Identify(bool b_Blink)
 {
     if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
@@ -637,7 +640,7 @@ uint32_t Candlelight::DisableBootPin()
     if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
-    kPinStatus k_PinStatus = {0};
+    kPinStatus k_PinStatus = {};
     k_PinStatus.Operation  = PINOP_Disable;
     k_PinStatus.PinID      = PINID_BOOT0;
     return CtrlTransfer(DIR_Out, ELM_ReqSetPinStatus, mu8_Channel, &k_PinStatus, sizeof(k_PinStatus));
@@ -661,12 +664,17 @@ uint32_t Candlelight::IsBootPinEnabled(bool* pb_Enabled)
 
 // Write user data to flash memory. The firmware also stores the length of the data and returns the same data in ReadFlash()
 // A segment of the STM32G431 has 2 kB. Segment 0 is the last segment in the flash memory.
-// ATTENTION: u8_Buffer must point to RAM memory, otherwise ERROR_NOACCESS.
-uint32_t Candlelight::WriteFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t u16_DataLen)
+uint32_t Candlelight::WriteFlash(uint8_t u8_Segment, uint8_t* u8_Data, uint16_t u16_DataLen)
 {
     if (!mb_InitDone || mu8_Interface == FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
-
+    
+    // If the user passes an inmutable byte array it MUST be copied to a new writable buffer for WinUSB! 
+    uint8_t u8_Buffer[4096];
+    if (u16_DataLen > sizeof(u8_Buffer))
+        return ERR_TX_DATA_TOO_LONG;
+    
+    memcpy(u8_Buffer, u8_Data, u16_DataLen);
     return CtrlTransfer(DIR_Out, ELM_ReqWriteFlash, u8_Segment, u8_Buffer, u16_DataLen);
 }
 
@@ -684,17 +692,18 @@ uint32_t Candlelight::ReadFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t
 // --------------------------------------------------------------------
 
 // Send a SETUP request to the firmware
-// u32_DataSize must be the expected byte count to be received from the firmware or to be sent to the firmware.
+// u16_DataSize must be the expected byte count to be received from the firmware or to be sent to the firmware.
 // u8_Request must be eUsbRequest for interface 0 and eDfuRequest for interface 1.
 // This function can obtain the feedback from the ElmüSoft firmware, but works also with legacy firmware.
-// ATTENTION: p_Data must point to RAM memory, otherwise ERROR_NOACCESS.
+// ATTENTION: p_Data must be writable, otherwise ERROR_NOACCESS.
+// For IN transfers the received bytes from USB are written into the buffer that is passed in p_Data
 uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_t u16_Value, 
                                    void* p_Data, uint16_t u16_DataSize, 
                                    uint32_t* pu32_DataRead) // = NULL
 {
     if (pu32_DataRead) *pu32_DataRead = 0;
 
-    // A Control Transfer must not exceed 4 kB.
+    // A USB Control Transfer must not exceed 4 kB.
     if (u16_DataSize > 4096)
         return ERR_TX_DATA_TOO_LONG;
 
@@ -702,17 +711,17 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
     eSetupType e_Type = (mu8_Interface == FIRMW_UPDATE_INTERFACE) ? TYP_Class : TYP_Vendor;
 
     kSetup k_Setup;
-    k_Setup.bRequestType = RECIP_Interface | e_Type | e_Dir;
+    k_Setup.bRequestType = (uint8_t)RECIP_Interface | (uint8_t)e_Type | (uint8_t)e_Dir;
     k_Setup.bRequest     = u8_Request;
     k_Setup.wValue       = u16_Value;     // Channel / PinID for ELM_ReqGetPinStatus
-    k_Setup.wIndex       = mu8_Interface; // destination interface (0,2,3 = Candlelight, 1 = Firmware Update)
+    k_Setup.wIndex       = mu8_Interface; // Destination interface (0,2,3 = Candlelight, 1 = Firmware Update)
     k_Setup.wLength      = u16_DataSize; 
 
     // -------- Execute Request ------------
 
     uint32_t u32_CmdBytes;
-    // ATTENTION: returns ERROR_NOACCESS if p_Data is not in RAM !
-    uint32_t u32_CmdErr = mi_OsLibrary.ControlTransfer(&k_Setup, (uint8_t*)p_Data, &u32_CmdBytes);
+    // ATTENTION: returns ERROR_NOACCESS if p_Data is not writable !
+    uint32_t u32_CmdErr = mi_OsLibrary.ControlTransfer(&k_Setup, p_Data, &u32_CmdBytes);
 
     // The Firmware Update interface sends no feedback
     if (mu8_Interface != FIRMW_UPDATE_INTERFACE)
@@ -723,7 +732,7 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
         // In second stage of the SETUP request the firmware can NOT stall the endpoint which is the only way to alert an USB error.
         uint8_t u8_Feedback; // feedback is a one byte response
 
-        k_Setup.bRequestType = RECIP_Interface | TYP_Vendor | DIR_In;
+        k_Setup.bRequestType = (uint8_t)RECIP_Interface | (uint8_t)TYP_Vendor | (uint8_t)DIR_In;
         k_Setup.bRequest     = ELM_ReqGetLastError;
         k_Setup.wLength      = sizeof(u8_Feedback);
 
@@ -735,7 +744,8 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
         // --------- Process Errors ------------
 
         // me_LastError is only valid if u32_FbkErr == NO_ERROR
-        // if a legacy board is connected it will not understand request ELM_ReqGetLastError --> Endpoint stalled --> u32_FbkErr = ERROR_GEN_FAILURE
+        // if a legacy board is connected it will not understand request ELM_ReqGetLastError
+        // --> Endpoint stalled --> u32_FbkErr = ERROR_GEN_FAILURE
         if (u32_FbkErr == NO_ERROR && me_LastError != FBK_Success)
             return ERR_CODE_IN_FEEDBACK;
     }
@@ -743,15 +753,9 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
     if (u32_CmdErr)
         return u32_CmdErr;
 
-    if (e_Dir == DIR_In)
-    {
-        // When reading flash memory the firmware will return less bytes than requested, this is not an error.
-        if (u8_Request != ELM_ReqReadFlash)
-        {
-            if (u32_CmdBytes < u16_DataSize) 
-                return ERR_INVALID_RX_DATA; 
-        }
-    }
+    // When reading flash memory the firmware will return less bytes than requested, this is not an error.
+    if (e_Dir == DIR_In && u32_CmdBytes < u16_DataSize && u8_Request != ELM_ReqReadFlash) 
+        return ERR_INVALID_RX_DATA; 
 
     if (pu32_DataRead) *pu32_DataRead = u32_CmdBytes;
     return NO_ERROR;
@@ -784,11 +788,13 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
 
         if (s64_Stamp >= 0)
         {
+            // The bug has been fixed in firmware 14.09.2026 that timestamps were jumping 133µs backwards
+            if (ms64_LastMcuStamp > s64_Stamp)
+                OsLibrary::PrintConsole(YELLOW, cUtils::Format("Timestamp jumps %d us backwards. Update the firmware.\n", ms64_LastMcuStamp - s64_Stamp));
+
             // The 32 bit firmware timestamp will roll over after 1 hour, this must be detected here.
-            // ATTENTION: The MCU may send an Rx packet with a lower timestamp than the previous Rx packet.
-            // This may happen --> ignore small jumps back in time and detect only big jumps.
-            if (s64_Stamp         <  0x10000000 &&
-                ms64_LastMcuStamp >  0xF0000000)
+            if (s64_Stamp         < 0x050000000 &&
+                ms64_LastMcuStamp > 0x0A0000000)   // ignore small jumps
                 ms64_McuRollOver += 0x100000000;
             
             ms64_LastMcuStamp = s64_Stamp;
@@ -804,6 +810,11 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
 
     if (s64_Stamp < 0)
         return "No Timestamp    ";
+
+    if (ms64_TimestampStart == 0)
+        ms64_TimestampStart = s64_Stamp;
+
+    s64_Stamp -= ms64_TimestampStart;
 
     uint32_t u32_Micro = s64_Stamp % 1000;
     s64_Stamp /= 1000;
@@ -887,7 +898,7 @@ string Candlelight::FormatCanErrors(kErrorElmue* pk_Error, eErrorBusStatus* pe_B
         else                                  s_Mesg += "Bus Active, ";
     }
 
-    // all errors generated by the firmware are bigger problems (Level High)
+    // All errors generated by the firmware are bigger problems (Level High)
     if (e_App > 0) *pe_Level = LEVEL_High;
     if (e_App & APP_CanRxFail)      s_Mesg += "Rx Failed, ";
     if (e_App & APP_CanTxFail)      s_Mesg += "Tx Failed, ";
@@ -906,12 +917,12 @@ string Candlelight::FormatCanErrors(kErrorElmue* pk_Error, eErrorBusStatus* pe_B
     char c_Buf[50];
     if (pk_Error->err_data[6] > 0) 
     {
-        sprintf_s(c_Buf, "Tx Errors: %u, ", pk_Error->err_data[6]);
+        snprintf(c_Buf, sizeof(c_Buf), "Tx Errors: %u, ", pk_Error->err_data[6]);
         s_Mesg += c_Buf;
     }
     if (pk_Error->err_data[7] > 0) 
     {
-        sprintf_s(c_Buf, "Rx Errors: %u, ", pk_Error->err_data[7]);
+        snprintf(c_Buf, sizeof(c_Buf), "Rx Errors: %u, ", pk_Error->err_data[7]);
         s_Mesg += c_Buf;
     }
     return cUtils::TrimRight(s_Mesg, ", ");
@@ -925,17 +936,18 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
     {
         case ERR_DEVICE_IN_USE:     return "Access denied. Probably the device is already open elsewhere.";
         case ERR_INVALID_DEVICE:    return "The device is not a Candlelight adapter.";
-        case ERR_INVALID_FIRMWARE:  return "This demo supports only devices that have the CANable 2.5 firmware from ElmüSoft.";
-        case ERR_RX_FIFO_OVERFLOW:  return "USB Rx FIFO overflow. Polling is too slow."; // in the demo app the reason is the slow Windows console.
+        case ERR_INVALID_FIRMWARE:  return "This class supports only devices that have the CANable 2.5 firmware from ElmüSoft.";
+        case ERR_RX_FIFO_OVERFLOW:  return "USB Rx FIFO overflow. Polling is too slow."; // in the Windows demo app the reason is the slow Windows console.
         case ERR_CORRUPT_IN_DATA:   return "Corrupt USB IN data received.";
         case ERR_UPDATE_FIRMWARE:   return "Please upload the latest firmware to the device.";
         case ERR_TOO_MANY_ERRORS:   return "Too many errors. The CANable has a problem or was disconnected.";
         case ERR_TX_DATA_TOO_LONG:  return "The Tx data is too long.";
         case ERR_OPERATION_INVALID: return "Invalid operation.";
         case ERR_PARAM_INVALID:     return "Invalid parameter.";
-        case ERR_INVALID_RX_DATA:   return "Invalid Rx data was received from the device";
+        case ERR_INVALID_RX_DATA:   return "Invalid USB Rx data was received from the device";
         case ERR_TIMEOUT:           return "Timeout waiting for data";
-        case ERR_NO_DRIVER:         return "The driver is not installed correctly";
+        case ERR_NO_DRIVER:         return "The WinUSB driver is not installed correctly";
+        case ERR_UPDATE_LIBUSB:     return "Please install libusb version 1.0.31 or if not availble at least 1.0.30";
 
         case ERR_CODE_IN_FEEDBACK:
         {
@@ -946,13 +958,13 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
                 case FBK_AdapterMustBeOpen:   return "This command cannot be executed before opening the adapter.";
                 case FBK_AdapterMustBeClosed: return "This command cannot be executed after  opening the adapter.";
                 case FBK_ErrorFromHAL:        return "The HAL from ST Microelectronics has reported an error.";
-                case FBK_UnsupportedFeature:  return "The feature is not implemented or not supported by the board.";
+                case FBK_UnsupportedFeature:  return "The feature is not implemented or not supported by the adapter.";
                 case FBK_TxBufferFull:        return "Sending is not possible because the Tx buffer is full.";
                 case FBK_BusIsOff:            return "Sending is not possible because the processor is blocked in BusOff state.";
                 case FBK_NoTxInSilentMode:    return "Sending is not possible because the adapter is in bus monitoring mode.";
                 case FBK_BaudrateNotSet:      return "The baudrate has not been set.";
                 case FBK_OptBytesProgrFailed: return "Programming the Option Bytes failed.";
-                case FBK_ResetRequired:       return "Please reconnect the USB cable.";
+                case FBK_ResetRequired:       return "Please reconnect the USB cable or press the Reset button.";
                 case FBK_ParamOutOfRange:     return "A paramter is outside the valid range.";
                 default:       return cUtils::Format("Unknown feedback code %d received from the device.", me_LastError);
             }
@@ -960,7 +972,7 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
     }
 
     // Get Windows API or libusb error message
-    return OsLibrary::GetErrorMessage(u32_Error);
+    return mi_OsLibrary.GetErrorMessage(u32_Error);
 }
 
 
@@ -981,17 +993,17 @@ uint32_t Candlelight::EnterDfuMode()
     if (!mb_InitDone || mu8_Interface != FIRMW_UPDATE_INTERFACE)
         return ERR_OPERATION_INVALID;
 
-    // The legacy firmware would have entered immediately in DFU mode and CtrlTransfer() would have returned error 31 here.
+    // The legacy firmware would have entered immediately in DFU mode and CtrlTransfer() would have returned ERROR_GEN_FAILURE.
     // But the CANable 2.5 firmware responds correctly to all SETUP requests because it makes a delay of 300 ms before entering DFU mode.
     uint32_t u32_Error = CtrlTransfer(DIR_Out, DFU_RequDetach, 0, NULL, 0);
     if (u32_Error)
         return u32_Error;
 
     kDfuStatus k_Status;
-    // returned Error must be ignored here because legacy devices enter boot mode immediately and CtrlTransfer will return error 31.
+    // returned Error must be ignored here because legacy devices enter boot mode immediately and CtrlTransfer will return ERROR_GEN_FAILURE.
     if (CtrlTransfer(DIR_In, DFU_RequGetStatus, 0, &k_Status, sizeof(k_Status)) == NO_ERROR)
     {
-        // Here k_Status.State is either DfuSte_AppIdle or DfuSte_AppDetach or DfuSte_Error.
+        // Here k_Status.State is either DfuState_AppIdle or DfuState_AppDetach or DfuState_Error.
 
         // returning AppDetach has been added by ElmüSoft to the firmware and means that the user must reconnect the USB cable.
         // This happens only if the pin BOOT0 was disabled before calling EnterDfuMode()

@@ -52,7 +52,7 @@ struct kDetail
     {
         string s_Out = ms_Name;
         s_Out += ":";
-        s_Out.append(max(1, s32_ColumnWidth - s_Out.length()), ' ');
+        s_Out.append(max(1, s32_ColumnWidth - (int)s_Out.length()), ' ');
         s_Out += ms_Value;
         return s_Out;
     }
@@ -92,9 +92,10 @@ public:
     uint32_t   ReadFlash (uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t u16_BufSize, uint32_t* pu32_DataRead);
     uint32_t   WriteFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t u16_DataLen);
     // ------------------------------------
+    inline uint32_t        EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_Devices) 
+                                            { return  mi_OsLibrary.EnumDevices(b_GetCandlelight, pi_Devices); }
+    inline kDevInfo        GetDeviceInfo()  { return *mi_OsLibrary.GetDevInfo(); } // return a copy of the struct. mpk_Info may be NULL here!
     inline vector<kDetail> GetDetails()     { return  mi_Details; }
-    inline kDevInfo        GetDeviceInfo()  { return *mi_OsLibrary.DevInfo(); } // return a copy of the struct. mpk_Info may be NULL here!
-    inline int64_t         GetOsTimestamp() { return  mi_OsLibrary.GetTimestamp(); }
 
 private:
     uint32_t   CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_t u16_Value, void* p_Data, uint16_t u16_DataSize, uint32_t* pu32_DataRead = NULL);
@@ -119,6 +120,7 @@ private:
     vector<kDetail>          mi_Details;
     uint8_t                  mu8_Channel;
     bool                     mb_McuTimestamp;
+    int64_t                  ms64_TimestampStart;
     kUsbInPacket             mk_UsbInPacket;           // the last received blob or single frame
 };
 

@@ -132,6 +132,7 @@ public class Candlelight : IDisposable
         Extended = 0x80000000, // 29 bit CAN ID used
         RTR      = 0x40000000, // Remote frame
         Error    = 0x20000000, // 8 Byte packet with flags in can_id and in bytes 0...4 (see can_parse_error_status)
+        // ------------------
         MASK_11  = 0x000007FF, // Mask for standard 11 bit ID
         MASK_29  = 0x1FFFFFFF, // Mask for extended 29 bit ID
     };
@@ -256,13 +257,13 @@ public class Candlelight : IDisposable
 
     #region enums ElmüSoft protocol
 
-    // Detail information about the board / firmware
+    // Detail information about the adapter / firmware
     // added in firmware from february 2026
     [FlagsAttribute]
     public enum eBoardFlags : uint
     {
-        Quartz_In_Use  = 0x00000001, // the board has a quartz and the firmware is using it
-        USB_HighSpeed  = 0x00000002, // the board supports ultra fast USB transfer (480 MBit/s)
+        Quartz_In_Use  = 0x00000001, // the adapter has a quartz and the firmware is using it
+        USB_HighSpeed  = 0x00000002, // the adapter supports ultra fast USB transfer (480 MBit/s)
     }
 
     public enum eFeedback
@@ -275,7 +276,7 @@ public class Candlelight : IDisposable
         Adapter_must_be_open,   // this command must be executed after  opening the adapter
         Adapter_must_be_closed, // this command must be executed before opening the adapter
         Error_from_HAL,
-        Unsupported_feature,    // The feature is not implemented or not supported by the board
+        Unsupported_feature,    // The feature is not implemented or not supported by the adapter
         Tx_buffer_overflow,
         Bus_is_off,             // the adapter is closed or in Silent Mode or Bus is Off
         No_Tx_in_silent_mode,
@@ -344,12 +345,12 @@ public class Candlelight : IDisposable
     [FlagsAttribute]
     enum eErrorAppFlags : byte
     {
-        None             = 0,
-        Rx_Failed        = 0x01,
-        Tx_Failed        = 0x02,
-        CAN_Tx_overflow  = 0x04,
-        USB_IN_overflow  = 0x08,
-        Tx_Timeout       = 0x10,
+        None             = 0,    // no error
+        Rx_Failed        = 0x01, // CAN packets arrive faster than the firmware can process them
+        Tx_Failed        = 0x02, // trying to send while in silent mode, while bus off or adaper not open or invalid Tx packet or HAL error
+        CAN_Tx_overflow  = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
+        USB_IN_overflow  = 0x08, // a USB IN packet could not be sent because CAN traffic is faster than USB transfer.
+        Tx_Timeout       = 0x10, // a packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
         // max 8 bits
     }
 
@@ -847,13 +848,25 @@ public class Candlelight : IDisposable
 
     #endregion
 
+    #region class AbortException
+
+    public class AbortException : Exception
+    {
+        public AbortException(String s_Message)
+            : base(s_Message)
+        {
+        }
+    }
+
+    #endregion
+
     // must be equal to FIRMW_UPDATE_INTERFACE in usb_class.h in the firmware
     public const Byte FIRMW_UPDATE_INTERFACE = 1;
 
     // Adapt this to the latest available CANable 2.5 firmware version.
     // It shows an error to upload the latest firmware to the adapter.
     // The version number is BCD encoded (0x251218 = 18.dec.2025)
-    const int MIN_FIRMWARE = 0x260803;
+    const int MIN_FIRMWARE = 0x260914;
 
     // must be equal to MAX_BLOB_SIZE in candlelight_def.h in firmware
     const int MAX_BLOB_SIZE = 2048;
@@ -877,6 +890,7 @@ public class Candlelight : IDisposable
     bool             mb_McuTimestamp;
     Int64            ms64_LastMcuStamp;
     Int64            ms64_McuRollOver;
+    Int64            ms64_TimestampStart;
     int              ms32_BlobOffset;   // current read position in kRxFifo.mu8_Buffer
     int              ms32_BlobFrames;   // count of remaining frames in mk_BlobData to be read
     cUsbInPacket     mi_UsbInPacket;    // the last received blob or single frame
@@ -934,17 +948,18 @@ public class Candlelight : IDisposable
         if (mi_WinUSB != null)
             throw new Exception("The Candlelight adapter is already open");
 
-        mk_Info           = new kDevInfo();
-        mi_Details        = new List<cDetail>();
-        mi_TxOverflow     = new Stopwatch();
-        mb_InitDone       = false;
-        mb_BaudFDSet      = false;
-        mb_Started        = false;
-        mb_EnableTxEcho   = true;
-        ms64_LastMcuStamp = 0;
-        ms64_McuRollOver  = 0;
-        ms32_BlobOffset   = 0;
-        ms32_BlobFrames   = 0;
+        mk_Info             = new kDevInfo();
+        mi_Details          = new List<cDetail>();
+        mi_TxOverflow       = new Stopwatch();
+        mb_InitDone         = false;
+        mb_BaudFDSet        = false;
+        mb_Started          = false;
+        mb_EnableTxEcho     = true;
+        ms64_LastMcuStamp   = 0;
+        ms64_McuRollOver    = 0;
+        ms64_TimestampStart = 0;
+        ms32_BlobOffset     = 0;
+        ms32_BlobFrames     = 0;
 
         // ------------- WinUSB -----------------
 
@@ -981,7 +996,7 @@ public class Candlelight : IDisposable
         // --------------- Channel ------------------
 
         // Interface 0 -> Channel 0
-        // Interface 1 -> DFU
+        // Interface 1 -> Firmware Update (execution never comes here)
         // Interface 2 -> Channel 1
         // Interface 3 -> Channel 2
         mu8_Channel = mi_WinUSB.Interface.Number; 
@@ -1096,7 +1111,7 @@ public class Candlelight : IDisposable
     /// <summary>
     /// STEP 4)
     /// Please read "CiA - Recommendations for CAN Bit Timing.pdf" in subfolder Documentation
-    /// returns the formatted baudrate and samplepoint in s_Display
+    /// returns display string with formatted baudrate and samplepoint 
     /// </summary>
     public void SetBitrate(bool b_FD, int s32_BRP, int s32_Seg1, int s32_Seg2, out String s_Display)
     {
@@ -1104,7 +1119,7 @@ public class Candlelight : IDisposable
             throw new Exception("The device must be opened for the Candlelight interface.");
 
         if (b_FD && !mk_Info.mb_SupportsFD)
-            throw new Exception("The board does not support CAN FD.");
+            throw new Exception("The adapter does not support CAN FD.");
     
         // NOTE:
         // It is not necessary to check if BRP, Seg1, Seg2 are in the allowed range defined in kTimeMinMax in the Capabilities.
@@ -1121,6 +1136,8 @@ public class Candlelight : IDisposable
 
         eUsbRequest e_Requ = b_FD ? eUsbRequest.SetBitTimingFD : eUsbRequest.SetBitTiming;
         CtrlTransfer((Byte)e_Requ, eDirection.Out, mu8_Channel, k_Timing);
+        
+        // --- Format display string ----
 
         int s32_TotTQ  = 1 + s32_Seg1 + s32_Seg2;
         int s32_Baud   = mk_Info.mk_Capability.ms32_CanClock / s32_BRP / s32_TotTQ;
@@ -1226,11 +1243,12 @@ public class Candlelight : IDisposable
         // IMPORTANT: Set flag ProtocolElmue always to make sure that the device can send debug messages.
         // Should there be a legacy device connected, it will ignore all flags sent with GS_ModeReset
         CtrlTransfer((Byte)eUsbRequest.SetDeviceMode, eDirection.Out, mu8_Channel, 
-                        new kDeviceMode(eDevMode.Reset, eDeviceFlags.ProtocolElmue));
+                      new kDeviceMode(eDevMode.Reset, eDeviceFlags.ProtocolElmue));
     }
 
     /// <summary>
-    /// Flashes the Rx + Tx LEDs on the board
+    /// Flashes the Rx + Tx LEDs on the adapter
+    /// NOTE: When you open the adapter with Start() the firmware stops LED flashing
     /// </summary>
     public void Identify(bool b_Blink)
     {
@@ -1371,7 +1389,7 @@ public class Candlelight : IDisposable
             if (s32_CmdError == (int)eApiError.GEN_FAILURE) // this means mostly STALL
                 throw new Exception("The device has refused to execute command " + s_Request);
             else
-                Utils.ThrowApiError(s32_CmdError, "Error {0} executing Candlelight command: {1}");
+                mi_WinUSB.ThrowLastError("Error executing Candlelight command " + s_Request, s32_CmdError);
         }
 
         if (e_Dir == eDirection.In)
@@ -1397,6 +1415,7 @@ public class Candlelight : IDisposable
     /// <summary>
     /// Send multiple CAN packets in one blob over USB to the firmware.
     /// This optimizes the USB speed to the maximum.
+    /// If you get an AbortException the device is dead --> abort and close the device and show the message to the user.
     /// </summary>
     public void SendPacketBlob(CanPacket[] i_Packets, out Int64 s64_WinTimestamp)
     {
@@ -1426,7 +1445,7 @@ public class Candlelight : IDisposable
             throw new Exception("Blob data exceeds MAX_BLOB_SIZE");
 
         // Get timestamp immediately before sending the packet
-        s64_WinTimestamp = Utils.GetWinTimestamp();
+        s64_WinTimestamp = Utils.GetOsTimestamp();
 
         mi_PipeOut.Send(i_Transmit.ToArray());
     }
@@ -1434,7 +1453,7 @@ public class Candlelight : IDisposable
     /// <summary>
     /// CAN FD packets (mb_FDF) can only be sent if a data baudrate has been set before.
     /// For remote frames (mb_RTR = true) the first byte may contain the value for the DLC field.
-    /// If you get an IOException the device is dead --> abort and close the device and show the message to the user.
+    /// If you get an AbortException the device is dead --> abort and close the device and show the message to the user.
     /// </summary>
     public void SendPacket(CanPacket i_Packet, out Int64 s64_WinTimestamp)
     {
@@ -1444,7 +1463,7 @@ public class Candlelight : IDisposable
         Byte[] u8_Transmit = TxPacketToTxBytes(i_Packet);
 
         // Get timestamp immediately before sending the packet
-        s64_WinTimestamp = Utils.GetWinTimestamp();
+        s64_WinTimestamp = Utils.GetOsTimestamp();
 
         mi_PipeOut.Send(u8_Transmit);
     }
@@ -1458,7 +1477,7 @@ public class Candlelight : IDisposable
         const Byte PAD_BYTE = 0;
 
         if (mi_PipeIn.PipeErrors > 30 || mi_PipeOut.PipeErrors > 30)
-            throw new IOException("Too many errors. The CANable has a problem or has been disconnected."); // --> exit
+            throw new AbortException("Too many errors. The CANable has a problem or has been disconnected."); // --> exit
 
         int s32_MaxData = mb_BaudFDSet ? 64 : 8;
         if (i_Packet.mi_Data.Count > s32_MaxData)
@@ -1530,20 +1549,18 @@ public class Candlelight : IDisposable
     /// <summary>
     /// Receive a Rx packet, a Tx echo packet, an error frame, a debug message, a busload packet, or .......
     /// returns null on timeout 
-    /// If you get an IOException the device is dead --> abort and close the device and show the message to the user.
+    /// If you get an AbortException the device is dead --> abort and close the device and show the message to the user.
     /// </summary>
     public cHeader ReceiveData(int s32_Timeout, out Int64 s64_RxTimestamp, out bool b_Blob)
     {
         b_Blob = false;
-
-        // This timestamp is only used in case that an error is returned
-        s64_RxTimestamp = Utils.GetWinTimestamp();
+        s64_RxTimestamp = Utils.GetOsTimestamp();
 
         if (!mb_InitDone || !mb_Started)
             throw new Exception("The device must be open and started.");
 
         if (mi_PipeIn.PipeErrors > 30 || mi_PipeOut.PipeErrors > 30)
-            throw new IOException("Too many errors. The CANable has a problem or has been disconnected."); // --> exit
+            throw new AbortException("Too many errors. The CANable has a problem or has been disconnected."); // --> exit
 
         // Get frames form the IN pipe if there is no pending data in mk_UsbInPacket
         if (ms32_BlobFrames <= 0)
@@ -1638,7 +1655,7 @@ public class Candlelight : IDisposable
     /// Formats a timestamp with 1 µs precision
     /// returns "HH:MM:SS.mmm.µµµ"
     /// i_Header may contain a timestamp if GS_DevFlagTimestamp is set --> mb_McuTimestamp = true
-    /// otherwise use s64_WinTimestamp which comes from GetWinTimestamp() at packet reception
+    /// otherwise use s64_WinTimestamp which comes from GetOsTimestamp() at packet reception
     /// </summary>
     public String FormatTimestamp(cHeader i_Header, Int64 s64_WinTimestamp)
     {
@@ -1662,11 +1679,16 @@ public class Candlelight : IDisposable
 
             if (s64_Stamp >= 0)
             {
+                // The bug has been fixed in firmware 14.09.2026 that timestamps were jumping 133µs backwards
+                if (ms64_LastMcuStamp > s64_Stamp)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.Write("Timestamp jumps {0} µs backwards. Update the firmware.\n", ms64_LastMcuStamp - s64_Stamp);
+                }
+
                 // The 32 bit firmware timestamp will roll over after 1 hour, this must be detected here.
-                // ATTENTION: The MCU may send an Rx packet with a lower timestamp than the previous Rx packet.
-                // This is very strange, but it may happen --> ignore small jumps back and detect only big jumps.
-                if (s64_Stamp         <  0x10000000 &&
-                    ms64_LastMcuStamp >  0xF0000000)
+                if (s64_Stamp         < 0x050000000 &&
+                    ms64_LastMcuStamp > 0x0A0000000)   // ignore small jumps
                     ms64_McuRollOver += 0x100000000;
             
                 ms64_LastMcuStamp = s64_Stamp;
@@ -1682,6 +1704,11 @@ public class Candlelight : IDisposable
 
         if (s64_Stamp < 0)
             return "No Timestamp    ";
+
+        if (ms64_TimestampStart == 0)
+            ms64_TimestampStart = s64_Stamp;
+
+        s64_Stamp -= ms64_TimestampStart;
 
         int s32_Micro = (int)(s64_Stamp % 1000);
         s64_Stamp    /= 1000;
@@ -1810,7 +1837,7 @@ public class Candlelight : IDisposable
         // returning AppDetach has been added by ElmüSoft to the firmware and means that the user must reconnect the USB cable.
         // This happens only if the pin BOOT0 was disabled before calling EnterDfuMode()
         if (k_Status.me_State == eDfuState.AppDetach)
-            throw new Exception("Please reconnect the USB cable");
+            throw new Exception("Please reconnect the USB cable or press the Reset button.");
 
         // Since firmware 17.May.2026 the feedback code is transferred in mu8_StringIdx.
         // Feedback = UnsupportedFeature, AdapterMustBeClosed, OptBytesProgrFailed

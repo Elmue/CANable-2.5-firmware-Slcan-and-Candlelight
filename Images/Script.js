@@ -7,7 +7,7 @@ function ShowFullSize(Link, DivLeft, ImgFile)
     if (DivLeft < 20)
         DivLeft = 20;
     
-    if (Link == LastLink)
+    if (Link != null && Link == LastLink)
     {
         HideFullSize(); // sets LastLink = null
         return;
@@ -32,7 +32,9 @@ function ShowFullSize(Link, DivLeft, ImgFile)
     Scr.scrollLeft = 0;
     Scr.scrollTop  = 0;
 
-    Link.innerHTML = "Hide Full Size";
+    if (Link != null)
+        Link.innerHTML = "Hide Full Size";
+
     LastLink = Link;
     LastDiv  = Div;
 
@@ -66,11 +68,14 @@ function ShowFullSize(Link, DivLeft, ImgFile)
 }
 function HideFullSize()
 {
+    if (LastDiv != null)
+    {
+        LastDiv.style.display = "none";        
+        LastDiv  = null;
+    }
     if (LastLink != null)
     {
-        LastDiv.style.display = "none";
         LastLink.innerHTML = "Show Full Size";
-        LastDiv  = null;
         LastLink = null;
     }
     ShowMenu(false);
