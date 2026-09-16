@@ -161,19 +161,19 @@
         <td>All bugs have been fixed. <nobr>See <a href="#Bugfixes">Bugfixes</a></nobr></td>
     </tr>
     <tr>
-        <td>Driver</td>
+        <td>USB Driver</td>
         <td>Slcan: No problem<br>Candlelight: The legacy firmware is so buggy that Windows cannot install the WinUSB driver.</td>
         <td>The WinUSB driver is installed automatically in less than a second. <nobr>See <a href="#Ms_OS_Descriptor">MS OS Descriptor</a></nobr></td>
     </tr>
     <tr>
-        <td>Error Handling</td>
-        <td>Candlelight: Very basic.<br>Slcan: Not existent</td>
+        <td>CAN Bus Errors</td>
+        <td>Slcan: Errors are not reported<br>Candlelight: Very basic error reports</td>
         <td>The firmware sends detailed error and status messages to the computer. <nobr>See <a href="#CAN_Errors">CAN bus Errors</a></nobr></td>
     </tr>
     <tr>
-        <td>Feedback</td>
+        <td>Command Feedback</td>
         <td>Not implemented.<br>You will never know why the adapter does not work.</td>
-        <td>If the firmware receives an invalid command it responds with a feedback error code. <nobr>See <a href="#Slcan_Responses">Feedback Codes</a></nobr></td>
+        <td>If the firmware receives an invalid command (e.g. unsupported baurate) it responds with a feedback error code. <nobr>See <a href="#Slcan_Responses">Feedback Codes</a></nobr></td>
     </tr>
     <tr>
         <td>Tx Echo</td>
@@ -183,11 +183,11 @@
     <tr>
         <td>USB Transfer Speed</td>
         <td>Candlelight uses the slow and misdesigned Geschwister Schneider protocol that sends always <b>80 bytes</b> over USB for any CAN FD packet no matter how many data bytes it has.</td>
-        <td>The ElmüSoft Candlelight protocol adds only a <b>2 byte header</b> to transfer a CAN packet as fast as possible over USB. Additionally multiple CAN packets can be sent without USB overhead in one <b>USB blob</b>. <nobr>See <a href="#Speed_Comparison">Speed Comparison</a></nobr></td>
+        <td>The ElmüSoft Candlelight protocol adds only a <b>2 byte header</b> to transfer a CAN packet as fast as possible over USB. Additionally multiple CAN packets are sent without USB overhead in one <b>USB blob</b>. ElmüSoft Candlelight is <span class="Error"> 3 times faster</span> than Geschwister Schneider. <nobr>See <a href="#Speed_Comparison">Speed Comparison</a></nobr></td>
     </tr>
     <tr>
         <td>Hardware CAN Filter</td>
-        <td>Not implemented.<br>All received CAN Packets are sent to the computer.</td>
+        <td>Not implemented.<br>All received CAN packets are sent to the computer.</td>
         <td>The user can define in up to 8 CAN filters which packets are sent to the computer. <nobr>See <a href="#Filter">Host Filter</a></nobr></td>
     </tr>
     <tr>
@@ -243,7 +243,7 @@
     <tr>
         <td>Sourcecode</td>
         <td>Sloppy code without comments.</td>
-        <td>You get very clean <a href="#Source_Code">Firmware Sourcecode</a> and three <a href="#Demo_Application">ready-to-use classes</a> for host software in C++, C# and Python for Windows and Linux with plenty detailed comments.</td>
+        <td>You get very clean <a href="#Source_Code">Firmware Sourcecode</a> and three <a href="#Demo_Application">ready-to-use classes</a> for host software in C++, C# and Python for Windows and Linux with plenty of detailed comments.</td>
     </tr>
     </table>
 </div>
@@ -516,6 +516,8 @@
 
 <a name="Speed_Comparison"></a>
 <h3>USB Data Transfer Speed</h3>
+<div class="DarkRed"><b>1.) Protocol Overhead:</b></div>
+<p>
 <div>The following table compares the efficiency of different firmware versions receiving a CAN FD packet.</div>
 <div>The payload in this example consists of a 29 bit CAN ID + 16 data bytes + flags = 21 byte.</div>
 <p>
@@ -527,24 +529,39 @@
 <div class="TableContainer">
     <table class="DataTable">
     <tr><th>Firmware</th><th>Payload</th><th>Transferred over USB</th><th>Efficiency</th></tr>
-    <tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
-    <tr><td>ElmüSoft Slcan 2.5</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td>21 / 44 = <span style="color:#CC8800"><b>48 %</b></span></td></tr>
-    <tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td align="right"><span style="color:#FF0000"><b>0 %</b></span></td></tr>
-    <tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td>21 / 23 = <span style="color:#00AA00"><b>91 %</b></span></td></tr>
+    <tr><td>Legacy Official Slcan</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td><span style="color:#CC8800"><b>48 %</b></span> (21 / 44)</td></tr>
+    <tr><td>ElmüSoft Slcan 2.5</td><td>21 byte</td><td>Payload x 2 + 2 = 44 byte</td><td><span style="color:#CC8800"><b>48 %</b></span> (21 / 44)</td></tr>
+    <tr><td>Legacy Official Candlelight</td><td>21 byte</td><td>CAN FD not implemented</td><td><span style="color:#FF0000"><b>0 %</b></span></td></tr>
+    <tr><td>ElmüSoft Candlelight 2.5</td><td>21 byte</td><td>Payload + 2 = 23 byte</td><td><span style="color:#00AA00"><b>91 %</b></span> (21 / 23)</td></tr>
     </table>
 </div>
-<div>Additionally the Candlelight 2.5 protocol supports packing multiple frames into one USB packet.</div>
+<div>As you see the ElmüSoft Candlelight protocol has been highly optimized for the highest USB throughput.</div>
+<p>
+<div class="DarkRed"><b>2.) USB Overhead:</b></div>
 <table class="TblImage">
     <tr><td align="center"><b>USB Full Speed Transfer</b></td></tr>
     <tr><td><img src="Images/USB FS Oscilloscope.png" alt="USB Full Speed Oscilloscope Capture" width="252" height="100"></td></tr>
     <tr><td class="Center"><span class="Link" onClick="ShowFullSize(this, 0, 'Images/USB FS Oscilloscope.png')">Show Full Size</span></td></tr>
 </table>
 <div>This oscilloscope capture and analysis has been created with the open source <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer" target="_blank">Oszi Waveform Analyzer</a>.</div>
-<div>To transfer 4 payload bytes over USB an overhead of SYNC, DATA1, CRC, EOP and an ACK packet is requried.</div>
-<div>The ElmüSoft protocol improves speed by sending as much as possible frames in one <b>BLOB</b> (Binary Large Object).</div>
-<div>The same USB protocol overhead is required if 4 bytes are sent or 64 bytes, which is the maximum for USB Full Speed.</div>
-<div>The new firmware can pack up to 250 frames with up to 2048 byte into one USB blob.</div>
+<div>USB requires sending an overhead of SYNC, DATA1, CRC, EOP, an ACK packet and 2 x inter-packet gap.</div>
+<div>This USB overhead must always be sent, no matter how many payload data bytes the USB packet transfers.</div>
+<p>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>USB Payload</th><th>USB Overhead</th><th>Transferred over USB</th><th>Efficiency</th></tr>
+    <tr><td>1 byte&nbsp; =&nbsp;&nbsp; 8 bit</td><td>60 bits</td><td>68 bits (8 + 60)</td><td><b>11%</b> (8 / 68)</td></tr>
+    <tr><td>4 bytes = 32 bit</td><td>60 bits</td><td>92 bits (32 + 60)</td><td><b>34%</b> (32 / 92)</td></tr>
+    <tr><td>8 bytes = 64 bit</td><td>60 bits</td><td>124 bits (64 + 60)</td><td><b>51%</b> (64 / 124)</td></tr>
+    </table>
+</div>
+<p>
+<div>The larger the payload, the better becomes the USB troughput.</div>
+<div>The ElmüSoft protocol improves USB speed by sending as much as possible frames in one <b>BLOB</b> (Binary Large Object).</div>
+<div>The new Candlelight protocol can pack up to 250 frames with up to 2048 byte into one USB blob.</div>
 <div>Blobs are only sent at very high CAN speeds if there are multiple frames waiting in the USB FIFO.</div>
+<p>
+<div>Speed Tests show that the ElmüSoft Candlelight protocol transfers <span class="Error">3 times more CAN traffic</span> than legacy Candlelight.</div>
 
 
 <a name="Legacy_Installation"></a>
