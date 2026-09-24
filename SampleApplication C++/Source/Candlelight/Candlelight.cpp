@@ -44,7 +44,7 @@ using namespace CANable;
 // must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
 #define CAN_QUEUE_SIZE    64
 
-// This class implements the new CANable 2.5 ElmüSoft protocol.
+// This class implements the new CANable 2.5 ElmÃ¼Soft protocol.
 Candlelight::Candlelight()
 {
     mb_InitDone = false;
@@ -104,7 +104,7 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     mi_Details.push_back(kDetail("Device Path",        pk_Device->ms_DevicePath));
     mi_Details.push_back(kDetail("USB Vendor",         cUtils::Format("\"%s\"", mpk_Info->ms_Vendor   .c_str())));   
     mi_Details.push_back(kDetail("USB Product",        cUtils::Format("\"%s\"", mpk_Info->ms_Product  .c_str())));  
-    mi_Details.push_back(kDetail("USB Serial  Nº",     cUtils::Format("\"%s\"", mpk_Info->ms_Serial   .c_str())));   
+    mi_Details.push_back(kDetail("USB Serial  NÂº",     cUtils::Format("\"%s\"", mpk_Info->ms_Serial   .c_str())));   
     mi_Details.push_back(kDetail("USB Interface Name", cUtils::Format("\"%s\"", mpk_Info->ms_Interface.c_str())));
     mi_Details.push_back(kDetail("USB Vendor  ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idVendor)));
     mi_Details.push_back(kDetail("USB Product ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idProduct)));
@@ -184,12 +184,12 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     if (!mpk_Info->mb_IsElmueSoft)
     {
         mi_Details.push_back(kDetail("CAN Clock", cUtils::Format("%u MHz", mpk_Info->mk_Capability.fclk_can / 1000000)));  
-        return ERR_INVALID_FIRMWARE; // this class requires the new ElmüSoft firmware
+        return ERR_INVALID_FIRMWARE; // this class requires the new ElmÃ¼Soft firmware
     }
 
-    // --------------- Here comes only ElmüSoft firmware ---------------
+    // --------------- Here comes only ElmÃ¼Soft firmware ---------------
 
-    // ELM_ReqGetBoardInfo requires ElmüSoft firmware
+    // ELM_ReqGetBoardInfo requires ElmÃ¼Soft firmware
     if ((u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetBoardInfo, mu8_Channel, &mpk_Info->mk_BoardInfo, sizeof(kBoardInfo))))
         return u32_Error;
 
@@ -301,7 +301,7 @@ uint32_t Candlelight::AddHostFilter(bool b_29bit, uint32_t u32_Filter, uint32_t 
 
 // STEP 5)  (optional)
 // set / clear one of 20 bridge filters
-// b_Enable = false and Index == 0x13  --> clear only bridge filter Nº 0x13
+// b_Enable = false and Index == 0x13  --> clear only bridge filter NÂº 0x13
 // b_Enable = false and Index == 0xFF  --> clear all bridge filters
 // b_Enable = true and b_Block = true  --> set block filter
 // b_Enable = true and b_Block = false --> set pass filter
@@ -694,7 +694,7 @@ uint32_t Candlelight::ReadFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t
 // Send a SETUP request to the firmware
 // u16_DataSize must be the expected byte count to be received from the firmware or to be sent to the firmware.
 // u8_Request must be eUsbRequest for interface 0 and eDfuRequest for interface 1.
-// This function can obtain the feedback from the ElmüSoft firmware, but works also with legacy firmware.
+// This function can obtain the feedback from the ElmÃ¼Soft firmware, but works also with legacy firmware.
 // ATTENTION: p_Data must be writable, otherwise ERROR_NOACCESS.
 // For IN transfers the received bytes from USB are written into the buffer that is passed in p_Data
 uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_t u16_Value, 
@@ -721,7 +721,7 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
 
     uint32_t u32_CmdBytes;
     // ATTENTION: returns ERROR_NOACCESS if p_Data is not writable !
-    uint32_t u32_CmdErr = mi_OsLibrary.ControlTransfer(&k_Setup, p_Data, &u32_CmdBytes);
+    uint32_t u32_CmdErr = mi_OsLibrary.ControlTransfer(&k_Setup, (uint8_t *)p_Data, &u32_CmdBytes);
 
     // The Firmware Update interface sends no feedback
     if (mu8_Interface != FIRMW_UPDATE_INTERFACE)
@@ -763,8 +763,8 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
 
 // =======================================================================================================================
 
-// Formats a timestamp with 1 µs precision
-// returns "HH:MM:SS.mmm.µµµ"
+// Formats a timestamp with 1 Âµs precision
+// returns "HH:MM:SS.mmm.ÂµÂµÂµ"
 // pk_Header may contain a timestamp if GS_DevFlagTimestamp is set --> mb_McuTimestamp = true
 // otherwise use s64_OsTimestamp which comes from GetOsTimestamp() at packet reception
 string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
@@ -788,7 +788,7 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
 
         if (s64_Stamp >= 0)
         {
-            // The bug has been fixed in firmware 14.09.2026 that timestamps were jumping 133µs backwards
+            // The bug has been fixed in firmware 14.09.2026 that timestamps were jumping 133Âµs backwards
             if (ms64_LastMcuStamp > s64_Stamp)
                 OsLibrary::PrintConsole(YELLOW, cUtils::Format("Timestamp jumps %d us backwards. Update the firmware.\n", ms64_LastMcuStamp - s64_Stamp));
 
@@ -936,7 +936,7 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
     {
         case ERR_DEVICE_IN_USE:     return "Access denied. Probably the device is already open elsewhere.";
         case ERR_INVALID_DEVICE:    return "The device is not a Candlelight adapter.";
-        case ERR_INVALID_FIRMWARE:  return "This class supports only devices that have the CANable 2.5 firmware from ElmüSoft.";
+        case ERR_INVALID_FIRMWARE:  return "This class supports only devices that have the CANable 2.5 firmware from ElmÃ¼Soft.";
         case ERR_RX_FIFO_OVERFLOW:  return "USB Rx FIFO overflow. Polling is too slow."; // in the Windows demo app the reason is the slow Windows console.
         case ERR_CORRUPT_IN_DATA:   return "Corrupt USB IN data received.";
         case ERR_UPDATE_FIRMWARE:   return "Please upload the latest firmware to the device.";
@@ -981,7 +981,7 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
 // Switch the Candlelight into firmware update mode.
 // This function requires that you have called EnumDevices(Interface = 1) before to get access to interface 1.
 // IMPORTANT:
-// This will ONLY work if the Candlelight has the new CANable 2.5 firmware from ElmüSoft.
+// This will ONLY work if the Candlelight has the new CANable 2.5 firmware from ElmÃ¼Soft.
 // ALL legacy Candlelights have a sloppy firmware that does not respond to the Microsoft OS descriptor request for interface 1.
 // The consequence is that Windows cannot install the WinUSB driver for the Firmware Update interface and EnumDevices() will not find the device.
 // ATTENTION:
@@ -1005,7 +1005,7 @@ uint32_t Candlelight::EnterDfuMode()
     {
         // Here k_Status.State is either DfuState_AppIdle or DfuState_AppDetach or DfuState_Error.
 
-        // returning AppDetach has been added by ElmüSoft to the firmware and means that the user must reconnect the USB cable.
+        // returning AppDetach has been added by ElmÃ¼Soft to the firmware and means that the user must reconnect the USB cable.
         // This happens only if the pin BOOT0 was disabled before calling EnterDfuMode()
         if (k_Status.State == DfuState_AppDetach)
         {
