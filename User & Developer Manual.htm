@@ -183,12 +183,12 @@
     <tr>
         <td>USB Transfer Speed</td>
         <td>Candlelight uses the slow and misdesigned Geschwister Schneider protocol that sends always <b>80 bytes</b> over USB for any CAN FD packet no matter how many data bytes it has.</td>
-        <td>The ElmüSoft Candlelight protocol adds only a <b>2 byte header</b> to transfer a CAN packet as fast as possible over USB. Additionally multiple CAN packets are sent without USB overhead in one <b>USB blob</b>. ElmüSoft Candlelight is <span class="Error"> 3 times faster</span> than Geschwister Schneider. <nobr>See <a href="#Speed_Comparison">Speed Comparison</a></nobr></td>
+        <td>The ElmüSoft Candlelight protocol adds only a <b>2 byte header</b> to transfer a CAN packet as fast as possible over USB. Additionally multiple CAN packets are sent without USB overhead in one <b>USB blob</b>. ElmüSoft Candlelight is <span class="Error"> 3 times faster</span> than gs_usb. <nobr>See <a href="#Speed_Comparison">Speed Comparison</a></nobr></td>
     </tr>
     <tr>
         <td>Hardware CAN Filter</td>
         <td>Not implemented.<br>All received CAN packets are sent to the computer.</td>
-        <td>The user can define in up to 8 CAN filters which packets are sent to the computer. <nobr>See <a href="#Filter">Host Filter</a></nobr></td>
+        <td>The user can define in up to 8 CAN filters which packets are sent over USB to the computer. <nobr>See <a href="#Filter">Host Filter</a></nobr></td>
     </tr>
     <tr>
         <td>Busload Report</td>
@@ -232,13 +232,13 @@
     </tr>
     <tr>
         <td>Software Support</td>
-        <td>Any legacy software: SavvyCAN, gs_usb, can-utils, ttyACM, SocketCAN, python-can, etc. Legacy software also works with the new ElmüSoft firmware in legacy mode.</td>
+        <td>Any legacy software: SavvyCAN, gs_usb, <nobr>can-utils</nobr>, ttyACM, SocketCAN, <nobr>python-can</nobr>, etc. Legacy software also works with the new ElmüSoft firmware in legacy mode.</td>
         <td><a href="#HUD_ECU_Hacker">HUD ECU Hacker</a> and the C++, C# and Python <a href="#Demo_Application">Demo Applications</a> for Windows and Linux switch the adapter into ElmüSoft mode and fully support the new features.</td>
     </tr>
     <tr>
         <td>Firmware Update</td>
         <td>Extremely clumsy on Windows with the ugly ST Cube Programmer. Many legacy Github projects do not offer pre-compiled binary files for download.</td>
-        <td>Windows: Ultra easy firmware update with one click in the <a href="#Firmware_Updater">Firmware Programmer</a><br>Linux: <nobr>See <a href="#Compiling">Firmware Upload</a></nobr></td>
+        <td>Windows: Ultra easy firmware update with one click in the <a href="#Firmware_Updater">Firmware Programmer</a><br>Linux: Easy with <nobr>dfu-util</nobr>. <nobr>See <a href="#Compiling">Firmware Upload</a></nobr></td>
     </tr>
     <tr>
         <td>Sourcecode</td>
@@ -684,7 +684,7 @@
         <td rowspan="2"><a href="https://weactstudio.aliexpress.com/store/910567080/pages/all-items.html?SearchText=can+bus+analyzer" target="_blank">WeActSudio</a><br><nowrap>USB2CANFD v1</nowrap><br><span class="Red">deprecated</span></td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter WeActStudioV2.jpg')"></td>
         <td rowspan="2">16 MHz</td>
-        <td rowspan="2"><span class="Red">60 MHz</span></td>
+        <td rowspan="2" class="Red">60 MHz</td>
         <td rowspan="2">Single</td>
         <td rowspan="2">A1,A0</td>
         <td rowspan="2">OK</td>
@@ -711,7 +711,7 @@
     <tr>
         <td rowspan="2"><a href="https://www.aliexpress.com/w/wholesale-canable-makerbase.html" target="_blank">MKS<br>Makerbase</a></td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter MKS Makerbase.jpg')"></td>
-        <td rowspan="2"><span class="Red">None</span></td>
+        <td rowspan="2" class="Red">None</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
         <td rowspan="2">A0,A15</td>
@@ -725,7 +725,7 @@
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD Tech</a><br>SH-C31A</td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter DSD-Tech 31A.jpg')"></td>
-        <td rowspan="2"><span class="Red">None</span></td>
+        <td rowspan="2" class="Red">None</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
         <td rowspan="2">A0,A15</td>
@@ -739,11 +739,11 @@
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD Tech</a><br>SH-C31G</td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter DSD-Tech 31G.jpg')"></td>
-        <td rowspan="2"><span class="Red">None</span></td>
+        <td rowspan="2" class="Red">None</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
         <td rowspan="2">A0,A15</td>
-        <td rowspan="2">Bad</td>
+        <td rowspan="2" class="Red">Worst</td>
         <td rowspan="2">TJA 1051<br>5 Mbaud<br>isolated</td>
         <td rowspan="2">$25</td>
         <td>STM32G<span class="Green">431</span>-Slcan2.5-Multiboard.dfu</td>
@@ -781,7 +781,7 @@
     <tr>
         <td rowspan="2"><a href="https://www.amazon.com/stores/page/30F46664-11EA-472C-988F-83CF9CBF201D" target="_blank">Walfront</a> with<br> 431 processor<br><span class="Red">naked board</span></td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Walfront.jpg')"></td>
-        <td rowspan="2"><span class="Red">None</span></td>
+        <td rowspan="2" class="Red">None</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
         <td rowspan="2">A0,A15</td>
@@ -813,7 +813,7 @@
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
         <td rowspan="2">A5,A6</td>
-        <td rowspan="2">Worst</td>
+        <td rowspan="2" class="Red">Worst</td>
         <td rowspan="2">TJA 1044<br>5 Mbaud<br>isolated</td>
         <td rowspan="2">$20</td>
         <td>STM32G<span class="Green">431</span>-Slcan2.5-OleksiiSolo.dfu</td>
@@ -827,7 +827,7 @@
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Dual</td>
         <td rowspan="2">A5,A6<br>A3,A4</td>
-        <td rowspan="2">Worst</td>
+        <td rowspan="2" class="Red">Worst</td>
         <td rowspan="2">TJA 1044<br>5 Mbaud<br>isolated</td>
         <td rowspan="2">$25</td>
         <td>STM32G<span class="Blue">473</span>-Slcan2.5-OleksiiDual.dfu</td>
@@ -837,13 +837,13 @@
     <tr>
         <td rowspan="2"><a href="https://openlightlabs.com/collections/frontpage/products/canable-2-0" target="_blank">Openlight Labs</a><br><span class="Red">sold out</span></td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter Openlightlabs.jpg')"></td>
-        <td rowspan="2"><span class="Red">None</span></td>
+        <td rowspan="2" class="Red">None</td>
         <td rowspan="2">160 MHz</td>
         <td rowspan="2">Single</td>
         <td rowspan="2">B11,A15</td>
         <td rowspan="2">Bad</td>
         <td rowspan="2">TJA 1051<br>5 Mbaud<br><span class="Red">not isolated</span></td>
-        <td rowspan="2"><span class="Red">$35</span></td>
+        <td rowspan="2" class="Red">$35</td>
         <td>STM32G<span class="Green">431</span>-Slcan2.5-OpenlightLabs.dfu</td>
     </tr>
     <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OpenlightLabs.dfu</td></tr>
@@ -852,9 +852,9 @@
         <td rowspan="2"><a href="https://www.amazon.com/BIGTREETECH-Supports-Connection-Interface-Raspberry/dp/B0BVQQ82SP" target="_blank">BigTreeTech</a><br><nowrap>U2C v2</nowrap><br>for 3D printer</td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter BigTreeTech U2C.jpg')"></td>
         <td rowspan="2">8 MHz</td>
-        <td rowspan="2"><span class="Red">60 MHz</span></td>
+        <td rowspan="2" class="Red">60 MHz</td>
         <td rowspan="2">Single</td>
-        <td rowspan="2"><span class="Red">No Rx,<br>Tx LED's</span></td>
+        <td rowspan="2" class="Red">No Rx,<br>Tx LED's</td>
         <td rowspan="2">OK</td>
         <td rowspan="2">TJA 1050<br><span class="Red">1 Mbaud<br>not isolated</span></td>
         <td rowspan="2">$25</td>
@@ -868,7 +868,7 @@
 
 <div><b>BOOT0 Pin = OK</b> means that the hardware design does not require to disable pin BOOT0.</div>
 <div><b>BOOT0 Pin = Bad</b> means wrong design: pin BOOT0 must be disabled to avoid that the board goes into boot mode alone.</div>
-<div><b>BOOT0 Pin = Worst</b> means worst design: the board does not work at all if pin BOOT0 is not disabled.</div>
+<div><b>BOOT0 Pin = Worst</b> means worst design: the board does not work at all if pin BOOT0 is not disabled by firmware.</div>
 <p>
 <div><span class="Error">IMPORTANT:</span> All firmware DFU files are different.</div>
 <div>Only one Slcan firmware and only one Candlelight firmware file matches your adapter.</div>
@@ -1203,6 +1203,7 @@
 <div>If a samplepoint cannot be matched exactly, it shows a <b>warning</b> and uses the nearest value that is possible.</div>
 <div>If a baudrate cannot be matched it shows an <b>error</b>.</div>
 
+<a name="Arbitration"></a>
 <p>
 <img src="Images/CAN FD Arbitration.png" alt="CAN FD Arbitration / Data phase" width="746" height="209">
 
@@ -1289,7 +1290,7 @@
     <tr><td><span class='TimeBk'>21:20:18.738</span><span class='InfoBold'>Send Packet</span></td></tr>
     <tr><td><span class='TimeBk'>21:20:18.738</span><span class='TxData'>14A90022: 01 02 03 04 05 06 07 08</span><span class='DebugDark'>             &lt;—— this packet was not acknowledged</span></td></tr>
     <tr><td><span class='TimeBk'>21:20:21.216</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></td></tr>
-    <tr><td><span class='TimeBk'>21:20:24.212</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>  &lt;—— same error repeated every 3 seconds</span></td></tr>
+    <tr><td><span class='TimeBk'>21:20:24.212</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span><span class='DebugDark'>  &lt;—— same error reported every 3 seconds</span></td></tr>
     <tr><td><span class='TimeBk'>21:20:27.208</span><span class='RxDataInvalid'>Bus Passive, No ACK received, Tx Errors: 128</span></td></tr>
     </table>
 </div>
@@ -1306,8 +1307,8 @@
     <li><div><span class="Error">Bus Off</span> (more than 248 errors, if data collision detected)</div>
 </ol>
 <p>
-<div>In the <b>arbitration phase</b> it is allowed that multiple controllers send at the same time. One of them will win the arbitration.</div>
-<div>But in the <b>data phase</b> there must be only one controller sending data.</div>
+<div>In the <a href="#Arbitration">arbitration phase</a> it is allowed that multiple controllers send at the same time. One of them will win the arbitration.</div>
+<div>But in the <a href="#Arbitration">data phase</a> there must be only one controller sending data.</div>
 <div>If the processor detects a case of a severe data corruption it immediately stops transmitting and goes into <b>Bus Off</b> state.</div>
 <div>Bus Off is a severe error that you can create by sending packets between two adapters configured for different baudrates.</div>
 <p>

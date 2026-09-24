@@ -190,10 +190,10 @@ void OsLibrary::Close()
 // ===================================== CTRL Pipe =====================================
 
 // Send SETUP packet and optionally additional data bytes as IN or OUT transfer
-uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t* pu32_Transferred)
+uint32_t OsLibrary::ControlTransfer(kSetup* pk_Setup, void* p_Data, uint32_t* pu32_Transferred)
 {
     int s32_Transferred = libusb_control_transfer(mpi_DevHandle, pk_Setup->bRequestType, pk_Setup->bRequest,
-                                                  pk_Setup->wValue, pk_Setup->wIndex, u8_Buffer, pk_Setup->wLength, PIPE_TIMEOUT);
+                                                  pk_Setup->wValue, pk_Setup->wIndex, (uint8_t*)p_Data, pk_Setup->wLength, PIPE_TIMEOUT);
     if (s32_Transferred < 0)
         return (uint32_t)s32_Transferred; // error
 

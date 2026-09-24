@@ -48,7 +48,7 @@ public:
     uint32_t    StartPipes();
     void        Close();
     // USB transfer
-    uint32_t    ControlTransfer(kSetup* pk_Setup, uint8_t* u8_Buffer, uint32_t* pu32_Transferred);
+    uint32_t    ControlTransfer(kSetup* pk_Setup, void* p_Data, uint32_t* pu32_Transferred);
     uint32_t    ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacket);
     uint32_t    WritePipeOut(uint8_t* u8_TxData, uint32_t u32_TxLen);
     // -------------------------
