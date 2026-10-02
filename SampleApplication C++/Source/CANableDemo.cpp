@@ -705,7 +705,7 @@ bool TestSelection()
         OsLibrary::PrintConsole(WHITE,  "E.) Flash Write / Read Demo\n");
         OsLibrary::PrintConsole(YELLOW, "    Write user data to the flash memory of the CANable, read it back and verify correct operation.\n");
         OsLibrary::PrintConsole(WHITE,  "F.) 100%% Bus Load Demo\n");
-        OsLibrary::PrintConsole(YELLOW, "    Send %d packets with %d bytes in a blob to the adapter with maximum CAN bus speed.\n", FAST_PACKETS, FAST_BYTES);
+        OsLibrary::PrintConsole(YELLOW, "    Send %d packets with %d bytes in a blob to the adapter to generate maximum CAN traffic.\n", FAST_PACKETS, FAST_BYTES);
         OsLibrary::PrintConsole(RED,    "    IMPORTANT:\n");
         OsLibrary::PrintConsole(YELLOW, "    Do NOT run this demo against another side which also sends CAN packets.\n");
         OsLibrary::PrintConsole(YELLOW, "    When one adapter occupies CAN bus with 100%% busload the other side has no chance to send a packet.\n");

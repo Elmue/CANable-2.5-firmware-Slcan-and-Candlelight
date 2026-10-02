@@ -731,7 +731,7 @@ class Program
             Print(ConsoleColor.White,  "E.) Flash Write / Read Demo\n");
             Print(ConsoleColor.Yellow, "    Write user data to the flash memory of the CANable, read it back and verify correct operation.\n");
             Print(ConsoleColor.White,  "F.) 100% Bus Load Demo\n");
-            Print(ConsoleColor.Yellow, "    Send {0} packets with {1} bytes in a blob to the adapter with maximum CAN bus speed.\n", FAST_PACKETS, FAST_BYTES);
+            Print(ConsoleColor.Yellow, "    Send {0} packets with {1} bytes in a blob to the adapter to generate maximum CAN traffic.\n", FAST_PACKETS, FAST_BYTES);
             Print(ConsoleColor.Red,    "    IMPORTANT:\n");
             Print(ConsoleColor.Yellow, "    Do NOT run this demo against another side which also sends CAN packets.\n");
             Print(ConsoleColor.Yellow, "    When one adapter occupies CAN bus with 100% busload the other side has no chance to send a packet.\n");

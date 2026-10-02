@@ -595,7 +595,7 @@ def TestSelection() -> bool:
         OsLibrary.PrintConsole(eConsole.White,  "E.) Flash Write / Read Demo\n");
         OsLibrary.PrintConsole(eConsole.Yellow, "    Write user data to the flash memory of the CANable, read it back and verify correct operation.\n");
         OsLibrary.PrintConsole(eConsole.White,  "F.) 100% Bus Load Demo\n");
-        OsLibrary.PrintConsole(eConsole.Yellow, "    Send %d packets with %d bytes in a blob to the adapter with maximum CAN bus speed.\n", FAST_PACKETS, FAST_BYTES);
+        OsLibrary.PrintConsole(eConsole.Yellow, "    Send %d packets with %d bytes in a blob to the adapter to generate maximum CAN traffic.\n", FAST_PACKETS, FAST_BYTES);
         OsLibrary.PrintConsole(eConsole.Red,    "    IMPORTANT:\n");
         OsLibrary.PrintConsole(eConsole.Yellow, "    Do NOT run this demo against another side which also sends CAN packets.\n");
         OsLibrary.PrintConsole(eConsole.Yellow, "    When one adapter occupies CAN bus with 100% busload the other side has no chance to send a packet.\n");
