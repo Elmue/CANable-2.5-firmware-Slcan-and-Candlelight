@@ -30,7 +30,7 @@ void buf_init()
     buf_cdc_tx.head = 1;
 }
 
-void buf_clear_can_buffer(uint8_t channel)
+void buf_clear_fifos(uint8_t channel, bool clear_can, bool clear_host)
 {
     can_tx_buf* txbuf = &buf_can_tx[channel];
     
@@ -150,7 +150,7 @@ eFeedback buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header,
 {
     eFeedback e_Feedback = can_is_tx_allowed(channel);
     if (e_Feedback != FBK_Success)
-        return e_Feedback;
+        return e_Feedback; // not open, silent mode, bus OFF
     
     can_tx_buf* txbuf = &buf_can_tx[channel];
     if (txbuf->full)

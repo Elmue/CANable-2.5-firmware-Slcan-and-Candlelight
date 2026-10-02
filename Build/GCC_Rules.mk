@@ -11,7 +11,7 @@
 # The year and month are stored in the device descriptor.
 # The entire version is returned by Slcan command "V" and by Candlelight command GS_ReqGetDeviceVersion
 # Do not use totally meaningless version numbers like "b158aa7" in legacy firmware on Github.
-FIRMWARE_VERSION = 0x260914
+FIRMWARE_VERSION = 0x261001
 
 # TARGET_BOARD, TARGET_FIRMWARE and TARGET_MCU must be set in the main makefile before including this file
 
@@ -34,8 +34,8 @@ endif
 BUILD_DIR = Build/$(TARGET_MCU)_$(TARGET_FIRMWARE)_$(TARGET_BOARD)
 
 # File trunk (without extension) of build files: *.bin, *.hex, *.elf
-# Example: Trunk = "STM32G431_Slcan2.5_Multiboard_0x250914"
-BUILD_TRUNK = $(BUILD_DIR)/$(TARGET_MCU)_$(TARGET_FIRMWARE)2.5_$(TARGET_BOARD)_$(FIRMWARE_VERSION)
+# Example: Trunk = "Slcan2.5_Multiboard_STM32G431_0x250914"
+BUILD_TRUNK = $(BUILD_DIR)/$(TARGET_FIRMWARE)2.5_$(TARGET_BOARD)_$(TARGET_MCU)_$(FIRMWARE_VERSION)
 
 # user C flags (enable warnings, enable debug info)
 # Flag -O3 optimizes for higher speed, Flag -Os optimizes for smaller size

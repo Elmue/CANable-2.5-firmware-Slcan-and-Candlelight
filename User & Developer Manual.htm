@@ -117,6 +117,7 @@
     <li><div>Here you find the first CANable firmware with correctly implemented <b>error handling</b> telling you what is wrong.</div>
     <li><div>Although many new features were added, the new firmware is 100% <b>backward compatible</b> with legacy software.</div>
     <li><div>The firmware has been tested successfully with <b>CAN FD</b> baudrates up to <b>10 Mega baud</b>.</div>
+    <li><div>The firmware has been tested with <b>100% busload</b>.</div>
     <li><div>The firmware has been designed to be <b>easily expandable</b> for future requirements.</div>
     <li><div>The firmware has been written by a software developer with 40+ years of programming, reverse engineering and electronic experience.</div>
 </ol>
@@ -191,9 +192,10 @@
         <td>The user can define in up to 8 CAN filters which packets are sent over USB to the computer. <nobr>See <a href="#Filter">Host Filter</a></nobr></td>
     </tr>
     <tr>
-        <td>Busload Report</td>
-        <td>Not implemented.</td>
-        <td>The firmware calculates and reports the current <a href="#Busload">Busload</a>.</td>
+        <td>High Busload</td>
+        <td>A busload report is not implemented.<br>The legacy Candlelight firmware crashes under high busload.</td>
+        <td>The firmware calculates and reports the current <a href="#Busload">Busload</a>.<br>
+            The C++, C# and Python <a href="#Busload_Demo">Demo Applications</a> can generate 100% busload.</td>
     </tr>
     <tr>
         <td>Baudrate / Samplepoint</td>
@@ -238,7 +240,7 @@
     <tr>
         <td>Firmware Update</td>
         <td>Extremely clumsy on Windows with the ugly ST Cube Programmer. Many legacy Github projects do not offer pre-compiled binary files for download.</td>
-        <td>Windows: Ultra easy firmware update with one click in the <a href="#Firmware_Updater">Firmware Programmer</a><br>Linux: Easy with <nobr>dfu-util</nobr>. <nobr>See <a href="#Compiling">Firmware Upload</a></nobr></td>
+        <td>Windows: Ultra easy firmware update with one click in the <a href="#Firmware_Updater">Firmware Programmer</a><br>Linux: Easy with <nobr><code>dfu-util</code></nobr>. <nobr>See <a href="#Compiling">Firmware Upload</a></nobr></td>
     </tr>
     <tr>
         <td>Sourcecode</td>
@@ -349,10 +351,8 @@
     </table>
 </td>
 </tr></table>
-<div><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD-Tech</a> in China uses my CANable 2.5 as stock firmware for their USB to CAN adapters (see <a href="#Firmware_Updater">details</a>).</div>
-<div>They provided me with the <b>diagrams</b> of the <a href="Images/Diagram DSD-Tech SH-C31A.pdf" target="_blank">SH-C31A</a> and the
-<a href="Images/Diagram DSD-Tech SH-C31G.pdf" target="_blank">SH-C31G</a> (PDF).</div>
-<div>They even publish the schematic, open source PCB layout, datasheet and a manual on <a href="https://github.com/dsdtech-official/can-adapters" target="_blank">Github</a>.</div>
+<div><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD-Tech</a> in China uses my CANable 2.5 as stock firmware for their newer adapters (see <a href="#Firmware_Updater">details</a>).</div>
+<div>They publish the schematic, open source PCB layout, datasheet and a manual of all their adapters on <a href="https://github.com/dsdtech-official/can-adapters" target="_blank">Github</a>.</div>
 
 
 <a name="WeActStudioV1"></a>
@@ -562,7 +562,7 @@
 <div>Blobs are only sent at very high CAN speeds if there are multiple frames waiting in the USB FIFO.</div>
 <p>
 <div>Speed Tests show that the ElmüSoft Candlelight protocol transfers <span class="Error">3 times more CAN traffic</span> than legacy Candlelight.</div>
-
+<div>You can use the <a href="#Busload_Demo">Busload Demo</a> in C++, C# or Python that generates 100% busload and maximum USB traffic.</div>
 
 <a name="Legacy_Installation"></a>
 <h3>Legacy Candlelight Installation not working</h3>
@@ -681,7 +681,7 @@
     <tr><th>Adapter</th><th>Photo</th><th>Quartz</th><th>CAN<br>Clock</th><th>CAN<br>Channels</th><th>LED<br>Pins</th><th>BOOT0<br>Pin</th><th>CAN Chip</th><th>Price</th><th>Firmware File Names</th></tr>
 
     <tr>
-        <td rowspan="2"><a href="https://weactstudio.aliexpress.com/store/910567080/pages/all-items.html?SearchText=can+bus+analyzer" target="_blank">WeActSudio</a><br><nowrap>USB2CANFD v1</nowrap><br><span class="Red">deprecated</span></td>
+        <td rowspan="2"><a href="https://weactstudio.aliexpress.com/store/910567080/pages/all-items.html?SearchText=can+bus+analyzer" target="_blank">WeAct Sudio</a><br><nowrap>USB2CANFD v1</nowrap><br><span class="Red">deprecated</span></td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter WeActStudioV2.jpg')"></td>
         <td rowspan="2">16 MHz</td>
         <td rowspan="2" class="Red">60 MHz</td>
@@ -695,7 +695,7 @@
     <tr><td>STM32G<span class="Red">0B1</span>-Candlelight2.5-WeActSudioV1.dfu</td></tr>
 
     <tr>
-        <td rowspan="2"><a href="https://weactstudio.aliexpress.com/store/910567080/pages/all-items.html?SearchText=can+bus+analyzer" target="_blank">WeActSudio</a><br><nowrap>USB2CANFD v2</nowrap></td>
+        <td rowspan="2"><a href="https://weactstudio.aliexpress.com/store/910567080/pages/all-items.html?SearchText=can+bus+analyzer" target="_blank">WeAct Sudio</a><br><nowrap>USB2CANFD v2</nowrap></td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter WeActStudioV2.jpg')"></td>
         <td rowspan="2">16 MHz</td>
         <td rowspan="2">160 MHz</td>
@@ -723,7 +723,7 @@
     <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-Multiboard.dfu</td></tr>
 
     <tr>
-        <td rowspan="2"><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD Tech</a><br>SH-C31A</td>
+        <td rowspan="2"><a href="https://www.amazon.com/stores/page/3984B7CC-592B-422B-8F53-9C4C23C7AEC9" target="_blank">DSD Tech</a><br>SH-C31A<br>SH-C31B</td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter DSD-Tech 31A.jpg')"></td>
         <td rowspan="2" class="Red">None</td>
         <td rowspan="2">160 MHz</td>
@@ -849,7 +849,7 @@
     <tr><td>STM32G<span class="Green">431</span>-Candlelight2.5-OpenlightLabs.dfu</td></tr>
 
     <tr>
-        <td rowspan="2"><a href="https://www.amazon.com/BIGTREETECH-Supports-Connection-Interface-Raspberry/dp/B0BVQQ82SP" target="_blank">BigTreeTech</a><br><nowrap>U2C v2</nowrap><br>for 3D printer</td>
+        <td rowspan="2"><a href="https://www.amazon.com/BIGTREETECH-Supports-Connection-Interface-Raspberry/dp/B0BVQQ82SP" target="_blank">Bigtreetech</a><br><nowrap>U2C v2</nowrap><br>for 3D printer</td>
         <td rowspan="2"><img src="Images/Photo.png" width="39" height="30" style="cursor:pointer;" onClick="ShowFullSize(this, 180, 'Images/Adapter BigTreeTech U2C.jpg')"></td>
         <td rowspan="2">8 MHz</td>
         <td rowspan="2" class="Red">60 MHz</td>
@@ -867,7 +867,7 @@
 </div>
 
 <div><b>BOOT0 Pin = OK</b> means that the hardware design does not require to disable pin BOOT0.</div>
-<div><b>BOOT0 Pin = Bad</b> means wrong design: pin BOOT0 must be disabled to avoid that the board goes into boot mode alone.</div>
+<div><b>BOOT0 Pin = Bad</b> means <a href="#Hardware">wrong hardware design</a>: pin BOOT0 must be disabled to avoid that the board goes into boot mode alone.</div>
 <div><b>BOOT0 Pin = Worst</b> means worst design: the board does not work at all if pin BOOT0 is not disabled by firmware.</div>
 <p>
 <div><span class="Error">IMPORTANT:</span> All firmware DFU files are different.</div>
@@ -908,6 +908,7 @@
 <a name="Meaning_of_LEDs"></a>
 <h3>Meaning of the LED's</h3>
 <div>The <b>red Power LED</b> is connected to 5 Volt from USB. It cannot be controlled by the firmware. It is always On.</div>
+<div>This table is for the MKS Makerbase adapter. Other companies may use different LED colors.</div>
 
 <div class="TableContainer">
     <table class="DataTable">
@@ -952,7 +953,7 @@
 <div>Cangaroo gives you very <b>few options</b> for CAN bus baudrates and much less options for the samplepoint.</div>
 <div>When you connect an adapter with any other clock (for example 160 MHz) you cannot select any baudrate.</div>
 <div>Cangaroo is not even able to show you an error message. It simply <b>does not work</b> and you don't know why you see nothing.</div>
-<div>Cangaroo uses WinUSB in the <b>wrong way</b> which may result in wrong packet order at a high bus load.</div>
+<div>Cangaroo uses WinUSB in the <b>wrong way</b> which may result in wrong packet order at a high busload.</div>
 <div>Cangaroo may suddenly hang eternally and even <b>crash</b>.</div>
 <div>Cangaroo is <b>low quality</b> software, as many projects on Github that have never been finished and that have bugs that never get fixed.</div>
 
@@ -1326,10 +1327,52 @@
 <div><b><u>NOTE</u>:</b> If the CAN bus is not <b>terminated</b> with at least one 120 Ohm resistor you will get Bus Off errors.</div>
 <div>If there is a severe error like Bus Off of Buffer Overflow, the <b>Rx and Tx LED's</b> are permanently On.</div>
 
+<p>
+<div>The ElmüSoft firmware reports the following 5 errors additionally to the legacy errors:</div>
+<div class="TableContainer">
+    <table class="DataTable">
+    <tr><th>Error</th><th>Meaning</th></tr>
+    <tr>
+        <td>Tx Timeout</td>
+        <td>
+            <div>The processor has tried for 500 ms in vain to send a packet to CAN bus.</div>
+            <div>This may either happen if there is no adapter that acknowledes the packet</div>
+            <div>or it may happen at a very high busload when arbitration was lost serveral times.</div>
+            <div>See next chapter.</div>
+        </td>
+    </tr>
+    <tr>
+        <td>CAN Tx Overflow</td>
+        <td>
+            <div>The firmware buffer for 64 CAN packets is full, but</div>
+            <div>the software on the host computer tries to send more CAN packets.</div>
+            <div>This is a programming error. Study the <a href="#Demo_Application">demo applications</a> how to avoid this.</div>
+        </td>
+    </tr>
+    <tr>
+        <td>USB IN Overflow</td>
+        <td>
+            <div>The CAN traffic is faster than the USB throughput (12 Mbit/s).</div>
+            <div>The firmware cannot send CAN packets to the host. USB IN transfer is saturated.</div>
+            <div>This will only happen at a very high busload.</div>
+        </td>
+    </tr>
+    <tr>
+        <td>Rx Failed<br>Tx Failed</td>
+        <td>
+            <div>The processor reports a Rx FIFO / Tx Event FIFO overflow.</div>
+            <div>The firmware was not fast enough to read the hardware FIFO buffers.</div>
+            <div>On the fast processors running with 160 MHz clock you will never see these errors.</div>
+        </td>
+    </tr>
+    </table>
+</div>
+
+
 <a name="Transmit_Timeout"></a>
 <h3>Transmit Timeout</h3>
 <div>If automatic retransmission is enabled and the processor does not receive an ACK it goes into <b>Tx Bus Passive</b> state.</div>
-<div>In this state the processor re-transmits the first packet in the Tx FIFO <span class="Error">eternally</span> creating <b>95% bus load</b>.</div>
+<div>In this state the processor re-transmits the first packet in the Tx FIFO <span class="Error">eternally</span> creating <b>95% busload</b>.</div>
 <div>The name '<b>Bus Passive</b>' is totally <b>misleading</b>. The bus is not passive. In the opposite it is flooded with traffic.</div>
 <div>On the <a href="https://netcult.ch/elmue/Oszi-Waveform-Analyzer" target="_blank">oscilloscope</a> you see the same packet retransmitted with nearly no pauses in between.</div>
 <p>
@@ -1501,11 +1544,12 @@
 <div><b>Slcan</b>: Use commands "*Flash:XX=Data" and "*Flash:XX?"</div>
 
 <a name="Busload"></a>
-<h3>Bus Load</h3>
-<div>The new firmware can <b>calculate the bus load</b>. It is displayed in percent in an interval that the user can define.</div>
-<div>If the interval is for example 5 seconds, the bus load is calculated as the average of 5 seconds.</div>
-<div>HUD ECU Hacker shows the bus load above in the CAN Raw Terminal and once per second in the Trace pane, if it is not zero.</div>
+<h3>Busload</h3>
+<div>The new firmware can <b>calculate the busload</b>. It is displayed in percent in an interval that the user can define.</div>
+<div>If the interval is for example 5 seconds, the busload is calculated as the average of 5 seconds.</div>
+<div>HUD ECU Hacker shows the busload above in the CAN Raw Terminal and once per second in the Trace pane, if it is not zero.</div>
 <div>The calculation is not precise because stuffing bits are only estimated. It may deviate by +/- 10%.</div>
+<div>You can use the <a href="#Busload_Demo">Busload Demo</a> in C++, C# or Python that generates 100% busload.</div>
 
 <h3>Transceiver Delay</h3>
 <div>The delay of the CAN bus transceiver chip is relevant for baudrates above 1 Mega baud.</div>
@@ -1556,11 +1600,11 @@
     <tr><td>"A1\r"</td><td>Closed</td><td>legacy</td><td>Enable Auto Retransmission</td><td>Retransmit packets until they are acknowledged</td></tr>
     <tr><td>"A0\r"</td><td>Closed</td><td>legacy</td><td>Disable Auto Retransmission</td><td>Enable one shot mode</td></tr>
     <tr><td>"C\r"</td><td>Open/Closed</td><td>legacy</td><td>Close the adapter</td><td>Shut down CAN connection, reset to default settings</td></tr>
-    <tr><td>"L7\r"</td><td>Open/Closed</td><td>100</td><td>Enable bus load reports every 700 ms</td><td rowspan="2">
+    <tr><td>"L7\r"</td><td>Open/Closed</td><td>100</td><td>Enable busload reports every 700 ms</td><td rowspan="2">
         <div>L1: Report interval= 100 ms, L50: Interval= 5 seconds</div>
         <div>Valid range of interval: 0 ... 100 (max 10 seconds)</div>
         </td></tr>
-    <tr><td>"L0\r"</td><td>Open/Closed</td><td>100</td><td>Disable bus load reports</td></tr>
+    <tr><td>"L0\r"</td><td>Open/Closed</td><td>100</td><td>Disable busload reports</td></tr>
     <tr><td>"O\r"</td><td>Closed</td><td>legacy</td><td>Open adapter</td><td>Connect to CAN bus with the mode set by M0 / M1</td></tr>
     <tr><td>"ON\r"</td><td>Closed</td><td>100</td><td>Open in normal mode</td><td>Ignore settings with M0 / M1</td></tr>
     <tr><td>"OS\r"</td><td>Closed</td><td>100</td><td>Open in silent mode</td><td>Ignore settings with M0 / M1</td></tr>
@@ -1692,7 +1736,7 @@
     <tr><th>Event</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
     <tr><td>"&gt;Message\r"</td><td>100</td><td>The firmware sends a debug message (plain text)</td><td>Requires Debug Messages to be enabled</td></tr>
     <tr><td>"Exxxxxxxx\r"</td><td>100</td><td>The firmware reports the CAN Error Status. See <a href="#Slcan_Errors">Slcan Errors</a></td><td>Requires CAN Error Reports to be enabled</td></tr>
-    <tr><td>"L27\r"</td><td>100</td><td>The firmware has calculated a bus load of 27%.<br>If the bus load is zero, no report is sent.</td><td>Requires Bus Load Reports to be enabled</td></tr>
+    <tr><td>"L27\r"</td><td>100</td><td>The firmware has calculated a busload of 27%.<br>If the busload is zero, no report is sent.</td><td>Requires Busload Reports to be enabled</td></tr>
     <tr><td>"M3C\r"</td><td>100</td><td>The firmware reports the Tx echo marker 0x3C. See <a href="#Slcan_Packets">Slcan Packets</a></td><td>Requires Tx Echo Report markers to be enabled</td></tr>
 
     <tr><th>Rx Packets</th><th>Version</th><th>Meaning</th><th>Comment</th></tr>
@@ -1956,6 +2000,7 @@
 <li>Use of multiple CAN channels
 <li>Disable pin BOOT0 / Enter DFU mode
 <li>Write and read user data to the flash memory
+<li>Generate 100% busload
 </ul>
 <div>The <a href="https://github.com/Elmue/CANable-2.5-firmware-Slcan-and-Candlelight/tree/main/SampleApplication%20C%2B%2B" target="_blank">source code</a> is full of <b>detailed comments</b> so you can easily understand how it works.</div>
 <p>
@@ -1973,6 +2018,13 @@
 <div>They have no advantage at all. They produce more USB traffic and you will see several lines with <b>"No Timestamp"</b>.</div>
 <div>The reason is that firmware timestamps are only available for events <b>received from</b> the firmware.</div>
 <div>But when you <b>send a packet to</b> the firmware you don't get a timestamp.</div>
+
+<a name="Busload_Demo"></a>
+<h3>100% Busload Demo</h3>
+<div>The C++, C# and Python demos can generate 100% busload on CAN bus.</div>
+<p>
+<img src="Images/Busload Demo.png" alt="Candlelight busload demo" width="634" height="232">
+<p>
 
 <a name="Candle_DFU"></a>
 <h3>Enter DFU mode</h3>
@@ -2107,6 +2159,7 @@
 <li><div><b>18.Jun.2026</b>: Added support for Candlelight <code>GS_ReqGetErrorState</code>.</div>
 <li><div><b>03.Aug.2026</b>: Bugfix for fake echo ID in Candlelight legacy mode. Added compiled <b>binary</b> DFU files. Simplified <b>Linux</b> C++ demo.</div>
 <li><div><b>14.Sep.2026</b>: <span class="Red">Anniversary Release</span> Bugfix: Hardware timestamps were sometimes jumping backwards. Added <a href="#Demo_Application">Python demo</a>.</div>
+<li><div><b>01.Oct.2026</b>: Improved buffer in firmware. New <a href="#Busload_Demo">Busload Demo</a> generates 100% busload in C++, C# and Python.</div>
 <li><div class="Grey">Any future versions will be listed here.</div>
 </ul>
 

@@ -10,9 +10,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CANableDemo.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="Candlelight\Candlelight.h">
       <Filter>Source Files\Candlelight</Filter>
     </ClInclude>

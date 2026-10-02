@@ -51,7 +51,7 @@ else:                       from OsLibrary_Linux   import OsLibrary, NO_ERROR, e
 # Adapt this to the latest available CANable 2.5 firmware version.
 # It shows an error to upload the latest firmware to the adapter.
 # The version number is BCD encoded (0x251218 = 18.dec.2025)
-MIN_FIRMWARE = 0x260914
+MIN_FIRMWARE = 0x261001
 
 # must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
 CAN_QUEUE_SIZE = 64
@@ -121,7 +121,7 @@ class Candlelight:
         if self.mi_OsLibrary.IsOpen():
             try:
                 self.Reset() # stop the CAN interface and reset all variables in the firmware
-            except Exception as e:
+            except Exception as Ex:
                 pass         # ignore error. The device may have been disconnected
 
         self.mi_OsLibrary.Close()
@@ -134,7 +134,8 @@ class Candlelight:
         if self.mi_OsLibrary.IsOpen():
            raise RuntimeError("The adapter is already open")
 
-        self.mu8_EchoMarker      = 1  # counter 1...255
+        self.mu8_TxEchoMarker    = 0  # counter 1...255 for Tx packets
+        self.mu8_RxEchoMarker    = 0  # counter 1...255 from received echo packets
         self.ms64_McuRollOver    = 0
         self.ms64_LastMcuStamp   = 0
         self.ms64_TimestampStart = 0
@@ -230,7 +231,7 @@ class Candlelight:
 
         if not self.mk_Info.mb_IsElmueSoft:
             self.mi_Details.append(kDetail("CAN Clock", "%u MHz" % (self.mk_Info.mk_Capability.fclk_can // 1000000)))
-            raise RuntimeError("This class supports only devices that have the CANable 2.5 firmware from ElmüSoft.")
+            raise RuntimeError("This class supports only adapters with the CANable 2.5 firmware from ElmüSoft.")
 
         # --------------- Here comes only ElmüSoft firmware ---------------
 
@@ -391,21 +392,50 @@ class Candlelight:
                            ctypes.byref(k_Mode), ctypes.sizeof(k_Mode))
 
     # ======================================= Send ========================================
+    
+    # Calculates the count of free FIFO slots in the firmware Tx FIFO.
+    # First call ReceiveData() to update mu8_RxEchoMarker, then CalculateTxFifoFreeSlots()
+    # and only if enough free slots are availabe call SendPacketBlob() to avoid running into a Tx buffer overflow.
+    # ATTENTION: Use this function with care. It works as long as the other side acknowledges all packets.
+    # In case of a Bus Passive state it may always return available slots = 0.
+    def CalculateTxFifoFreeSlots(self) -> int:
+        if not self.mb_InitDone or not self.mb_Started or not self.mb_EnableTxEcho:
+            raise RuntimeError("The device must be open and started and Tx echo must be enabled.")
 
-    # Send multiple CAN packets in one blob over USB to the firmware.
-    # This optimizes the USB speed to the maximum.
+        # The markers are always between 1 and 255 after sending a packet.
+        # If the Tx marker is zero this means that no packet has been sent yet --> the Tx FIFO is empty
+        if self.mu8_TxEchoMarker == 0:
+            return CAN_QUEUE_SIZE
+
+        if self.mu8_TxEchoMarker < self.mu8_RxEchoMarker:
+            s32_UsedSlots = self.mu8_TxEchoMarker + 255 - self.mu8_RxEchoMarker
+        else:
+            s32_UsedSlots = self.mu8_TxEchoMarker - self.mu8_RxEchoMarker
+
+        return CAN_QUEUE_SIZE - s32_UsedSlots
+    
+    # Send CAN packets in one blob over USB to the firmware.
+    # This optimizes the USB speed to the maximum and you can create 100% CAN bus load.
+    # When the firmware cannot store all packets it will report an CanTxOverflow event and send nothing.
+    # To avoid this wait until CalculateTxFifoFreeSlots() reports >= 25 free slots, then send a blob with 25 packets.    
     # returns OsTimestamp
-    # raises AbortError if the CANable has been disconnected
+    # If you get an AbortError the device is dead --> abort and close the device and show the message to the user.
     def SendPacketBlob(self, k_Packets: List[kCanPacket]) -> int:
         if not self.mb_InitDone or not self.mb_Started:
             raise RuntimeError("The device must be open and started.")
 
-        if (self.mk_Info.mk_Capability.feature & eDeviceFlags.ELM_DevFlagSendUsbBlobs) == 0:
-            raise RuntimeError("Blobs are not supported by the firmware")
+        if len(k_Packets) == 0:
+            raise ValueError("Invalid packet count.")
+
+        if len(k_Packets) == 1:
+            return self.SendPacket(k_Packets[0])
 
         # the firmware has a FIFO for max 64 packets
         if len(k_Packets) > CAN_QUEUE_SIZE:
             raise ValueError("Too many Tx packets.")
+            
+        if (self.mk_Info.mk_Capability.feature & eDeviceFlags.ELM_DevFlagSendUsbBlobs) == 0:
+            raise RuntimeError("Blobs are not supported by the firmware")
 
         k_Blob = kBlob()
         k_Blob.frame_count = len(k_Packets)
@@ -415,14 +445,21 @@ class Candlelight:
         u8_Transmit = (ctypes.c_ubyte * MAX_BLOB_SIZE)()
         ctypes.memmove(u8_Transmit, ctypes.addressof(k_Blob), ctypes.sizeof(kBlob))
 
-        s32_Offset = ctypes.sizeof(kBlob)
-        for k_Packet in k_Packets:
-            s32_Offset = self._TxPacketToTxBytes(k_Packet, u8_Transmit, s32_Offset)
+        u8_LastMarker = self.mu8_TxEchoMarker
+        try:
+            s32_Offset = ctypes.sizeof(kBlob)
+            for k_Packet in k_Packets:
+                s32_Offset = self._TxPacketToTxBytes(k_Packet, u8_Transmit, s32_Offset) # throws
 
-        # Get timestamp immediately before sending the packet
-        s64_Timestamp = Utils.GetOsTimestamp()
-        self.mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset)
-        return s64_Timestamp
+            # Get timestamp immediately before sending the packet
+            s64_Timestamp = Utils.GetOsTimestamp()
+            self.mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset)
+            return s64_Timestamp
+            
+        except Exception as Ex:
+            # If the packets have not been sent --> restore the Tx marker
+            self.mu8_TxEchoMarker = u8_LastMarker
+            raise Ex
 
     # CAN FD packets (b_FDF) can only be sent if a data baudrate has been set before.
     # Remote frames (b_RTR = True): s32_DataLen = 0 --> DLC = 0 will be sent, or s32_DataLen = 1 and u8_Data[0] contains the DLC to send.
@@ -431,16 +468,23 @@ class Candlelight:
     def SendPacket(self, k_Packet: kCanPacket) -> int:
         if not self.mb_InitDone or not self.mb_Started:
             raise RuntimeError("The device must be open and started.")
+       
+        u8_LastMarker = self.mu8_TxEchoMarker
+        try:
+            # WritePipe() does not work with a bytearray!
+            u8_Transmit = (ctypes.c_ubyte * 256)()           
+            s32_Offset = 0            
+            s32_Offset = self._TxPacketToTxBytes(k_Packet, u8_Transmit, s32_Offset)
 
-        # WritePipe() does not work with a bytearray!
-        u8_Transmit = (ctypes.c_ubyte * 256)()
-        s32_Offset = 0
-        s32_Offset = self._TxPacketToTxBytes(k_Packet, u8_Transmit, s32_Offset)
-
-        # Get timestamp immediately before sending the packet
-        s64_Timestamp = Utils.GetOsTimestamp()
-        self.mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset)
-        return s64_Timestamp
+            # Get timestamp immediately before sending the packet
+            s64_Timestamp = Utils.GetOsTimestamp()
+            self.mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset)
+            return s64_Timestamp
+            
+        except Exception as Ex:
+            # If the packets have not been sent --> restore the Tx marker
+            self.mu8_TxEchoMarker = u8_LastMarker
+            raise Ex
 
     # If the packet has insufficient bytes to match one of the CAN FD DLC values, it will be padded with PAD_BYTE.
     # returns modified s32_Offset
@@ -466,13 +510,14 @@ class Candlelight:
         # 3 + 64 messages have been sent to the firmware which were not acknowledged.
         # The adapter is blocked --> report error once only.
         # If no errors were reported in the last 3 seconds the buffer is not full anymore
+        # To avoid that this happens you must call CalculateTxFifoFreeSlots() before sending Tx packets.
         if self.mu64_TxOverflow > 0 and (Utils.GetTickMilli() - self.mu64_TxOverflow) < 4000:
            self.mu64_TxOverflow = 0
            raise RuntimeError("Sending is not possible because the Tx buffer is full.")
 
         u32_ID    = k_Packet.mu32_ID
         u32_MaxID = eCanIdFlags.MASK_29 if k_Packet.mb_29bit else eCanIdFlags.MASK_11
-        if u32_ID > u32_MaxID:
+        if u32_ID == 0 or u32_ID > u32_MaxID:
             raise ValueError("The CAN ID is invalid.")
 
         if k_Packet.mb_29bit: u32_ID |= eCanIdFlags.Extended # 29 bit CAN ID
@@ -496,9 +541,9 @@ class Candlelight:
 
         k_TxFrame = kTxFrameElmue()
         k_TxFrame.header.size     = ctypes.sizeof(k_TxFrame) + len(k_Packet.mu8_Data)
-        k_TxFrame.header.msg_type = eMessageType.TxFrame;
-        k_TxFrame.can_id          = u32_ID;
-        k_TxFrame.flags           = 0;
+        k_TxFrame.header.msg_type = eMessageType.TxFrame
+        k_TxFrame.can_id          = u32_ID
+        k_TxFrame.flags           = 0
         if k_Packet.mb_FDF: k_TxFrame.flags |= eFrameFlags.FDF
         if k_Packet.mb_BRS: k_TxFrame.flags |= eFrameFlags.BRS
 
@@ -510,12 +555,12 @@ class Candlelight:
         # 255 markers are far more than enough because the processor has a Tx FIFO for 3 CAN packets and the firmware can store
         # additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
         if self.mb_EnableTxEcho:
-           self.mu8_EchoMarker = max(1, (self.mu8_EchoMarker + 1) & 0xFF) # If k_TxFrame.marker == 0 --> firmware does not send an echo
-           k_TxFrame.marker = self.mu8_EchoMarker;
+           self.mu8_TxEchoMarker = max(1, (self.mu8_TxEchoMarker + 1) & 0xFF) # If k_TxFrame.marker == 0 --> firmware does not send an echo
+           k_TxFrame.marker = self.mu8_TxEchoMarker;
 
         # IMPORTANT: The packet must be cloned. The caller may modify it. 
         # Avoid that mk_EchoPackets stores a reference to the orignal packet.
-        self.mk_EchoPackets[self.mu8_EchoMarker] = copy.deepcopy(k_Packet)
+        self.mk_EchoPackets[self.mu8_TxEchoMarker] = copy.deepcopy(k_Packet)
 
         p_Dest = ctypes.addressof(u8_Transmit) + s32_Offset
         ctypes.memmove(p_Dest, ctypes.addressof(k_TxFrame), ctypes.sizeof(k_TxFrame))
@@ -539,13 +584,13 @@ class Candlelight:
         if self.mi_OsLibrary.HasPipeErrors():
             raise AbortError("Too many errors. The CANable has a problem or has been disconnected.")
 
-        # Get frames form the IN pipe if there is no pending data in mk_UsbInPacket
+        # Get frames from the IN pipe if there is no pending data in mk_UsbInPacket
         if self.ms32_BlobFrames <= 0:
             self.ms32_BlobFrames = 0
             self.ms32_BlobOffset = 0
 
             self.mk_UsbInPacket = self.mi_OsLibrary.ReadPipeIn(s32_Timeout)
-            if self.mk_UsbInPacket == None: # Timeout
+            if self.mk_UsbInPacket is None: # Timeout
                 return None
 
             k_Blob = kBlob.from_buffer(self.mk_UsbInPacket.mu8_Buffer)
@@ -577,10 +622,12 @@ class Candlelight:
         u8_ExtBytes = k_Data.mu8_RawBytes + bytearray(10)
              
         if   k_Header.msg_type == eMessageType.RxFrame: k_Data.mk_RxFrame = kRxFrameElmue.from_buffer(u8_ExtBytes)
-        elif k_Header.msg_type == eMessageType.TxEcho:  k_Data.mk_TxEcho  = kTxEchoElmue .from_buffer(u8_ExtBytes)
         elif k_Header.msg_type == eMessageType.Error:   k_Data.mk_Error   = kErrorElmue  .from_buffer(u8_ExtBytes)
         elif k_Header.msg_type == eMessageType.String:  k_Data.mk_String  = kStringElmue .from_buffer(u8_ExtBytes)
         elif k_Header.msg_type == eMessageType.Busload: k_Data.mk_Busload = kBusloadElmue.from_buffer(u8_ExtBytes)
+        elif k_Header.msg_type == eMessageType.TxEcho:  
+            k_Data.mk_TxEcho      = kTxEchoElmue .from_buffer(u8_ExtBytes)
+            self.mu8_RxEchoMarker = k_Data.mk_TxEcho.marker
         return k_Data
 
     def RxFrameToCanPacket(self, k_RecvData: kRecvData) -> kCanPacket:
@@ -605,9 +652,10 @@ class Candlelight:
         k_Packet.mu8_Data = u8_RawBytes[s32_DataStart : k_Frame.header.size]
         return k_Packet
 
-    def GetTxEchoPacket(self, k_RecvData: kRecvData) -> kCanPacket:
-        if k_RecvData.mk_TxEcho is None:
-            raise ValueError("Invalid parameter")
+    # returns None if the marker is invalid
+    def GetTxEchoPacket(self, k_RecvData: kRecvData) -> Optional[kCanPacket]:
+        if k_RecvData.mk_TxEcho is None or k_RecvData.mk_TxEcho.marker == 0:
+            return None
         
         return self.mk_EchoPackets[k_RecvData.mk_TxEcho.marker]
 
@@ -794,9 +842,9 @@ class Candlelight:
             return "No Timestamp    "
 
         if self.ms64_TimestampStart == 0:
-           self.ms64_TimestampStart = s64_Stamp;
+           self.ms64_TimestampStart = s64_Stamp
 
-        s64_Stamp -= self.ms64_TimestampStart;
+        s64_Stamp = max(0, s64_Stamp - self.ms64_TimestampStart)
 
         s32_Micro = s64_Stamp % 1000
         s64_Stamp //= 1000
@@ -811,7 +859,10 @@ class Candlelight:
         return "%02u:%02u:%02u.%03u.%03u" % (s32_Hour, s32_Min, s32_Sec, s32_Milli, s32_Micro)
 
     def FormatCanPacket(self, k_Packet: kCanPacket) -> str:
-        s_Frame = "";
+        if k_Packet.mu32_ID == 0 and len(k_Packet.mu8_Data) == 0:
+            return "Corrupt packet" # NULL packet
+        
+        s_Frame = ""
         if k_Packet.mb_29bit: s_Frame = "%08X: " % (k_Packet.mu32_ID & eCanIdFlags.MASK_29)
         else:                 s_Frame = "%03X: " % (k_Packet.mu32_ID & eCanIdFlags.MASK_11)
 
@@ -939,7 +990,7 @@ class Candlelight:
         try:
             self._CtrlTransfer(eDirection.In, eDfuRequest.RequGetStatus, 0, 
                                ctypes.byref(k_Status), ctypes.sizeof(k_Status))
-        except Exception as e:
+        except Exception as Ex:
             # A legacy device enters boot mode immediately and _CtrlTransfer() raises ERROR_GEN_FAILURE.
             self.Close()
             return

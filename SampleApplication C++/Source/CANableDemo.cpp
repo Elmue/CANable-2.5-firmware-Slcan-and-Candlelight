@@ -1,4 +1,4 @@
-
+ï»¿
 // https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 /*
@@ -33,51 +33,66 @@ NAMING CONVENTIONS which allow to see the type of a variable immediately without
 An additional "m" is prefixed for all member variables (e.g. ms_String)
 */
 
-#include "CANableDemo.h"
 #include "Candlelight/Candlelight.h"
-
 using namespace CANable;
 
-// true  --> run Candlelight demo (send and receive CAN packets)
-// false --> run DFU demo (switch a device in Candlelight mode into DFU mode, fails if already in DFU mode)
-bool CANDLELIGHT_DEMO   = true; 
+// ============================================================================================================
 
 // true  --> set data baudrate        -> CAN FD ackets can be sent and received
 // false --> do not set data baudrate -> CAN FD ackets cannot be sent and received
-bool ENABLE_CAN_FD      = true;
+const bool ENABLE_CAN_FD      = true;
 
-// true  --> only packets with 11 bit CAN ID 0x7E8 are sent to the host.
+// true  --> only packets with 11 bit CAN ID 0x7E8 will be sent to the host.
 // false --> all packets are sent to the host
-bool SET_HOST_FILTERS   = false;
+const bool SET_HOST_FILTERS   = false;
 
 // true  --> Received packets with CAN ID 0x7E5 will be forwarded from channel 0 to channel 1 (only multi-channel adapters)
 // false --> Do not use brdige mode
-bool SET_BRIDGE_FILTERS = false;
+const bool SET_BRIDGE_FILTERS = false;
 
 // true  --> enable transfer of timestamps from the firmware (deprecated!)
 // false --> create performance counter timestamps 
-bool HW_TIMESTAMP       = false;
+const bool HW_TIMESTAMP       = false;
 
-// true --> test writing/reading user data to/from flash memory
-bool FLASH_MEMORY_TEST  = false;
-
-// true --> send 3 Tx packets in one blob
-bool SEND_TX_BLOB       = false;
-
+// ============================================================================================================
 
 // forward declarations
 void CandlelightDemo();
 void DfuDemo();
 bool OpenDevice();
+bool ReceiveAndDisplayPackets();
 void FlashMemoryTest();
+void LoadSlowTxPackets(bool b_Init);
+void LoadFastTxPackets(bool b_Init);
+void SendSlowTxPackets(int64_t* ps64_LastStamp);
+void SendFastTxPackets();
+bool TestSelection();
 void PrintDeviceMenu(vector<kUsbDevice>& i_Devices);
 
+// enum
+enum eDemo
+{
+    DEMO_Receive    = 0,
+    DEMO_SlowSingle,
+    DEMO_SlowBlob,
+    DEMO_EnterDFU,
+    DEMO_FlashRW,
+    DEMO_FastBlob,
+};
+
+// constants
+const int FAST_PACKETS = 25;  // Tx packtes per blob (used for DEMO_FastBlob)
+const int FAST_BYTES   = 64;  // Tx bytes per packet (used for DEMO_FastBlob)
+
 // global instances
+eDemo       ge_RunDemo;
 Candlelight gi_Candle;
 kDevInfo    gk_Info;
 int         gs32_DeviceIndex; // user selection if multiple devices connected
+kCanPacket  gk_TxPackets[FAST_PACKETS] = {};
+uint8_t     gu8_TxPacketID = 0;
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ============================================================================================================
 
 int main(int argc, char* argv[])
 {
@@ -86,24 +101,71 @@ int main(int argc, char* argv[])
 
     // Increase console buffer for 3000 lines output with 300 chars per line
     // Set console window to 120 chars in 60 lines
-    OsLibrary::SetUpConsole(300, 3000, 120, 60, "ElmueSoft Candlelight C++ Demo");
+    OsLibrary::SetUpConsole(300, 3000, 120, 60, "Elm\xC3\xBCSoft Candlelight C++ Demo"); // UTF8 'Ã¼'
     
     // only needed for Linux
     OsLibrary::SwitchTerminalToNonCanonical();
 
-    if (CANDLELIGHT_DEMO) 
+    // loads variable ge_RunDemo
+    if (!TestSelection())
+        goto _Exit;
+
+    // Print Header
+    OsLibrary::ClearConsole();
+    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
+    OsLibrary::PrintConsole(YELLOW, "               CANable 2.5 Candlelight C++ Demo by Elm\xC3\xBCSoft \n"); // UTF8 'Ã¼'
+    OsLibrary::PrintConsole(YELLOW, "                            ");
+    switch (ge_RunDemo)
     {
-        // Test interface 0 = Candlelight
-        CandlelightDemo();
+        case DEMO_Receive:    OsLibrary::PrintConsole(YELLOW, "Receive Only Demo\n");          break;
+        case DEMO_SlowSingle: OsLibrary::PrintConsole(YELLOW, "Slow Tx Single Packet Demo\n"); break;
+        case DEMO_SlowBlob:   OsLibrary::PrintConsole(YELLOW, "Slow Tx Blob Packet Demo\n");   break;
+        case DEMO_FastBlob:   OsLibrary::PrintConsole(YELLOW, "Fast Tx Blob Packet Demo\n");   break;
+        case DEMO_EnterDFU:   OsLibrary::PrintConsole(YELLOW, "Enter DFU Mode Demo\n");        break;
+        case DEMO_FlashRW:    OsLibrary::PrintConsole(YELLOW, "Read / Write Flash Demo\n");    break;
     }
-    else
+    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
+
+    // open Candlelight or DFU interface
+    if (OpenDevice())
     {
-        // Test interface 1 = Firmware Update
-        DfuDemo();
+        switch (ge_RunDemo)
+        {
+            case DEMO_FlashRW:
+            {
+                // Test flash writing / reading
+                FlashMemoryTest();
+                break;
+            }
+            case DEMO_EnterDFU:
+            {
+                // Test interface 1 = Device Firmware Update
+                // This works only if the device is in Candlelight mode.
+                // If the device is already in DFU mode it will fail.
+                uint32_t u32_Error = gi_Candle.EnterDfuMode();
+                if (u32_Error)
+                    OsLibrary::PrintConsole(RED, "\nError switching to DFU mode. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+                else
+                    OsLibrary::PrintConsole(LIME, "\nDevice has been switched successfully into DFU mode.\n");
+                break;
+            }
+            default:
+            {
+                // Test interfaces 0, 2, 3 = Candlelight
+                CandlelightDemo();
+
+                // This delay is important to give the CANable time to send pending data in the Tx FIFO to CAN bus.
+                // If the sending would be aborted by closing the adapter, the other side would report CAN bus Rx errors.
+                // If you use a slower baudrate this delay must be increased.
+                OsLibrary::Sleep(300);
+                break;
+            }
+        }
     }
 
     gi_Candle.Close(); // Close CAN bus, stop pipe thread
 
+    _Exit:
     OsLibrary::PrintConsole(GREY, "\nPress a key to exit ...\n");
     OsLibrary::WaitConsoleChar();
 
@@ -112,26 +174,10 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ============================================================================================================
 
 void CandlelightDemo()
-{
-    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
-    OsLibrary::PrintConsole(YELLOW, "               CANable 2.5 Candlelight C++ Demo by ElmueSoft                 \n");
-    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
-
-    // open Candlelight interface
-    if (!OpenDevice())
-        return;
-
-    // -----------------------------------------
-
-    // Test flash writing / reading
-    if (FLASH_MEMORY_TEST)
-        FlashMemoryTest();
-
-    // -----------------------------------------
-    
+{   
     uint32_t u32_Error = 0;
     string s_Display;
 
@@ -208,7 +254,7 @@ void CandlelightDemo()
     {
         if (gk_Info.mk_DeviceVersion.icount + 1 >= 2 && gk_Info.mu8_Channel == 0)
         {
-            // Set filter Nº 08 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
+            // Set filter NÂº 08 to forward packets with CAN ID 0x7E5 from channel 0 to channel 1.
             u32_Error = gi_Candle.SetBridgeFilter(8, 1, true, false, false, 0x7E5, 0x7FF);
             if (u32_Error)
                 OsLibrary::PrintConsole(RED, "Error setting bridge filter: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
@@ -240,16 +286,12 @@ void CandlelightDemo()
         return;
     }
 
-    OsLibrary::PrintConsole(YELLOW, "\nThe device has been opened. Please send CAN packets now.\n");
-    OsLibrary::PrintConsole(YELLOW, "When a packet is received it is displayed in the console.\n");
-    OsLibrary::PrintConsole(YELLOW, "Additionally classic packets with 8 data bytes are sent every 2 seconds.\n\n");
-
 #if defined(_MSC_VER)
     OsLibrary::PrintConsole(RED,    "ATTENTION:\n");
     OsLibrary::PrintConsole(YELLOW, "The Windows console is very slow. It cannot display fast CAN bus traffic.\n");
     OsLibrary::PrintConsole(YELLOW, "If you want to test your CANable on a real CAN bus, use HUD ECU Hacker.\n");
     OsLibrary::PrintConsole(YELLOW, "HUD ECU Hacker has an ultra fast speed-optimized CAN Raw Terminal.\n\n");
-    OsLibrary::PrintConsole(YELLOW, "A left click into the console stops output, right click continues.\n\n");
+    OsLibrary::PrintConsole(YELLOW, "A left click into the Windows console stops output, right click continues.\n\n");
 #endif
 
     OsLibrary::PrintConsole(LIME,   "Lime  = Sent packets\n");
@@ -260,178 +302,274 @@ void CandlelightDemo()
 
     // -----------------------------------------
 
-    kCanPacket k_TxPackets[3] = {};
-
-    k_TxPackets[0].mu32_ID     = 0x7E0 + gs32_DeviceIndex; // Each USB adapter has it's own ID
-    k_TxPackets[0].mu8_DataLen = 8;
-    memcpy(k_TxPackets[0].mu8_Data, "ElmuSoft", 8);
-
-    k_TxPackets[1].mu32_ID     = k_TxPackets[0].mu32_ID + 1;
-    k_TxPackets[1].mu8_DataLen = 8;
-    memcpy(k_TxPackets[1].mu8_Data, "TxBlob 2", 8);
-
-    k_TxPackets[2].mu32_ID     = k_TxPackets[0].mu32_ID + 2;
-    k_TxPackets[2].mu8_DataLen = 8;
-    memcpy(k_TxPackets[2].mu8_Data, "TxBlob 3", 8);
-
-    // -----------------------------------------
+    if (ge_RunDemo == DEMO_FastBlob) LoadFastTxPackets(true);
+    else                             LoadSlowTxPackets(true);
 
     int64_t s64_LastStamp = OsLibrary::GetOsTimestamp();
     while (true)
     {
-        // Read the comment of OsLibrary::GetTimestamp()
-        int64_t s64_Now = OsLibrary::GetOsTimestamp();
+        if (!ReceiveAndDisplayPackets())
+            break;
 
-        // Send the Tx frame every 2 seconds (= 2000000 µs)
-        if (s64_Now - s64_LastStamp >= 2000000)
-        {
-            s64_LastStamp = s64_Now;
-
-            int64_t s64_TxStamp; // only valid if no error returned
-            int     s32_PackCount;
-            if (SEND_TX_BLOB)    // send blob with 3 packets at once over USB
-            {
-                u32_Error = gi_Candle.SendPacketBlob(k_TxPackets, 3, &s64_TxStamp);
-                s32_PackCount = 3;
-            }
-            else
-            {
-                u32_Error = gi_Candle.SendPacket(&k_TxPackets[0], &s64_TxStamp);
-                s32_PackCount = 1;
-            }
-
-            if (u32_Error)
-            {
-                OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, OsLibrary::GetOsTimestamp()));
-                OsLibrary::PrintConsole(WHITE, " Send");
-                OsLibrary::PrintConsole(RED,   " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
-
-                if (u32_Error == ERR_TOO_MANY_ERRORS)
-                    return; // The CANable has been disconnected
-            }
-            else
-            {
-                for (int P=0; P<s32_PackCount; P++)
-                {
-                    // Timestamps for sending are only available if Windows timestamps are used
-                    OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
-                    OsLibrary::PrintConsole(WHITE, " Send");
-                    OsLibrary::PrintConsole(LIME,  " %s", gi_Candle.FormatCanPacket(&k_TxPackets[P]).c_str());
-
-                    if (SEND_TX_BLOB) OsLibrary::PrintConsole(GREY, " (Tx Blob)\n");
-                    else              OsLibrary::PrintConsole(GREY, "\n");
-                }
-            }
-
-            // pseudo random data
-            k_TxPackets[0].mu8_Data[0] ++;
-            k_TxPackets[0].mu8_Data[1] = k_TxPackets[0].mu8_Data[0] * 3;
-            k_TxPackets[0].mu8_Data[2] = k_TxPackets[0].mu8_Data[1] * 2;
-            k_TxPackets[0].mu8_Data[3] = k_TxPackets[0].mu8_Data[2] * 51;
-            k_TxPackets[0].mu8_Data[4] = k_TxPackets[0].mu8_Data[3] * 11;
-            k_TxPackets[0].mu8_Data[5] = k_TxPackets[0].mu8_Data[4] * 7;
-            k_TxPackets[0].mu8_Data[6] = k_TxPackets[0].mu8_Data[5] * 25;
-            k_TxPackets[0].mu8_Data[7] = k_TxPackets[0].mu8_Data[6] * 17;
-
-            k_TxPackets[1].mu8_Data[0] = k_TxPackets[0].mu8_Data[0] + 0x10;
-            k_TxPackets[2].mu8_Data[0] = k_TxPackets[0].mu8_Data[0] + 0x20;
-        }
-
-        // Check for Rx data
-        int64_t  s64_RxTimestamp;
-        bool     b_RxBlob;
-        kHeader* pk_Header;
-        u32_Error = gi_Candle.ReceiveData(100, &pk_Header, &s64_RxTimestamp, &b_RxBlob);
-        if (u32_Error)
-        {
-            // Timeout means that no data was received during 100 ms. This is not an error.
-            if (u32_Error != ERR_TIMEOUT)
-            {
-                // Error is not timeout (e.g. USB device has been disconnected)
-                OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_RxTimestamp));
-                OsLibrary::PrintConsole(WHITE, " Recv");
-                OsLibrary::PrintConsole(RED,   " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
-            }
-
-            if (u32_Error == ERR_TOO_MANY_ERRORS)
-                return; // The CANable has been disconnected
-        }
-        else // pk_Header is valid
-        {
-            OsLibrary::PrintConsole(GREY, gi_Candle.FormatTimestamp(pk_Header, s64_RxTimestamp));
-            switch (pk_Header->msg_type)
-            {
-                case MSG_RxFrame:
-                {
-                    kCanPacket k_RxPacket = gi_Candle.RxFrameToCanPacket((kRxFrameElmue*)pk_Header);
-                    OsLibrary::PrintConsole(WHITE, " Recv");
-                    OsLibrary::PrintConsole(CYAN,  " %s", gi_Candle.FormatCanPacket(&k_RxPacket).c_str());
-                    break;
-                }
-                case MSG_TxEcho:
-                {
-                    kCanPacket k_EchoPacket = gi_Candle.GetTxEchoPacket((kTxEchoElmue*)pk_Header);
-                    OsLibrary::PrintConsole(WHITE, " Echo");
-                    OsLibrary::PrintConsole(GREEN, " %s", gi_Candle.FormatCanPacket(&k_EchoPacket).c_str());
-                    break;
-                }
-                case MSG_Error:
-                {
-                    eErrorBusStatus e_BusStatus;
-                    eErrorLevel     e_ErrLevel;
-                    string s_Error = gi_Candle.FormatCanErrors((kErrorElmue*)pk_Header, &e_BusStatus, &e_ErrLevel);
-                    uint16_t u16_Color = GREY;
-                    if (e_ErrLevel == LEVEL_Medium) u16_Color = YELLOW;
-                    if (e_ErrLevel == LEVEL_High)   u16_Color = RED;
-                    OsLibrary::PrintConsole(WHITE,     " Err ");
-                    OsLibrary::PrintConsole(u16_Color, " %s", s_Error.c_str());
-                    break;
-                }
-                case MSG_String:
-                {
-                    kStringElmue* pk_String = (kStringElmue*)pk_Header;
-                    OsLibrary::PrintConsole(WHITE, " Debg");
-                    OsLibrary::PrintConsole(GREY,  " %s", gi_Candle.ConvertStringFrame(pk_String).c_str());
-                    break;
-                }
-                case MSG_Busload:
-                {
-                    kBusloadElmue* pk_Busload = (kBusloadElmue*)pk_Header;
-                    OsLibrary::PrintConsole(WHITE, " Load");
-                    OsLibrary::PrintConsole(GREY,  " Busload: %u%%", pk_Busload->bus_load);
-                    break;
-                }
-                default:
-                {
-                    OsLibrary::PrintConsole(WHITE, " Err ");
-                    OsLibrary::PrintConsole(RED,   " Unknown USB message received: %s", cUtils::FormatHexBytes((uint8_t*)pk_Header, pk_Header->size).c_str());
-                    break;
-                }
-            }
-
-            if (b_RxBlob) OsLibrary::PrintConsole(GREY, "   Rx Blob\n");
-            else          OsLibrary::PrintConsole(GREY, "\n");
-        }
+        if (ge_RunDemo == DEMO_FastBlob) 
+            SendFastTxPackets();
+        else if (ge_RunDemo != DEMO_Receive)
+            SendSlowTxPackets(&s64_LastStamp);
 
         // exit if the user hits ENTER
         if (OsLibrary::CheckConsoleEnterPressed())
-            return;
-
-    } // while (true)
+            break;
+    }
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ============================================================================================================
+
+// Load gk_TxPackets with 3 packets with 8 data bytes
+void LoadSlowTxPackets(bool b_Init)
+{
+    if (b_Init)
+    {
+        // IMPORTANT: Each connected USB adapter must use it's own ID, otherwise CAN errors when sending!
+        gk_TxPackets[0].mu32_ID     = 0x7E0 + gs32_DeviceIndex; 
+        gk_TxPackets[0].mu8_DataLen = 8;
+        memcpy(gk_TxPackets[0].mu8_Data, "ElmuSoft", 8);
+
+        gk_TxPackets[1].mu32_ID     = gk_TxPackets[0].mu32_ID;
+        gk_TxPackets[1].mu8_DataLen = 8;
+        memcpy(gk_TxPackets[1].mu8_Data, "TxBlob 2", 8);
+
+        gk_TxPackets[2].mu32_ID     = gk_TxPackets[0].mu32_ID;
+        gk_TxPackets[2].mu8_DataLen = 8;
+        memcpy(gk_TxPackets[2].mu8_Data, "TxBlob 3", 8);
+    }
+    else
+    {
+        // increment the first byte in each packet which is a counter
+        gk_TxPackets[0].mu8_Data[0] = ++ gu8_TxPacketID;
+        gk_TxPackets[1].mu8_Data[0] = gu8_TxPacketID + 0x10;
+        gk_TxPackets[2].mu8_Data[0] = gu8_TxPacketID + 0x20;
+    }
+}
+
+// Load gk_TxPackets with FAST_PACKETS packets with FAST_BYTES data bytes
+void LoadFastTxPackets(bool b_Init)
+{
+    for (int P=0; P<FAST_PACKETS; P++)
+    {
+        if (b_Init)
+        {
+            // IMPORTANT: Each connected USB adapter must use it's own ID, otherwise CAN errors when sending!
+            gk_TxPackets[P].mu32_ID     = 0x500 + gs32_DeviceIndex; 
+            gk_TxPackets[P].mu8_DataLen = FAST_BYTES;
+
+            for (int B=0; B<FAST_BYTES; B++)
+            {
+                gk_TxPackets[P].mu8_Data[B] = (uint8_t)(P + B);
+            }
+        }
+
+        // increment the first byte in each packet which is a counter
+        gk_TxPackets[P].mu8_Data[0] = gu8_TxPacketID ++;
+    }
+}
+
+// ============================================================================================================
+
+void SendSlowTxPackets(int64_t* ps64_LastStamp)
+{
+    // Read the comment of OsLibrary::GetOsTimestamp()
+    int64_t s64_Now = OsLibrary::GetOsTimestamp();
+
+    // Send the Tx frame every 2 seconds (= 2000000 Âµs)
+    if (s64_Now - *ps64_LastStamp < 2000000)
+        return;
+    
+    *ps64_LastStamp = s64_Now;
+
+    uint32_t u32_Error;
+    int64_t  s64_TxStamp; // only valid if no error returned
+    int      s32_PackCount;
+    if (ge_RunDemo == DEMO_SlowBlob) // send blob with 3 packets at once over USB
+    {
+        u32_Error = gi_Candle.SendPacketBlob(gk_TxPackets, 3, &s64_TxStamp);
+        s32_PackCount = 3;
+    }
+    else // send a single packet
+    {
+        u32_Error = gi_Candle.SendPacket(&gk_TxPackets[0], &s64_TxStamp);
+        s32_PackCount = 1;
+    }
+
+    if (u32_Error)
+    {
+        OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, OsLibrary::GetOsTimestamp()));
+        OsLibrary::PrintConsole(WHITE, " Send");
+        OsLibrary::PrintConsole(RED,   " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+    }
+    else
+    {
+        for (int P=0; P<s32_PackCount; P++)
+        {
+            // Timestamps for sending are only available if Windows timestamps are used
+            OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
+            OsLibrary::PrintConsole(WHITE, " Send");
+            OsLibrary::PrintConsole(LIME,  " %s", gi_Candle.FormatCanPacket(&gk_TxPackets[P]).c_str());
+
+            if (ge_RunDemo == DEMO_SlowBlob) OsLibrary::PrintConsole(GREY, "  Tx Blob\n");
+            else                             OsLibrary::PrintConsole(GREY, "\n");
+        }
+    }
+    LoadSlowTxPackets(false);
+}
+
+// Send a blob with FAST_PACKETS packets with FAST_BYTES data bytes at maximum CAN bus load
+void SendFastTxPackets()
+{
+    // Read the comment of CalculateTxFifoFreeSlots()
+    int s32_Available;
+    uint32_t u32_Error = gi_Candle.CalculateTxFifoFreeSlots(&s32_Available);
+    if (u32_Error)
+    {
+        OsLibrary::PrintConsole(RED, "Tx Echo must be enabled\n");
+        return;
+    }
+
+    // not enough free slots in the firmware
+    if (s32_Available <= FAST_PACKETS)
+        return;
+
+    int64_t s64_TxStamp;
+    u32_Error = gi_Candle.SendPacketBlob(gk_TxPackets, FAST_PACKETS, &s64_TxStamp);
+
+    OsLibrary::PrintConsole(GREY, gi_Candle.FormatTimestamp(NULL, s64_TxStamp));
+    OsLibrary::PrintConsole(WHITE, " Send");
+    if (u32_Error)
+    {
+        OsLibrary::PrintConsole(RED, " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+    }
+    else
+    {
+        OsLibrary::PrintConsole(LIME, " %X: %d packets with %d bytes from 0x%02X to 0x%02X", 
+                                        gk_TxPackets[0].mu32_ID, FAST_PACKETS, FAST_BYTES,
+                                        (uint8_t)(gu8_TxPacketID - FAST_PACKETS), 
+                                        (uint8_t)(gu8_TxPacketID - 1));
+        OsLibrary::PrintConsole(GREY, "  Tx Blob\n");
+    }
+    LoadFastTxPackets(false);
+}
+
+// ============================================================================================================
+
+// returns false to abort the demo when the adapter has been disconnected
+bool ReceiveAndDisplayPackets()
+{
+    int64_t  s64_RxTimestamp;
+    bool     b_RxBlob;
+    kHeader* pk_Header;
+
+    for (int L=0; L<FAST_PACKETS; L++)
+    {
+        // Wait once for a packet, then only get packets that are in the buffer in OsLibrary.
+        int s32_Timeout = (L == 0) ? 100 : 0;
+
+        // Check for Rx data
+        uint32_t u32_Error = gi_Candle.ReceiveData(s32_Timeout, &pk_Header, &s64_RxTimestamp, &b_RxBlob);
+        if (u32_Error)
+        {
+            // Timeout means that no data was received. This is not an error.
+            if (u32_Error == ERR_TIMEOUT)
+                return true;
+            
+            // Error is not timeout (e.g. USB device has been disconnected)
+            OsLibrary::PrintConsole(GREY,  gi_Candle.FormatTimestamp(NULL, s64_RxTimestamp));
+            OsLibrary::PrintConsole(WHITE, " Recv");
+            OsLibrary::PrintConsole(RED,   " %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
+
+            // The CANable has been disconnected --> return false
+            return (u32_Error != ERR_TOO_MANY_ERRORS);
+        }
+
+        #if defined(_MSC_VER)
+            // The Windows console is too slow to print all the Tx echo packets at maximum busload
+            if (ge_RunDemo == DEMO_FastBlob && pk_Header->msg_type == MSG_TxEcho)
+                continue;
+        #endif
+
+        OsLibrary::PrintConsole(GREY, gi_Candle.FormatTimestamp(pk_Header, s64_RxTimestamp));
+        switch (pk_Header->msg_type)
+        {
+            case MSG_RxFrame:
+            {
+                kCanPacket k_RxPacket = gi_Candle.RxFrameToCanPacket((kRxFrameElmue*)pk_Header);
+                OsLibrary::PrintConsole(WHITE, " Recv");
+                OsLibrary::PrintConsole(CYAN,  " %s", gi_Candle.FormatCanPacket(&k_RxPacket).c_str());
+                break;
+            }
+            case MSG_TxEcho:
+            {
+                OsLibrary::PrintConsole(WHITE, " Echo");
+                kCanPacket k_EchoPacket;
+                if (!gi_Candle.GetTxEchoPacket((kTxEchoElmue*)pk_Header, &k_EchoPacket))
+                    OsLibrary::PrintConsole(RED,   " Invalid echo marker received");
+                else
+                    OsLibrary::PrintConsole(GREEN, " %s", gi_Candle.FormatCanPacket(&k_EchoPacket).c_str());
+                break;
+            }
+            case MSG_Error:
+            {
+                eErrorBusStatus e_BusStatus;
+                eErrorLevel     e_ErrLevel;
+                string s_Error = gi_Candle.FormatCanErrors((kErrorElmue*)pk_Header, &e_BusStatus, &e_ErrLevel);
+                uint16_t u16_Color = GREY;
+                if (e_ErrLevel == LEVEL_Medium) u16_Color = YELLOW;
+                if (e_ErrLevel == LEVEL_High)   u16_Color = RED;
+                OsLibrary::PrintConsole(WHITE,     " Err ");
+                OsLibrary::PrintConsole(u16_Color, " %s", s_Error.c_str());
+                break;
+            }
+            case MSG_String:
+            {
+                kStringElmue* pk_String = (kStringElmue*)pk_Header;
+                OsLibrary::PrintConsole(WHITE, " Debg");
+                OsLibrary::PrintConsole(GREY,  " %s", gi_Candle.ConvertStringFrame(pk_String).c_str());
+                break;
+            }
+            case MSG_Busload:
+            {
+                kBusloadElmue* pk_Busload = (kBusloadElmue*)pk_Header;
+                OsLibrary::PrintConsole(WHITE, " Load");
+                OsLibrary::PrintConsole(GREY,  " Busload: %u%%", pk_Busload->bus_load);
+                break;
+            }
+            default:
+            {
+                OsLibrary::PrintConsole(WHITE, " Err ");
+                OsLibrary::PrintConsole(RED,   " Unknown USB message received: %s", cUtils::FormatHexBytes((uint8_t*)pk_Header, pk_Header->size).c_str());
+                break;
+            }
+        } // switch
+
+        if (b_RxBlob) OsLibrary::PrintConsole(GREY, "  Rx Blob\n");
+        else          OsLibrary::PrintConsole(GREY, "\n");
+    } // for
+    return true;
+}
+
+// ============================================================================================================
 
 // Write a string and a 64 bit random into 2 flash segments, then read the data and verify that it is correct.
 void FlashMemoryTest()
 {
+    OsLibrary::PrintConsole(YELLOW, "\nTest 1: Write string \"Hello C++ World of flash data!\" to flash segment 2\n");
+    OsLibrary::PrintConsole(YELLOW, "Test 2: Write 8 random bytes to flash segment 5\n");
+
     uint32_t u32_Error;
     uint32_t u32_Read;
-    uint8_t  u8_FlashData[5000];
+    uint8_t  u8_FlashData[4096];
     uint8_t  u8_SegmentA = 2;
     uint8_t  u8_SegmentB = 5;
 
-    const char* s8_Hello   = "Hello World of flash data!";
+    const char* s8_Hello   = "Hello C++ World of flash data!";
     uint16_t  u16_LenHello = strlen(s8_Hello);
 
     uint64_t u64_Random    = cUtils::GetTickMilli() * 0x815A78F3D;
@@ -476,36 +614,13 @@ _Error:
     OsLibrary::PrintConsole(RED,  "\nFlash memory test Error: %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ============================================================================================================
 
-// ATTENTION:
-// This works only if the device is in Candlelight mode.
-// If the device is already in DFU mode it will fail.
-void DfuDemo()
-{
-    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
-    OsLibrary::PrintConsole(YELLOW, "                    CANable 2.5 DFU C++ Demo by ElmüSoft                     \n");
-    OsLibrary::PrintConsole(YELLOW, "=============================================================================\n");
-
-    // Open Firmware Update interface
-    if (!OpenDevice())
-        return;
-
-    uint32_t u32_Error = gi_Candle.EnterDfuMode();
-    if (u32_Error)
-        OsLibrary::PrintConsole(RED, "\nError switching to DFU mode. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
-    else
-        OsLibrary::PrintConsole(LIME, "\nDevice has been switched successfully into DFU mode.\n");
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-// CANDLELIGHT_DEMO = true  --> open Candlelight interface
-// CANDLELIGHT_DEMO = false --> open DFU interface
+// Candlelight interface or DFU interface
 bool OpenDevice()
 {
     vector<kUsbDevice> i_Devices;
-    uint32_t u32_Error = gi_Candle.EnumDevices(CANDLELIGHT_DEMO, &i_Devices);
+    uint32_t u32_Error = gi_Candle.EnumDevices(ge_RunDemo != DEMO_EnterDFU, &i_Devices);
     if (u32_Error)
     {
         OsLibrary::PrintConsole(RED, "Error enumerating USB devices. %s\n", gi_Candle.FormatLastError(u32_Error).c_str());
@@ -514,23 +629,27 @@ bool OpenDevice()
 
     if (i_Devices.size() == 0)
     {
-        OsLibrary::PrintConsole(RED, "\nNo Candlelight device connected or in wrong operatiom mode or WinUSB driver not installed correctly.\n"
+        OsLibrary::PrintConsole(RED, "\nNo Candlelight device connected or in wrong operatiom mode or driver not installed correctly.\n"
                                      "Legacy Candlelight firmware has bugs that prevent the correct driver installation.\n"
-                                     "Make sure you have the new CANable 2.5 firmware from ElmüSoft.\n");
+                                     "Make sure you have the new CANable 2.5 firmware from Elm\xC3\xBCSoft.\n"); // UTF8 'Ã¼'
         return false;
     }
 
     // -----------------------------------------
 
     gs32_DeviceIndex = 0;
-    if (i_Devices.size() > 1) // Two or more devices connected
+    if (i_Devices.size() == 1)
+    {
+        PrintDeviceMenu(i_Devices);
+    }
+    else // Two or more devices connected
     {
         while (true)
         {
-            OsLibrary::PrintConsole(LIME, "\nPlease select one of the devices:");
-            OsLibrary::PrintConsole(GREY, "  (Exit with ESCAPE)\n\n");
-
             PrintDeviceMenu(i_Devices);
+
+            OsLibrary::PrintConsole(LIME, "\nPlease select the adapter.");
+            OsLibrary::PrintConsole(GREY, "  (Exit with ESCAPE)\n\n");
 
             int s32_Char = OsLibrary::WaitConsoleChar();
             if (s32_Char == 27) // ESCAPE key pressed
@@ -568,9 +687,62 @@ bool OpenDevice()
     return true;
 }
 
+// ============================================================================================================
+
+bool TestSelection()
+{
+    OsLibrary::ClearConsole();
+    while (true)
+    {
+        OsLibrary::PrintConsole(WHITE,  "\nA.) Receive Only Demo\n");
+        OsLibrary::PrintConsole(YELLOW, "    Display all received CAN traffic and send nothing.\n");
+        OsLibrary::PrintConsole(WHITE,  "B.) Slow Tx Single Demo\n");
+        OsLibrary::PrintConsole(YELLOW, "    Send one CAN packet with 8 data bytes every 2 seconds and display all received CAN traffic.\n");
+        OsLibrary::PrintConsole(WHITE,  "C.) Slow Tx Blob Demo\n");
+        OsLibrary::PrintConsole(YELLOW, "    Send a Tx blob with 3 CAN packets with 8 data bytes every 2 seconds and display all received CAN traffic.\n");
+        OsLibrary::PrintConsole(WHITE,  "D.) Enter DFU Demo\n");
+        OsLibrary::PrintConsole(YELLOW, "    Switch the adapter into DFU mode. This fails if already in DFU mode.\n");
+        OsLibrary::PrintConsole(WHITE,  "E.) Flash Write / Read Demo\n");
+        OsLibrary::PrintConsole(YELLOW, "    Write user data to the flash memory of the CANable, read it back and verify correct operation.\n");
+        OsLibrary::PrintConsole(WHITE,  "F.) 100%% Bus Load Demo\n");
+        OsLibrary::PrintConsole(YELLOW, "    Send %d packets with %d bytes in a blob to the adapter with maximum CAN bus speed.\n", FAST_PACKETS, FAST_BYTES);
+        OsLibrary::PrintConsole(RED,    "    IMPORTANT:\n");
+        OsLibrary::PrintConsole(YELLOW, "    Do NOT run this demo against another side which also sends CAN packets.\n");
+        OsLibrary::PrintConsole(YELLOW, "    When one adapter occupies CAN bus with 100%% busload the other side has no chance to send a packet.\n");
+        OsLibrary::PrintConsole(YELLOW, "    The side with the higher CAN ID will always lose arbitration and you see Tx Timeout errors.\n");
+        OsLibrary::PrintConsole(YELLOW, "    This demo has been designed to send only unidirectional high speed traffic.\n");
+        OsLibrary::PrintConsole(YELLOW, "    On Linux run this demo against the \"Receive Only Demo\" on the other side.\n");
+        OsLibrary::PrintConsole(YELLOW, "    On Windows the console is too slow to display the CAN traffic generated by this demo.\n");
+        OsLibrary::PrintConsole(YELLOW, "    If you use the Windows console don't be surprised to see errors \"Polling is too slow\".\n");
+        OsLibrary::PrintConsole(YELLOW, "    I recommend to use the HUD ECU Hacker CAN Raw Terminal as packet receiver on the other side.\n");
+        OsLibrary::PrintConsole(YELLOW, "    HUD ECU Hacker has an ultra fast Trace pane which is able of displaying CAN FD traffic at maximum speed.\n");
+        OsLibrary::PrintConsole(LIME,   "\nPlease select the test to execute.");
+        OsLibrary::PrintConsole(GREY,   "  (Exit with ESCAPE)\n\n");
+    
+        int s32_Char = OsLibrary::WaitConsoleChar();
+        if (s32_Char == 27) // ESCAPE key pressed
+            return false;
+
+        if (s32_Char >= 'a')   
+            s32_Char -= 32; // make upper case
+
+        if (s32_Char >= 'A' && s32_Char <= 'F') 
+        {
+            ge_RunDemo = (eDemo)(s32_Char - 'A');
+            return true;
+        }
+            
+        OsLibrary::PrintConsole(RED, "\nInvalid key!\n");
+    }
+}
+
+// ============================================================================================================
+
 // Formatted output for each device: Product - Interface (Serial Number) CAN Channel
 void PrintDeviceMenu(vector<kUsbDevice>& i_Devices)
 {
+    OsLibrary::PrintConsole(WHITE, "\n");
+
     uint32_t u32_ProductLen = 0;
     uint32_t u32_SerialLen  = 0;
     uint32_t u32_InterfLen  = 0;

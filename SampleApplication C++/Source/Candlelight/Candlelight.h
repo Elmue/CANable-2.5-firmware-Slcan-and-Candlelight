@@ -1,4 +1,4 @@
-
+﻿
 // https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 #pragma once
@@ -72,11 +72,12 @@ public:
     uint32_t   SetBridgeFilter(uint8_t u8_FilterIndex, uint8_t u8_DestChannel, bool b_Enable, bool b_Block, bool b_29bit, uint32_t u32_Filter, uint32_t u32_Mask);
     uint32_t   Start(eDeviceFlags e_Flags);
     // ------------------------------------
+    uint32_t   CalculateTxFifoFreeSlots(int* ps32_Available);
     uint32_t   SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, int64_t* ps64_OsTimestamp);
     uint32_t   SendPacket(kCanPacket* pk_CanPacket, int64_t* ps64_OsTimestamp);
     uint32_t   ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, int64_t* ps64_RxTimestamp, bool* pb_Blob = NULL);
     kCanPacket RxFrameToCanPacket(kRxFrameElmue* pk_RxFrame);
-    kCanPacket GetTxEchoPacket   (kTxEchoElmue*  pk_TxEcho);
+    bool       GetTxEchoPacket   (kTxEchoElmue*  pk_TxEcho, kCanPacket* pk_Paket);
     string     ConvertStringFrame(kStringElmue*  pk_String);
     // ------------------------------------
     string     FormatCanPacket(kCanPacket* pk_Packet);
@@ -105,7 +106,8 @@ private:
     OsLibrary                mi_OsLibrary;
     uint8_t                  mu8_Interface;
     kDevInfo*                mpk_Info;
-    uint8_t                  mu8_EchoMarker;      // counter    1...255
+    uint8_t                  mu8_TxEchoMarker;    // counter 1...255 for Tx packets
+    uint8_t                  mu8_RxEchoMarker;    // counter 1...255 from received echo packets
     int64_t                  ms64_McuRollOver;    // offset for 32 bit firmware timestamp
     int64_t                  ms64_LastMcuStamp;   // the last MCU timestamp
     uint64_t                 mu64_TxOverflow;    

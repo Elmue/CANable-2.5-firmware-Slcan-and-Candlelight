@@ -1,4 +1,4 @@
-
+ï»¿
 // https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 /*
@@ -62,7 +62,7 @@ using namespace CANable;
 GUID GUID_CANDLELIGHT  = { 0xc15b4308, 0x04d3, 0x11e6, { 0xb3, 0xea, 0x60, 0x57, 0x18, 0x9e, 0x64, 0x43 }};
 
 // Interface 1 "{c25b4308-04d3-11e6-b3ea-6057189e6443}"
-// This GUID can be used to switch the device into DFU mode. Requires the CANable 2.5 firmware from ElmüSoft.
+// This GUID can be used to switch the device into DFU mode. Requires the CANable 2.5 firmware from ElmÃ¼Soft.
 GUID GUID_FIRMW_UPDATE = { 0xc25b4308, 0x04d3, 0x11e6, { 0xb3, 0xea, 0x60, 0x57, 0x18, 0x9e, 0x64, 0x43 }};
 
 HANDLE gh_ConsoleOut = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -206,6 +206,14 @@ uint32_t OsLibrary::StartPipes()
         return GetLastError();
 
     CloseHandle(h_Thread);
+
+    // When the thread starts reading the IN pipe there may be a USB packet hanging from the last time the device was opened.
+    // Delete this packet by resetting the fifo count after a delay.
+    Sleep(100);
+    EnterCriticalSection(&mk_Critical);
+        ms32_FifoReadIdx = (ms32_FifoReadIdx + ms32_FifoCount) % RX_FIFO_MAX_COUNT;
+        ms32_FifoCount   = 0;
+    LeaveCriticalSection(&mk_Critical);
 
     return NO_ERROR;
 }
@@ -353,7 +361,9 @@ void OsLibrary::PipeThreadMember()
         uint32_t u32_Error = NO_ERROR;
         if (WinUsb_ReadPipe(mh_WinUsb, mk_Info.mu8_EndpointIN, pk_FifoWrite->mu8_Buffer, 
                             sizeof(pk_FifoWrite->mu8_Buffer), NULL, &k_Overlapped))
+        {
             assert(FALSE); // Error WinUsb_ReadPipe terminated synchronously
+        }
         else
         {
             u32_Error = GetLastError();
@@ -459,7 +469,7 @@ uint32_t OsLibrary::ReadPipeIn(uint32_t u32_Timeout, kUsbInPacket* pk_UsbInPacke
 // =================================== Enumerate USB Devices ==================================
 
 // Returns device name, serial number and path like "\\?\USB#VID_1D50&PID_606F&MI_00#7&20E43BBC&0&0000#{c15b4308-04d3-11e6-b3ea-6057189e6443}"
-// b_GetCandlelight = false -> this function enumerates the Firmware Update interfaces using GUID_FIRMW_UPDATE, but only if the device has the ElmüSoft firmware.
+// b_GetCandlelight = false -> this function enumerates the Firmware Update interfaces using GUID_FIRMW_UPDATE, but only if the device has the ElmÃ¼Soft firmware.
 // All legacy fimrware versions were buggy and unable to send the two Microsoft OS descriptors correctly, so the driver is not installed.
 uint32_t OsLibrary::EnumDevices(bool b_GetCandlelight, vector<kUsbDevice>* pi_Devices)
 {
@@ -665,7 +675,8 @@ uint32_t OsLibrary::RegReadString(HKEY h_Class, const char* s8_Path, const char*
 // Set console title, buffer size and window size
 void OsLibrary::SetUpConsole(int16_t s16_BufWidth, int16_t s16_BufHeight, int16_t s16_WndWidth, int16_t s16_WndHeight, string s_Title)
 {
-    SetConsoleTitleA(s_Title.c_str());
+    wstring s_Unicode = ToUnicode(s_Title.c_str());
+    SetConsoleTitleW(s_Unicode.c_str());
 
     COORD k_Size = {s16_BufWidth, s16_BufHeight}; 
     SetConsoleScreenBufferSize(gh_ConsoleOut, k_Size);
@@ -694,6 +705,26 @@ void OsLibrary::PrintConsole(uint16_t u16_Color, string s_Format, ...)
     // WriteConsole() is significantly faster than wprinf() or vwprintf(), which need 10 ms per line!
     uint32_t u32_Written;
     WriteConsoleW(gh_ConsoleOut, s_Unicode.c_str(), s_Unicode.length(), &u32_Written, NULL);
+}
+
+// Clear the entire Console screen
+void OsLibrary::ClearConsole() 
+{
+    CONSOLE_SCREEN_BUFFER_INFO k_Info;
+    GetConsoleScreenBufferInfo(gh_ConsoleOut, &k_Info);
+
+    DWORD u32_CellCount = k_Info.dwSize.X * k_Info.dwSize.Y;
+    COORD k_HomePos     = {0, 0};
+
+    // Fill the entire buffer with spaces
+    DWORD u32_Count;
+    FillConsoleOutputCharacterW(gh_ConsoleOut, L' ', u32_CellCount, k_HomePos, &u32_Count);
+
+    // Restore current character attributes (colors) across the filled cells
+    FillConsoleOutputAttribute(gh_ConsoleOut, k_Info.wAttributes, u32_CellCount, k_HomePos, &u32_Count);
+
+    // Move cursor back to the top-left origin
+    SetConsoleCursorPosition(gh_ConsoleOut, k_HomePos);
 }
 
 // ===================================== Console IN =====================================
@@ -739,7 +770,13 @@ void OsLibrary::RestoreTerminal()
 
 // ===================================== Helpers =====================================
 
-// Create a timestamp with 1 µs precision.
+// Pause the thread for X milliseconds
+void OsLibrary::Sleep(uint32_t u32_Interval)
+{
+    ::Sleep(u32_Interval);
+}
+
+// Create a timestamp with 1 Âµs precision.
 // It is recommended to turn off transimssion of timestamps (not set GS_DevFlagTimestamp) to reduce USB traffic.
 // Then this function is used as a replacement to generate a timestamp on reception of a USB packet and when sending a packet.
 int64_t OsLibrary::GetOsTimestamp()

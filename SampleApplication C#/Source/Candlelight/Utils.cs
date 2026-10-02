@@ -187,6 +187,39 @@ public class Utils
     // ------------------------------------------------
 
     /// <summary>
+    /// Check if ENTER key has been pressed
+    /// </summary>
+    public static bool CheckConsoleEnterPressed()
+    {
+        const int STD_INPUT_HANDLE = -10;
+        const int KEY_EVENT = 0x01;
+        const int VK_RETURN = 0x0D;
+        IntPtr h_Console = GetStdHandle(STD_INPUT_HANDLE);
+
+        // Check if ENTER key has been pressed
+        INPUT_KEY_RECORD k_Buffer;
+        int s32_Events;
+        if (PeekConsoleInput(h_Console, out k_Buffer, 1, out s32_Events))
+        {
+            if (s32_Events > 0)
+            {
+                // The event must be removed from the input buffer, otherwise it is reported eternally.
+                ReadConsoleInputW(h_Console, out k_Buffer, 1, out s32_Events);  
+
+                if (k_Buffer.EventType == KEY_EVENT  && 
+                    k_Buffer.bKeyDown &&
+                    k_Buffer.wVirtualKeyCode == VK_RETURN)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // ------------------------------------------------
+
+    /// <summary>
     /// s_Format = "Error {0} enumerating USB devices: {1}"
     /// </summary>
     public static void ThrowApiError(int s32_Error, String s_Format)

@@ -66,6 +66,7 @@ void can_init()
         HAL_GPIO_Init(SET_CanPorts[C], &GPIO_InitStruct);
 
         can_inst[C].handle.Instance = SET_CanInterfaces[C];
+        can_inst[C].termination_on  = false;
     }
 
 #if defined(CAN_TRX_ENABLE_PIN)
@@ -92,14 +93,13 @@ void can_reset(uint8_t channel)
     inst->std_filter_count    = 0;
     inst->ext_filter_count    = 0;
     inst->busload_interval    = 0;
-    inst->tx_pending          = 0;
     inst->is_open             = false;
 
     // clear all bridge filters
     can_set_bridge_filter(channel, 0, 0xFF, false, false, false, 0, 0);
 
     // this is indispensable here, otherwise Slcan is dead after a Tx buffer overlow and closing the adapter.
-    buf_clear_can_buffer(channel);
+    buf_clear_fifos(channel, true, true);
 }
 
 // Start the FDCAN instance
@@ -114,6 +114,8 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
     // Nominal baudrate is mandatory
     if (inst->bitrate_nominal.Brp == 0)
         return FBK_BaudrateNotSet;
+    
+    // ------------------- Reset ------------------------
 
     if (!can_is_any_open())
     {
@@ -122,14 +124,26 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
         __HAL_RCC_FDCAN_RELEASE_RESET();
     }
 
-    buf_clear_can_buffer(channel);
+    buf_clear_fifos(channel, true, true);
     error_init(channel);
+    
+    inst->bitrate_printed_once = false;
+    inst->delay_printed_once   = false;
+    inst->recover_bus_off      = false;
+    inst->bit_count_total      = 0;
+    inst->busload_counter      = 0;
+    inst->old_busload_pct      = 0;
+    inst->tx_pending           = 0;
+   
+    // ------------------ Stop blink ----------------------
 
     // stop identify blinking on all channels
     for (int C=0; C<CHANNEL_COUNT; C++)
     {
         led_blink_identify(C, false);
     }
+    
+    // ------------------ Init FDCAN ----------------------
 
     FDCAN_InitTypeDef* init = &inst->handle.Init;
     init->ClockDivider          = FDCAN_CLOCK_DIV1;
@@ -141,21 +155,21 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
     init->StdFiltersNbr         = inst->std_filter_count;
     init->ExtFiltersNbr         = inst->ext_filter_count;
 
-    // ------------------- baudrate ------------------------
-
+    // set nominal bitrate
     init->FrameFormat           = FDCAN_FRAME_CLASSIC;
     init->NominalPrescaler      = inst->bitrate_nominal.Brp;
     init->NominalTimeSeg1       = inst->bitrate_nominal.Seg1;
     init->NominalTimeSeg2       = inst->bitrate_nominal.Seg2;
     init->NominalSyncJumpWidth  = inst->bitrate_nominal.Sjw;
 
-    // Data baudrate is optional (only required for CAN FD)
+    // data baudrate is optional (only required for CAN FD)
+    // data baudrate == 0                --> classic CAN
     // data baudrate == nominal baudrate --> CAN FD
     // data baudrate  > nominal baudrate --> CAN FD + BRS
     // NOTE:
     // The samplepoint for high data rates is critical.
     // 8 M baud does not work with 75%, but it works with 50%.
-    // But strangely 10 M baud works with 50% and with 75% !
+    // But strangely 10 M baud works with 50% and with 75%.
     if (can_using_FD(channel))
     {
         init->FrameFormat       = can_using_BRS(channel) ? FDCAN_FRAME_FD_BRS : FDCAN_FRAME_FD_NO_BRS;
@@ -165,7 +179,11 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
         init->DataSyncJumpWidth = inst->bitrate_data.Sjw;
     }
 
-    // ------------------ init bus load ------------------------
+    // sets inst->handle.State == HAL_FDCAN_STATE_READY
+    if (HAL_FDCAN_Init(&inst->handle) != HAL_OK)
+        return FBK_ErrorFromHAL; // error detail in inst->handle.ErrorCode
+
+    // ------------------ Init bus load ------------------------
 
     // Calculate the length of 1 nominal CAN bus bit in nanoseconds (500 kBaud --> nom_bit_len_ns = 2000)
 
@@ -177,24 +195,6 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
     inst->nom_bit_len_ns *= inst->bitrate_nominal.Brp;     // clock prescaler
     inst->nom_bit_len_ns *= 1000;                          // µs -> ns
     inst->nom_bit_len_ns /= clock_MHz;
-
-    inst->bitrate_printed_once = false;
-    inst->delay_printed_once   = false;
-    inst->recover_bus_off      = false;
-
-    // ------------------ Init FDCAN ----------------------
-
-    // sets inst->handle.State == HAL_FDCAN_STATE_READY
-    if (HAL_FDCAN_Init(&inst->handle) != HAL_OK)
-        return FBK_ErrorFromHAL; // error detail in inst->handle.ErrorCode
-
-    // ---------------- Rx/Tx Timestamps ------------------
-
-    if (HAL_FDCAN_ConfigTimestampCounter(&inst->handle, FDCAN_TIMESTAMP_PRESC_1)  != HAL_OK || // use no prescaler
-        HAL_FDCAN_EnableTimestampCounter(&inst->handle, FDCAN_TIMESTAMP_EXTERNAL) != HAL_OK || // use timer TIM3 (see system.c)
-        HAL_FDCAN_ConfigInterruptLines  (&inst->handle, FDCAN_IT_GROUP_MISC, FDCAN_INTERRUPT_LINE0) != HAL_OK ||
-        HAL_FDCAN_ActivateNotification  (&inst->handle, FDCAN_IT_LIST_MISC | FDCAN_IT_TIMESTAMP_WRAPAROUND, 0) != HAL_OK) // wrap callback
-        return FBK_ErrorFromHAL; // error detail in inst->handle.ErrorCode
 
     // ---------------- TDC compensation ------------------
 
@@ -238,7 +238,7 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
         }
     }
 
-    // -------------------- filters --------------------------
+    // --------------------- Host Filters ---------------------
 
     // Store all user filters in can_filters into the processor's memory
     if (!can_apply_host_filters(inst))
@@ -253,7 +253,7 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
 
     HAL_FDCAN_ConfigGlobalFilter(&inst->handle, non_matching, non_matching, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE);
 
-    // ----------------------- start ---------------------------
+    // ----------------------- Start ---------------------------
 
     // sets inst->handle.State == HAL_FDCAN_STATE_BUSY
     if (HAL_FDCAN_Start(&inst->handle) != HAL_OK) return FBK_ErrorFromHAL; // error detail in inst->handle.ErrorCode
@@ -280,7 +280,7 @@ void can_close(uint8_t channel)
     // It should not generate an error if the adapter is closed twice
     if (!inst->is_open)
         return;
-
+    
     HAL_FDCAN_Stop  (&inst->handle);
     HAL_FDCAN_DeInit(&inst->handle);
 
@@ -304,7 +304,7 @@ void can_send_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t*
     {
         // On error the HAL sets inst->handle.ErrorCode to HAL_FDCAN_ERROR_FIFO_FULL or HAL_FDCAN_ERROR_NOT_STARTED
         // Both errors can never happen, because this function is only called when CAN has been initialized and the FIFO is not full.
-        error_assert(channel, APP_CanTxFail, true);
+        error_assert(channel, APP_CanTxFail, true); // both LED ON
         return;
     }
 
@@ -337,7 +337,7 @@ void can_process(uint8_t channel, uint32_t tick_now)
     // they have sent a fake event immediately after dispatching the packet, no matter if it really was sent or not.
     FDCAN_TxEventFifoTypeDef tx_event;
     if (HAL_FDCAN_GetTxEvent(&inst->handle, &tx_event) == HAL_OK)
-    {
+    {       
         // Here tx_event.EventType is FDCAN_TX_EVENT if auto retransmission is enabled.
         // Here tx_event.EventType is FDCAN_TX_IN_SPITE_OF_ABORT if auto retransmission is disabled.
         // "In DAR mode (Disable Auto Retransmission) all transmissions are automatically canceled after
@@ -434,7 +434,7 @@ void can_process(uint8_t channel, uint32_t tick_now)
     {
         inst->tx_pending = 0;
         HAL_FDCAN_AbortTxRequest(&inst->handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
-        buf_clear_can_buffer(channel);
+        buf_clear_fifos(channel, true, false);
         error_assert(channel, APP_CanTxTimeout, false);
     }
 
@@ -544,7 +544,7 @@ void can_timer_100ms()
             uint32_t busload_ppm = rate_us_ppm * STUFFING_FACTOR / inst->busload_interval;
 
             // divide by 1000 to remove stuff factor, which is multiplied with 1000, and divide by 10 to convert 1000 into 100%
-            uint8_t  new_busload = MIN(99, busload_ppm / 10000);
+            uint8_t new_busload = MIN(100, busload_ppm / 10000);
 
             // Suppress report of "Bus load = 0%" eternally
             if (new_busload > 0 || inst->old_busload_pct > 0)

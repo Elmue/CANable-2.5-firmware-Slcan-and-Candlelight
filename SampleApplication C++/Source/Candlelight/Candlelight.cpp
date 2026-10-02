@@ -1,4 +1,4 @@
-
+ï»¿
 // https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 /*
@@ -40,11 +40,11 @@ using namespace CANable;
 // Adapt this to the latest available CANable 2.5 firmware version.
 // It shows an error to upload the latest firmware to the adapter.
 // The version number is BCD encoded (0x251218 = 18.dec.2025)
-#define MIN_FIRMWARE      0x260914
+#define MIN_FIRMWARE      0x261001
 // must be equal to CAN_QUEUE_SIZE in buffer.h in the firmware
 #define CAN_QUEUE_SIZE    64
 
-// This class implements the new CANable 2.5 ElmüSoft protocol.
+// This class implements the new CANable 2.5 ElmÃ¼Soft protocol.
 Candlelight::Candlelight()
 {
     mb_InitDone = false;
@@ -78,7 +78,8 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     if (mi_OsLibrary.IsOpen())
         return ERR_OPERATION_INVALID; // Already open
     
-    mu8_EchoMarker      = 1; // counter 1...255
+    mu8_TxEchoMarker    = 0; 
+    mu8_RxEchoMarker    = 0;
     ms64_McuRollOver    = 0;
     ms64_LastMcuStamp   = 0;
     ms64_TimestampStart = 0;
@@ -104,7 +105,7 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     mi_Details.push_back(kDetail("Device Path",        pk_Device->ms_DevicePath));
     mi_Details.push_back(kDetail("USB Vendor",         cUtils::Format("\"%s\"", mpk_Info->ms_Vendor   .c_str())));   
     mi_Details.push_back(kDetail("USB Product",        cUtils::Format("\"%s\"", mpk_Info->ms_Product  .c_str())));  
-    mi_Details.push_back(kDetail("USB Serial  Nº",     cUtils::Format("\"%s\"", mpk_Info->ms_Serial   .c_str())));   
+    mi_Details.push_back(kDetail("USB Serial  Number", cUtils::Format("\"%s\"", mpk_Info->ms_Serial   .c_str())));   
     mi_Details.push_back(kDetail("USB Interface Name", cUtils::Format("\"%s\"", mpk_Info->ms_Interface.c_str())));
     mi_Details.push_back(kDetail("USB Vendor  ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idVendor)));
     mi_Details.push_back(kDetail("USB Product ID",     cUtils::Format("%04X",   mpk_Info->mk_DeviceDescr .idProduct)));
@@ -184,12 +185,12 @@ uint32_t Candlelight::Open(kUsbDevice* pk_Device)
     if (!mpk_Info->mb_IsElmueSoft)
     {
         mi_Details.push_back(kDetail("CAN Clock", cUtils::Format("%u MHz", mpk_Info->mk_Capability.fclk_can / 1000000)));  
-        return ERR_INVALID_FIRMWARE; // this class requires the new ElmüSoft firmware
+        return ERR_INVALID_FIRMWARE; // this class requires the new ElmÃ¼Soft firmware
     }
 
-    // --------------- Here comes only ElmüSoft firmware ---------------
+    // --------------- Here comes only ElmÃ¼Soft firmware ---------------
 
-    // ELM_ReqGetBoardInfo requires ElmüSoft firmware
+    // ELM_ReqGetBoardInfo requires ElmÃ¼Soft firmware
     if ((u32_Error = CtrlTransfer(DIR_In, ELM_ReqGetBoardInfo, mu8_Channel, &mpk_Info->mk_BoardInfo, sizeof(kBoardInfo))))
         return u32_Error;
 
@@ -301,7 +302,7 @@ uint32_t Candlelight::AddHostFilter(bool b_29bit, uint32_t u32_Filter, uint32_t 
 
 // STEP 5)  (optional)
 // set / clear one of 20 bridge filters
-// b_Enable = false and Index == 0x13  --> clear only bridge filter Nº 0x13
+// b_Enable = false and Index == 0x13  --> clear only bridge filter Number 0x13
 // b_Enable = false and Index == 0xFF  --> clear all bridge filters
 // b_Enable = true and b_Block = true  --> set block filter
 // b_Enable = true and b_Block = false --> set pass filter
@@ -372,14 +373,55 @@ uint32_t Candlelight::Reset()
 
 // ======================================= Send ========================================
 
+// Calculates the count of free FIFO slots in the firmware Tx FIFO.
+// First call ReceiveData() to update mu8_RxEchoMarker, then CalculateTxFifoFreeSlots()
+// and only if enough free slots are availabe call SendPacketBlob() to avoid running into a Tx buffer overflow.
+// ATTENTION: Use this function with care. It works as long as the other side acknowledges all packets.
+// In case of a Bus Passive state it may always return Available = 0.
+uint32_t Candlelight::CalculateTxFifoFreeSlots(int* ps32_Available)
+{
+    if (!mb_InitDone || !mb_Started || !mb_EnableTxEcho)
+        return ERR_OPERATION_INVALID;
+
+    // The markers are always between 1 and 255 after sending a packet.
+    // If the Tx marker is zero this means that no packet has been sent yet --> the Tx FIFO is empty
+    if (mu8_TxEchoMarker == 0)
+    {
+        *ps32_Available = CAN_QUEUE_SIZE;
+        return NO_ERROR;
+    }
+
+    int s32_UsedSlots;
+    if (mu8_TxEchoMarker < mu8_RxEchoMarker)
+        s32_UsedSlots = mu8_TxEchoMarker + 255 - mu8_RxEchoMarker;
+    else
+        s32_UsedSlots = mu8_TxEchoMarker - mu8_RxEchoMarker;
+
+    *ps32_Available = CAN_QUEUE_SIZE - s32_UsedSlots;
+    return NO_ERROR;
+}
+
 // Send s32_Count CAN packets in one blob over USB to the firmware.
-// This optimizes the USB speed to the maximum.
+// This optimizes the USB speed to the maximum and you can create 100% CAN bus load.
+// When the firmware cannot store s32_Count packets it will report an APP_CanTxOverflow event and send nothing.
+// To avoid this wait until CalculateTxFifoFreeSlots() reports >= 25 free slots, then send a blob with 25 packets.
 uint32_t Candlelight::SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, int64_t* ps64_OsTimestamp)
 {
-    *ps64_OsTimestamp = -1;
+    // get timestamp for errors
+    *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
 
     if (!mb_InitDone || !mb_Started)
         return ERR_OPERATION_INVALID;
+
+    if (s32_Count == 0)
+        return ERR_PARAM_INVALID;
+
+    if (s32_Count == 1)
+        return SendPacket(&pk_Packets[0], ps64_OsTimestamp);
+
+    // the firmware has a FIFO for max 64 packets
+    if (s32_Count > CAN_QUEUE_SIZE)
+        return ERR_TX_DATA_TOO_LONG;
 
     if ((mpk_Info->mk_Capability.feature & ELM_DevFlagSendUsbBlobs) == 0)
     {
@@ -387,49 +429,63 @@ uint32_t Candlelight::SendPacketBlob(kCanPacket* pk_Packets, int s32_Count, int6
         return ERR_CODE_IN_FEEDBACK;
     }
 
-    // the firmware has a FIFO for max 64 packets
-    if (s32_Count > CAN_QUEUE_SIZE)
-        return ERR_TX_DATA_TOO_LONG;
-
     uint8_t u8_Transmit[MAX_BLOB_SIZE];
     kBlob* pk_Blob = (kBlob*)u8_Transmit;
     pk_Blob->frame_count = s32_Count;
     pk_Blob->msg_type    = MSG_TxBlob;
 
+    uint8_t u8_LastMarker = mu8_TxEchoMarker;
+
+    uint32_t u32_Error = NO_ERROR;
     int s32_Offset = sizeof(kBlob);
     for (int P=0; P<s32_Count; P++)
     {
-        uint32_t u32_Error = TxPacketToTxBytes(&pk_Packets[P], u8_Transmit, sizeof(u8_Transmit), &s32_Offset);
+        u32_Error = TxPacketToTxBytes(&pk_Packets[P], u8_Transmit, sizeof(u8_Transmit), &s32_Offset);
         if (u32_Error)
-            return u32_Error;
+            break;
     }
 
-    // Get timestamp immediately before sending the packet
-    *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
+    if (u32_Error == NO_ERROR)
+    {
+        // get a precise timestamp immediately before sending USB packet
+        *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
+        u32_Error = mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
+    }
 
-    return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
+    // If the packets have not been sent --> restore the Tx marker
+    if (u32_Error)
+        mu8_TxEchoMarker = u8_LastMarker;
+
+    return u32_Error;
 }
 
 // CAN FD packets (b_FDF) can only be sent if a data baudrate has been set before.
 // Remote frames (b_RTR = true): s32_DataLen = 0 --> DLC = 0 will be sent, or s32_DataLen = 1 and u8_Data[0] contains the DLC to send.
 uint32_t Candlelight::SendPacket(kCanPacket* pk_Packet, int64_t* ps64_OsTimestamp)
 {
-    *ps64_OsTimestamp = -1;
+    // get timestamp for errors
+    *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
 
     if (!mb_InitDone || !mb_Started)
         return ERR_OPERATION_INVALID;
 
     uint8_t u8_Transmit[256];
+    uint8_t u8_LastMarker = mu8_TxEchoMarker;
 
     int s32_Offset = 0;
     uint32_t u32_Error = TxPacketToTxBytes(pk_Packet, u8_Transmit, sizeof(u8_Transmit), &s32_Offset);
+    if (u32_Error == NO_ERROR)
+    {
+        // get a precise timestamp immediately before sending USB packet
+        *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
+        u32_Error = mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
+    }
+
+    // If the packet has not been sent --> restore the Tx marker
     if (u32_Error)
-        return u32_Error;
+        mu8_TxEchoMarker = u8_LastMarker;
 
-    // Get timestamp immediately before sending the packet
-    *ps64_OsTimestamp = OsLibrary::GetOsTimestamp();
-
-    return mi_OsLibrary.WritePipeOut(u8_Transmit, s32_Offset);
+    return u32_Error;
 }
 
 // If the packet has insufficient bytes to match one of the CAN FD DLC values, it will be padded with PAD_BYTE.
@@ -456,6 +512,7 @@ uint32_t Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, uint8_t* u8_TxBuf
     // 3 + 64 messages have been sent to the firmware which were not acknowledged. 
     // The adapter is blocked --> report error once only.
     // If no errors were reported in the last 3 seconds the buffer is not full anymore
+    // To avoid that this happens you must call CalculateTxFifoFreeSlots() before sending Tx packets.
     if (mu64_TxOverflow > 0 && (cUtils::GetTickMilli() - mu64_TxOverflow) < 4000)
     {
         mu64_TxOverflow = 0;
@@ -465,7 +522,7 @@ uint32_t Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, uint8_t* u8_TxBuf
 
     uint32_t u32_ID    = pk_Packet->mu32_ID;
     uint32_t u32_MaxID = pk_Packet->mb_29bit ? CAN_MASK_29 : CAN_MASK_11;
-    if (u32_ID > u32_MaxID)
+    if (u32_ID == 0 || u32_ID > u32_MaxID)
         return ERR_PARAM_INVALID;
 
     if (pk_Packet->mb_29bit) u32_ID |= CAN_ID_29Bit; // 29 bit CAN ID
@@ -510,10 +567,10 @@ uint32_t Candlelight::TxPacketToTxBytes(kCanPacket* pk_Packet, uint8_t* u8_TxBuf
     // additionally 64 waiting frames in the queue. When a Tx buffer overflow is reported any further SendPacket() is blocked.
     if (mb_EnableTxEcho)
     {
-        mu8_EchoMarker ++;
-        if (mu8_EchoMarker == 0) 
-            mu8_EchoMarker = 1;  // If k_TxFrame.marker == 0 --> firmware does not send an echo
-        k_TxFrame.marker = mu8_EchoMarker;
+        mu8_TxEchoMarker ++;
+        if (mu8_TxEchoMarker == 0) 
+            mu8_TxEchoMarker = 1;  // If k_TxFrame.marker == 0 --> firmware does not send an echo
+        k_TxFrame.marker = mu8_TxEchoMarker;
     }
 
     memcpy(&mk_EchoPackets[k_TxFrame.marker], pk_Packet, sizeof(kCanPacket));
@@ -542,7 +599,7 @@ uint32_t Candlelight::ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, in
     if (mi_OsLibrary.HasPipeErrors())
         return ERR_TOO_MANY_ERRORS;
 
-    // Get frames form the IN pipe if there is no pending data in mk_UsbInPacket
+    // Get frames from the IN pipe if there is no pending data in mk_UsbInPacket
     if (ms32_BlobFrames <= 0)
     {
         ms32_BlobFrames = 0;
@@ -573,6 +630,9 @@ uint32_t Candlelight::ReceiveData(uint32_t u32_Timeout, kHeader** ppk_Header, in
     ms32_BlobFrames --;                              // AFTER
     mu32_BlobOffset += pk_Header->size;
 
+    if (pk_Header->msg_type == MSG_TxEcho)
+        mu8_RxEchoMarker = ((kTxEchoElmue*)pk_Header)->marker;
+
     *ppk_Header       = pk_Header;
     *ps64_RxTimestamp = mk_UsbInPacket.ms64_OsTimestamp;
     return NO_ERROR;    
@@ -597,9 +657,14 @@ kCanPacket Candlelight::RxFrameToCanPacket(kRxFrameElmue* pk_Frame)
     return k_Packet;
 }
 
-kCanPacket Candlelight::GetTxEchoPacket(kTxEchoElmue* pk_TxEcho)
+bool Candlelight::GetTxEchoPacket(kTxEchoElmue* pk_TxEcho, kCanPacket* pk_Paket)
 {
-    return mk_EchoPackets[pk_TxEcho->marker];
+    // marker 0 is always invalid
+    if (pk_TxEcho->marker == 0)
+        return false;
+
+    *pk_Paket = mk_EchoPackets[pk_TxEcho->marker];
+    return true;
 }
 
 // Get the content of a debug message from the adapter
@@ -694,7 +759,7 @@ uint32_t Candlelight::ReadFlash(uint8_t u8_Segment, uint8_t* u8_Buffer, uint16_t
 // Send a SETUP request to the firmware
 // u16_DataSize must be the expected byte count to be received from the firmware or to be sent to the firmware.
 // u8_Request must be eUsbRequest for interface 0 and eDfuRequest for interface 1.
-// This function can obtain the feedback from the ElmüSoft firmware, but works also with legacy firmware.
+// This function can obtain the feedback from the ElmÃ¼Soft firmware, but works also with legacy firmware.
 // ATTENTION: p_Data must be writable, otherwise ERROR_NOACCESS.
 // For IN transfers the received bytes from USB are written into the buffer that is passed in p_Data
 uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_t u16_Value, 
@@ -763,8 +828,8 @@ uint32_t Candlelight::CtrlTransfer(eDirection e_Dir, uint8_t u8_Request, uint16_
 
 // =======================================================================================================================
 
-// Formats a timestamp with 1 µs precision
-// returns "HH:MM:SS.mmm.µµµ"
+// Formats a timestamp with 1 Âµs precision
+// returns "HH:MM:SS.mmm.ÂµÂµÂµ"
 // pk_Header may contain a timestamp if GS_DevFlagTimestamp is set --> mb_McuTimestamp = true
 // otherwise use s64_OsTimestamp which comes from GetOsTimestamp() at packet reception
 string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
@@ -788,7 +853,7 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
 
         if (s64_Stamp >= 0)
         {
-            // The bug has been fixed in firmware 14.09.2026 that timestamps were jumping 133µs backwards
+            // The bug has been fixed in firmware 14.09.2026 that timestamps were jumping 133Âµs backwards
             if (ms64_LastMcuStamp > s64_Stamp)
                 OsLibrary::PrintConsole(YELLOW, cUtils::Format("Timestamp jumps %d us backwards. Update the firmware.\n", ms64_LastMcuStamp - s64_Stamp));
 
@@ -814,7 +879,8 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
     if (ms64_TimestampStart == 0)
         ms64_TimestampStart = s64_Stamp;
 
-    s64_Stamp -= ms64_TimestampStart;
+    // GCC is so stupid that it requires casting a zero!
+    s64_Stamp = max((int64_t)0, s64_Stamp - ms64_TimestampStart);
 
     uint32_t u32_Micro = s64_Stamp % 1000;
     s64_Stamp /= 1000;
@@ -831,6 +897,9 @@ string Candlelight::FormatTimestamp(kHeader* pk_Header, int64_t s64_OsTimestamp)
 
 string Candlelight::FormatCanPacket(kCanPacket* pk_Packet)
 {
+    if (pk_Packet->mu32_ID == 0 && pk_Packet->mu8_DataLen == 0)
+        return "Corrupt packet"; // NULL packet
+
     string s_Frame;
     if (pk_Packet->mb_29bit) s_Frame = cUtils::Format("%08X: ", pk_Packet->mu32_ID & CAN_MASK_29);
     else                     s_Frame = cUtils::Format("%03X: ", pk_Packet->mu32_ID & CAN_MASK_11);
@@ -936,7 +1005,7 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
     {
         case ERR_DEVICE_IN_USE:     return "Access denied. Probably the device is already open elsewhere.";
         case ERR_INVALID_DEVICE:    return "The device is not a Candlelight adapter.";
-        case ERR_INVALID_FIRMWARE:  return "This class supports only devices that have the CANable 2.5 firmware from ElmüSoft.";
+        case ERR_INVALID_FIRMWARE:  return "This class supports only adapters with the CANable 2.5 firmware from Elm\xC3\xBCSoft."; // UTF8 'Ã¼'
         case ERR_RX_FIFO_OVERFLOW:  return "USB Rx FIFO overflow. Polling is too slow."; // in the Windows demo app the reason is the slow Windows console.
         case ERR_CORRUPT_IN_DATA:   return "Corrupt USB IN data received.";
         case ERR_UPDATE_FIRMWARE:   return "Please upload the latest firmware to the device.";
@@ -981,7 +1050,7 @@ string Candlelight::FormatLastError(uint32_t u32_Error)
 // Switch the Candlelight into firmware update mode.
 // This function requires that you have called EnumDevices(Interface = 1) before to get access to interface 1.
 // IMPORTANT:
-// This will ONLY work if the Candlelight has the new CANable 2.5 firmware from ElmüSoft.
+// This will ONLY work if the Candlelight has the new CANable 2.5 firmware from ElmÃ¼Soft.
 // ALL legacy Candlelights have a sloppy firmware that does not respond to the Microsoft OS descriptor request for interface 1.
 // The consequence is that Windows cannot install the WinUSB driver for the Firmware Update interface and EnumDevices() will not find the device.
 // ATTENTION:
@@ -1005,7 +1074,7 @@ uint32_t Candlelight::EnterDfuMode()
     {
         // Here k_Status.State is either DfuState_AppIdle or DfuState_AppDetach or DfuState_Error.
 
-        // returning AppDetach has been added by ElmüSoft to the firmware and means that the user must reconnect the USB cable.
+        // returning AppDetach has been added by ElmÃ¼Soft to the firmware and means that the user must reconnect the USB cable.
         // This happens only if the pin BOOT0 was disabled before calling EnterDfuMode()
         if (k_Status.State == DfuState_AppDetach)
         {

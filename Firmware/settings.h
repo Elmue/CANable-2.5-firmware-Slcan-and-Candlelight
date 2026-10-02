@@ -104,6 +104,8 @@ typedef enum // sent as 8 bit
 
 #elif defined(OpenlightLabs)
 
+    #define ADAPTER_NAME        "Openlight Labs"
+
     // OpenlightLabs has the Tx LED at pin B11
     #define LED_TX_PINS         GPIO_PIN_11
     #define LED_TX_PORTS        GPIOB
@@ -113,6 +115,8 @@ typedef enum // sent as 8 bit
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
 
 #elif defined(OleksiiSolo)
+
+    #define ADAPTER_NAME        "Oleksii Solo"
 
     // Oleksii puts a 8 MHz quartz on the single channel board
     #define LED_TX_PINS         GPIO_PIN_5
@@ -129,6 +133,8 @@ typedef enum // sent as 8 bit
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0 (indispensable for correct operation)
 
 #elif defined(OleksiiDual)
+
+    #define ADAPTER_NAME        "Oleksii Dual"
 
     // Oleksii puts a 8 MHz quartz on the dual channel board
     // The board has 2 CAN connectors and creates 2 Candlelight USB interfaces.
@@ -157,6 +163,8 @@ typedef enum // sent as 8 bit
 
 #elif defined(WeActStudioV1)
 
+    #define ADAPTER_NAME        "WeAct Studio v1"
+
     // The WeActStudio USB2CANFD v1 has a STM32G0B1 processor and a 16 MHz quartz
     #define CHANNEL_COUNT       1
     // -------------------
@@ -181,6 +189,8 @@ typedef enum // sent as 8 bit
 
 #elif defined(WeActStudioV2)
 
+    #define ADAPTER_NAME        "WeAct Studio v2"
+
     // The WeActStudio USB2CANFD v2 has a STM32G431 processor and a 16 MHz quartz
     #define LED_RX_PINS         GPIO_PIN_0
     #define LED_RX_PORTS        GPIOA
@@ -202,6 +212,8 @@ typedef enum // sent as 8 bit
 
 #elif defined(BigTreeTechU2C)
 
+    #define ADAPTER_NAME        "Bigtreetech U2C v2"
+
     // The BigTreeTech U2C v2 CAN adapter has a STM32G0B1 processor and a 8 MHz quartz.
     #define CHANNEL_COUNT       1
     // -------------------
@@ -221,6 +233,27 @@ typedef enum // sent as 8 bit
     // -------------------
     #define ALLOW_DISABLE_BOOT0 0  // do not allow to disable pin BOOT0 (not required for this processor)
 
+#elif defined(DsdTechC32A)
+    
+    #define ADAPTER_NAME        "DSD Tech C32A"
+    
+    // DSD Tech puts a 25 MHz quartz on the SH-C32A
+    #define LED_TX_PINS         GPIO_PIN_3  
+    #define LED_TX_PORTS        GPIOA
+    #define LED_RX_PINS         GPIO_PIN_4  
+    #define LED_RX_PORTS        GPIOA
+    // -------------------
+    // This board has a more intelligent hardware design than most boards for the STM32G431.
+    // The shared processor pin CAN RXD + BOOT0 is held low by hardware to avoid entering BOOT mode when USB power is connected.
+    // The firmware must enable the CAN transceiver chip by switching processor pin PB7 to low.
+    #define CAN_TRX_ENABLE_PIN  GPIO_PIN_7
+    #define CAN_TRX_ENABLE_PORT GPIOB
+    #define CAN_TRX_ENABLE_ON   GPIO_PIN_RESET
+    // -------------------
+    #define MAX_CAN_BAUDRATE    5   // CAN transceiver chip TJA 1051 limits to 5 Mbaud
+    // -------------------
+    #define ALLOW_DISABLE_BOOT0 0   // do not allow to disable pin BOOT0 (not required due to correct hardware design)
+
 #else
 
     #error "TARGET_BOARD not implemented"
@@ -230,6 +263,12 @@ typedef enum // sent as 8 bit
 
 // ============================================================================================
 // Load default settings if no board-specific settings are defined
+
+// This is displayed in the USB descriptor and Version info.
+// Maximum 24 characters!
+#ifndef ADAPTER_NAME
+    #define ADAPTER_NAME        TARGET_BOARD
+#endif
 
 // Define single channel default: Tx LED is at pin A0
 #ifndef LED_TX_PINS

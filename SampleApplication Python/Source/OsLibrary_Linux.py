@@ -357,8 +357,19 @@ class OsLibrary:
     # ====================================== IN Pipe =======================================
 
     # Get the next frame from USB and return a k_UsbInPacket.
-    # If no data received during timeout return None.
+    # returns None if no data received during timeout.
     def ReadPipeIn(self, u32_Timeout: int) -> Optional[kUsbInPacket]:
+        # libusb / the Linux kernel driver do not support a zero timeout to check if data has arrived and return immediately if not.
+        # A zero timeout would block eternally!
+        # A short timeout of 1 ms will also NOT work: The result would be crippled USB IN packets.
+        # The maximum USB size that the firmware will ever send are 2048 byte blobs and USB speed is 12 Mbit/s.
+        # The kernel driver resets its internal watchdog timer each time a USB packet of 64 bytes arrives on the bus.
+        # So a timeout of 10 ms would guarantee that no pakets are lost. But under very heavy CPU load this may become critical.
+        # If you want to use an instant response if no data was received passing a zero timeout here,
+        # you have to implement a background thread that calls libusb_bulk_transfer() in an endless loop 
+        # and stores received packets into a FIFO. Study the Windows OsLibrary how to do this.
+        if u32_Timeout < 50: u32_Timeout = 50
+        
         k_UsbInPacket   = kUsbInPacket()
         s32_Transferred = ctypes.c_int(0)
         s32_Error = _libusb.libusb_bulk_transfer(self.mpi_DevHandle, self.mk_Info.mu8_EndpointIN,
@@ -488,7 +499,8 @@ class OsLibrary:
         # Linux uses a cryptic Escape sequence to set the window title
         print("\033]2;%s\007" % s_Title, end="", flush=True)
 
-        # TODO: Set console window size and buffer size
+        # On Windows the console screen buffer size and the window size are set here.
+        # Linux is so primitive that it does not allow to display long CAN packets with a horizontal scrollbar in the console!
 
     # Print coloured console output
     @staticmethod
@@ -512,6 +524,15 @@ class OsLibrary:
 
         print(s_ColorMap[e_Color], end="")
         print(s_Formatted,         end="", flush=True)
+        
+    # Clear the entire Console screen
+    @staticmethod    
+    def ClearConsole():
+        # Linux uses cryptic Escape sequences to clear the console
+        # \033[2J = clear visible screen
+        # \033[3J = clear scrollback buffer
+        # \033[H  = move cursor to top-left (home)
+        print("\033[2J\033[3J\033[H", end="", flush=True)       
         
     # ===================================== Console IN =====================================
     

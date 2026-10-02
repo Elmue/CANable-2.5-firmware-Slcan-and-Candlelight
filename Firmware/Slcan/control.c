@@ -336,7 +336,7 @@ eFeedback control_parse_str(uint8_t channel, char buf[], int len)
                 // HAL_GetDEVID() returns a unique identifier (DBG_IDCODE) for each processor family.
                 // The STM32G0xx serie uses 0x460, 0x465, 0x476, 0x477 and STM32G4xx uses 0x468, 0x469, 0x479.
                 // String responses start with '+', all other command responses start with '#'
-                sprintf(tempbuf, "+Board: "      TARGET_BOARD              // Multiboard  (from MakeFile)
+                sprintf(tempbuf, "+Board: "      ADAPTER_NAME              // Multiboard  (from settings.h)
                                  "\tMCU: "       TARGET_MCU                // STM32G431   (from MakeFile)
                                  "\tDevID: %lu"                            // 0x468       (from processor)
                                  "\tFirmware: %u"                          // 2427156     (from settings.h)
@@ -827,10 +827,10 @@ void control_report_busload(uint8_t channel, uint8_t busload_percent)
 // Send a debug message. Maximum length is 80 characters.
 // The message may contain "\n" for multi-line output
 // You will see this message in the Trace pane of HUD ECU Hacker if USR_DebugReport is enabled.
-bool control_send_debug_mesg(uint8_t channel, const char* message)
+void control_send_debug_mesg(uint8_t channel, const char* message)
 {
     if ((GLB_UserFlags[channel] & USR_DebugReport) == 0)
-        return false;
+        return;
 
     int len = strlen(message);
     if (len > 80)
@@ -843,6 +843,5 @@ bool control_send_debug_mesg(uint8_t channel, const char* message)
     sprintf(buf, ">%s\r", message);
 
     buf_enqueue_cdc(channel, buf, len + 2);
-    return true;
 }
 

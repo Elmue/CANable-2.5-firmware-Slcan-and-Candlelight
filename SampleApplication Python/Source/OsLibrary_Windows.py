@@ -178,6 +178,15 @@ class SMALL_RECT(ctypes.Structure):
         ("Bottom", wintypes.SHORT),
     ]
 
+class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
+    _fields_ = [
+        ("dwSize",              COORD),
+        ("dwCursorPosition",    COORD),
+        ("wAttributes",         wintypes.WORD),
+        ("srWindow",            SMALL_RECT),
+        ("dwMaximumWindowSize", COORD),
+    ]
+
 # size = 16 bytes
 class KEY_EVENT_RECORD(ctypes.Structure):
     class _Chars(ctypes.Union):
@@ -238,6 +247,12 @@ class DEVPROPKEY(ctypes.Structure):
         ("fmtid", GUID),
         ("pid",   wintypes.DWORD),
     ]
+    
+kernel32.GetConsoleScreenBufferInfo .argtypes = [wintypes.HANDLE, ctypes.POINTER(CONSOLE_SCREEN_BUFFER_INFO)]
+kernel32.FillConsoleOutputCharacterW.argtypes = [wintypes.HANDLE, wintypes.WCHAR, wintypes.DWORD, COORD, ctypes.POINTER(wintypes.DWORD)]
+kernel32.FillConsoleOutputAttribute .argtypes = [wintypes.HANDLE, wintypes.WORD,  wintypes.DWORD, COORD, ctypes.POINTER(wintypes.DWORD)]
+kernel32.SetConsoleCursorPosition   .argtypes = [wintypes.HANDLE, COORD]
+    
 
 DEVPKEY_Device_BusReportedDeviceDesc = DEVPROPKEY(
     GUID(0x540b947e, 0x8b40, 0x45bc, (wintypes.BYTE * 8)(0xa8, 0xa2, 0x6a, 0x0b, 0x89, 0x4c, 0xbd, 0xa2)), 4,
@@ -395,6 +410,13 @@ class OsLibrary:
 
         i_Thread = threading.Thread(target=self._PipeThread, daemon=True, name="PipeThread")
         i_Thread.start()
+        
+        # When the thread starts reading the IN pipe there may be a USB packet hanging from the last time the device was opened.
+        # Delete this packet by resetting the fifo count after a delay.
+        kernel32.Sleep(100);
+        with self.mk_Lock:
+            self.ms32_FifoReadIdx = (self.ms32_FifoReadIdx + self.ms32_FifoCount) % RX_FIFO_MAX_COUNT;
+            self.ms32_FifoCount   = 0;
 
     # Called from Candlelight.Close()
     def Close(self) -> None:
@@ -818,6 +840,25 @@ class OsLibrary:
         # WriteConsole() is significantly faster than wprinf() or vwprintf(), which need 10 ms per line!
         u32_Written = wintypes.DWORD()
         kernel32.WriteConsoleW(gh_ConsoleOut, s_Formatted, len(s_Formatted), ctypes.byref(u32_Written), None)
+    
+    # Clear the entire Console screen
+    @staticmethod    
+    def ClearConsole():
+        k_Info = CONSOLE_SCREEN_BUFFER_INFO()
+        kernel32.GetConsoleScreenBufferInfo(gh_ConsoleOut, ctypes.byref(k_Info))
+
+        u32_CellCount = k_Info.dwSize.X * k_Info.dwSize.Y
+        k_HomePos     = COORD(0, 0)
+
+        # Fill the entire buffer with spaces
+        u32_Count = wintypes.DWORD()
+        kernel32.FillConsoleOutputCharacterW(gh_ConsoleOut, ' ', u32_CellCount, k_HomePos, ctypes.byref(u32_Count))
+
+        # Restore current character attributes (colors) across the filled cells
+        kernel32.FillConsoleOutputAttribute(gh_ConsoleOut, k_Info.wAttributes, u32_CellCount, k_HomePos, ctypes.byref(u32_Count))
+
+        # Move cursor back to the top-left origin
+        kernel32.SetConsoleCursorPosition(gh_ConsoleOut, k_HomePos)
         
     # ===================================== Console IN =====================================
 

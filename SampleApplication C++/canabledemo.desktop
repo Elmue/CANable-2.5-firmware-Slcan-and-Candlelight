@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=CANable Demo
+Exec=sh -c 'cd "$(dirname "%k")" && ./canabledemo'
+Terminal=true

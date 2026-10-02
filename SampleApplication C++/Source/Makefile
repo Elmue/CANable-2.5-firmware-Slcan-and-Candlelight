@@ -1,3 +1,7 @@
+
+# For Debug   build execute: make clean && make
+# For Release build execute: make clean && make BUILD=release
+
 CXX = g++
 CXXFLAGS = -Wall -Wextra -std=c++20 -ICandlelight -ICandlelight/Linux -I/usr/include/libusb-1.0
 LDFLAGS = -lusb-1.0
@@ -5,11 +9,12 @@ LDFLAGS = -lusb-1.0
 # default Build Mode = Debug
 BUILD ?= Debug
 
-ifeq ($(BUILD), Release)
-   CXXFLAGS += -O2
+ifeq ($(BUILD),release)
+   CXXFLAGS += -O3 -DNDEBUG -flto=auto
+   LDFLAGS  += -O3 -flto=auto -s
    BUILD_DIR = Release
 else
-   CXXFLAGS += -g -O0
+   CXXFLAGS += -g -O0 -DDEBUG
    BUILD_DIR = Debug
 endif
 

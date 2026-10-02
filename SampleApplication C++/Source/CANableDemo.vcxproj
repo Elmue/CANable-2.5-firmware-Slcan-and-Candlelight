@@ -86,7 +86,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="CANableDemo.h" />
     <ClInclude Include="Candlelight\Candlelight.h" />
     <ClInclude Include="Candlelight\Candlelight_def.h" />
     <ClInclude Include="Candlelight\Utils.h" />

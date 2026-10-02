@@ -59,7 +59,7 @@ typedef struct
 void      buf_init();
 void      buf_process(uint8_t channel, uint32_t tick_now);
 void      buf_enqueue_cdc(uint8_t channel, char* buf, uint16_t len);
-void      buf_clear_can_buffer(uint8_t channel);
+void      buf_clear_fifos(uint8_t channel, bool clear_can, bool clear_host);
 void      buf_store_tx_echo  (uint8_t channel, FDCAN_TxEventFifoTypeDef* tx_event);
 eFeedback buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef*    tx_header, uint8_t* tx_data);
 void      buf_store_rx_packet(uint8_t channel, FDCAN_RxHeaderTypeDef*    rx_header, uint8_t* rx_data);

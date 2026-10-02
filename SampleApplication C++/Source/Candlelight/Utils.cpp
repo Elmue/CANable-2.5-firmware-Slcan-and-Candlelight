@@ -1,4 +1,4 @@
-
+﻿
 // https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 /*

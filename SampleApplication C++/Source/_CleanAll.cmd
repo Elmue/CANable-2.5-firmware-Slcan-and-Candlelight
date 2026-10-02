@@ -10,6 +10,8 @@ del "Output\*.ilk"
 del "*.vshost.exe"
 del "*.vshost.exe.manifest"
 
+copy Output\CANableDemo.exe ..\CANableDemo.exe
+
 rmdir "Output" /S /Q
 rmdir "Debug" /S /Q
 rmdir "Release" /S /Q

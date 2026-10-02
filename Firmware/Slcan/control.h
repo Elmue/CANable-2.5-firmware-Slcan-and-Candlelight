@@ -46,7 +46,7 @@ void control_init();
 void control_parse_command(char* buf, int len);
 void control_report_errors(uint8_t channel, uint32_t tick_now);
 void control_report_busload(uint8_t channel, uint8_t busload_percent);
-bool control_send_debug_mesg(uint8_t channel, const char* message);
+void control_send_debug_mesg(uint8_t channel, const char* message);
 
 
 

@@ -1,4 +1,4 @@
-
+ï»¿
 // https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 #pragma once
@@ -40,11 +40,14 @@ using namespace std;
         #pragma warning(disable: 4996)
     #endif
     
-#elif defined(__linux__)    
+#elif defined(__linux__)
 
     #include <cstdint>
     #include <cstring>
     #include <fstream>
+    #include <algorithm>
+    #include <thread>
+    #include <chrono>
     #include <unistd.h>
     #include <termios.h>
     #include <sys/select.h>
@@ -193,7 +196,7 @@ typedef enum
     DfuStatus_ErrVerify,      // Programmed memory failed verification. 
     DfuStatus_ErrAddress,     // Cannot program memory due to received address that is out of range. 
     DfuStatus_ErrNotDone,     // Received DFU_DNLOAD with wLength = 0, but device does not think it has all of the data yet. 
-    DfuStatus_ErrFirmware,    // Device’s firmware is corrupt.  It cannot return to run-time (non-DFU) operations. 
+    DfuStatus_ErrFirmware,    // Deviceâ€™s firmware is corrupt.  It cannot return to run-time (non-DFU) operations. 
     DfuStatus_ErrVendor,      // StringIdx indicates a vendor-specific error. 
     DfuStatus_ErrUSBR,        // Device detected unexpected USB reset signaling. 
     DfuStatus_ErrPOR,         // Device detected unexpected power on reset.  
@@ -251,7 +254,7 @@ struct kDevInfo
     
     // the following members are set in Candlelight::Open()
     uint8_t                  mu8_Channel;         // CAN channel 0,1,2
-    bool                     mb_IsElmueSoft;      // The adapter supports the ElmüSoft protocol
+    bool                     mb_IsElmueSoft;      // The adapter supports the ElmÃ¼Soft protocol
     bool                     mb_SupportsFD;       // The adapter supports CAN FD
     kCapabilityClassic       mk_Capability;       // see Candlelight_def.h
     kCapabilityFD            mk_CapabilityFD;     // see Candlelight_def.h
@@ -286,7 +289,7 @@ struct kUsbInPacket
     uint8_t   mu8_Buffer[MAX_BLOB_SIZE];
     uint32_t  mu32_BytesRead;
     uint32_t  mu32_Error;
-    int64_t   ms64_OsTimestamp;  // Timestamp with 1µs precision from operating system
+    int64_t   ms64_OsTimestamp;  // Timestamp with 1Âµs precision from operating system
 };
 
 // This struct is filled by OsLibrary::EnumDevices()

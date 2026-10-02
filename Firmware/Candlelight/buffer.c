@@ -29,55 +29,43 @@ bool GLB_ProtoElmue = false;
 // ----- Class Instance
 buf_class  buf_inst[CHANNEL_COUNT] = {0};
 
-// ----- Private Methods
-void              buf_process_host (uint8_t channel, buf_class* usb_buf);
-void              buf_process_can  (uint8_t channel, buf_class* can_buf);
-void              buf_clear_buffers(uint8_t channel, bool clear_can, bool clear_host);
-kHostFrameObject* buf_peek_host_frame_locked(list_item* list_head);
-buf_class*        buf_get_inst_for_usb(uint8_t channel);
-bool              buf_store_can_frame(uint8_t channel, uint8_t* can_frame);
-void              buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo);
+// ----- private enums
+typedef enum
+{
+    FIFO_ReadNext, // read the current Fifo element and advance to the next
+    FIFO_Peek,     // only read the current Fifo element
+} eFifoRead;
+
+// ----- private FIFO
+void  FifoReset(kFifo* Fifo, void* Ptr,  int Size, int Capacity);
+bool  FifoWrite(kFifo* Fifo, void* Data, int Size);
+bool  FifoRead (kFifo* Fifo, void* Data, int Size, eFifoRead  e_Read);
+// ----- private Methods
+void       buf_process_host (uint8_t channel, buf_class* usb_buf);
+void       buf_process_can  (uint8_t channel, buf_class* can_buf);
+bool       buf_store_can_frame (uint8_t channel, uint8_t* can_frame);
+void       buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo);
+buf_class* buf_get_inst_for_usb(uint8_t channel);
 
 // public
 void buf_init()
 {
     for (int C=0; C<CHANNEL_COUNT; C++)
     {
-        buf_clear_buffers(C, true, true);
+        buf_clear_fifos(C, true, true);
     }
 }
+
 // public
-void buf_clear_can_buffer(uint8_t channel)
-{
-    buf_clear_buffers(channel, true, false);
-}
-// private
-void buf_clear_buffers(uint8_t channel, bool clear_can, bool clear_host)
+void buf_clear_fifos(uint8_t channel, bool clear_can, bool clear_host)
 {
     buf_class* inst = &buf_inst[channel];
 
     if (clear_can)
-    {
-        list_init(&inst->list_can_pool);
-        list_init(&inst->list_to_can);
-
-        // add the 64 entries to the can pool ringbuffers
-        for (int i=0; i < CAN_QUEUE_SIZE; i++)
-        {
-            list_add_tail(&inst->can_pool_buffer[i].list, &inst->list_can_pool);
-        }
-    }
+        FifoReset(&inst->can_fifo,  inst->can_buffer,  sizeof(kCanFrameObject), CAN_QUEUE_SIZE);
+        
     if (clear_host)
-    {
-        list_init(&inst->list_host_pool);
-        list_init(&inst->list_to_host);
-
-        // add the 70 entries to the host pool ringbuffers
-        for (int i=0; i < HOST_QUEUE_SIZE; i++)
-        {
-            list_add_tail(&inst->host_pool_buffer[i].list, &inst->list_host_pool);
-        }
-    }
+        FifoReset(&inst->host_fifo, inst->host_buffer, sizeof(kHostFrameUnion), HOST_QUEUE_SIZE);
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -93,12 +81,12 @@ void buf_process(uint8_t channel, uint32_t tick_now)
 
     // The APP_xxx errors are deleted after sending them to the host.
     // They must be refreshed here, so the Rx + Tx LED stay ON permanently and show that there is a problem.
-    if (list_is_empty(&can_buf->list_can_pool))  error_assert(channel, APP_CanTxOverflow, false);
-    if (list_is_empty(&usb_buf->list_host_pool)) error_assert(channel, APP_UsbInOverflow, false);
+    if (can_buf->can_fifo .IsFull) error_assert(channel, APP_CanTxOverflow, false);
+    if (usb_buf->host_fifo.IsFull) error_assert(channel, APP_UsbInOverflow, false);
 }
 
 // called from the main loop
-// send a CAN packet to the host if list_to_host has data
+// send a CAN packet to the host if host_buffer has data
 void buf_process_host(uint8_t channel, buf_class* usb_buf)
 {
     if (usb_buf->TxBusy)
@@ -106,12 +94,12 @@ void buf_process_host(uint8_t channel, buf_class* usb_buf)
 
     // only for testing: wait until there are 3 pending frames to be sent to the host in one blob
 #if DEBUG_TEST_BLOB
-    if (HOST_QUEUE_SIZE - count_free_entries(usb_buf, true) < 3)
+    if (usb_buf->host_fifo.Count < 3)
         return;
 #endif
 
-    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_to_host);
-    if (!obj_to_host)
+    kHostFrameUnion k_HostFrame; // size = 80 byte
+    if (!FifoRead(&usb_buf->host_fifo, &k_HostFrame, sizeof(k_HostFrame), FIFO_ReadNext))
         return; // nothing to be sent
 
     uint16_t len;
@@ -122,78 +110,68 @@ void buf_process_host(uint8_t channel, buf_class* usb_buf)
         // All ElmüSoft messages use the same header, no matter if CAN packet or an ASCII message.
         // If ELM_DevFlagSendUsbBlobs is set --> send multiple fames in one blob to the host.
 
-        kHostFrameObject* next_obj = buf_peek_host_frame_locked(&usb_buf->list_to_host);
-
         // Send blob with multiple frames
-        if ((GLB_UserFlags[channel] & USR_SendBlobs) && next_obj != NULL)
+        if ((GLB_UserFlags[channel] & USR_SendBlobs) && !usb_buf->host_fifo.IsEmpty)
         {
             kBlob* blob = (kBlob*)usb_buf->to_host_buf;
             blob->frame_count = 0;
             blob->msg_type    = MSG_RxBlob;
             len = sizeof(kBlob);
 
-            // Copy all frames in list_to_host into to_host_buf
-            while (obj_to_host)
+            // Copy all frames in host_buffer into to_host_buf
+            while (true)
             {
-                uint16_t size = ((kHeader*)obj_to_host->frame)->size;
-                memcpy(usb_buf->to_host_buf + len, obj_to_host->frame, size);
+                uint16_t size = k_HostFrame.Header.size;
+                memcpy(usb_buf->to_host_buf + len, &k_HostFrame, size);
                 len += size;
                 blob->frame_count ++;
-
-                // packet was stored --> give the frame back to the pool
-                list_add_tail_locked(&obj_to_host->list, &usb_buf->list_host_pool);
-
+                
                 // frame_count is a byte --> max count = 255
-                if (next_obj == NULL || blob->frame_count > 250)
+                if (blob->frame_count > 250)
+                    break;               
+                
+                // peek the next frame without incrementing the Fifo read index
+                if (!FifoRead(&usb_buf->host_fifo, &k_HostFrame, sizeof(k_HostFrame), FIFO_Peek))
                     break;
 
-                // check if the next frame also fits into to_host_buf
-                int next_size = ((kHeader*)next_obj->frame)->size;
-                if (len + next_size >= MAX_BLOB_SIZE)
+                // check if the next frame still fits into to_host_buf
+                if (len + k_HostFrame.Header.size >= MAX_BLOB_SIZE)
                     break;
 
-                obj_to_host = buf_get_host_frame_locked (&usb_buf->list_to_host);
-                next_obj    = buf_peek_host_frame_locked(&usb_buf->list_to_host);
+                // read the next frame and increment the Fifo index
+                FifoRead(&usb_buf->host_fifo, &k_HostFrame, sizeof(k_HostFrame), FIFO_ReadNext);
             }
         }
-        else // only one frame to be sent
+        else // only one ElmüSoft frame to be sent
         {
-            len = ((kHeader*)obj_to_host->frame)->size;
-
-            memcpy(usb_buf->to_host_buf, obj_to_host->frame, len);
-
-            // packet was stored --> give the frame back to the pool
-            list_add_tail_locked(&obj_to_host->list, &usb_buf->list_host_pool);
+            len = k_HostFrame.Header.size;
+            memcpy(usb_buf->to_host_buf, &k_HostFrame, len);
         }
     }
     else // legacy Geschwister Schneider protocol
     {
-        kHostFrameLegacy* pk_Legacy = (kHostFrameLegacy*)obj_to_host->frame;
-
         // The legacy protocol is not intelligently designed. The timestamp is behind a fix 64 byte data array.
         // For CAN FD it sends ALWAYS 76 or 80 bytes over USB no matter how many bytes the frame really has.
         len = sizeof(kHostFrameLegacy); // 80 bytes
-        if ((pk_Legacy->flags & FRM_FDF) == 0) len -= 56;
-        if ((GLB_UserFlags[pk_Legacy->channel] & USR_Timestamp) == 0) len -= 4;
+        if ((k_HostFrame.Legacy.flags & FRM_FDF) == 0) len -= 56;
+        if ((GLB_UserFlags[k_HostFrame.Legacy.channel] & USR_Timestamp) == 0) len -= 4;
 
-        memcpy(usb_buf->to_host_buf, obj_to_host->frame, len);
-
-        // packet was stored --> give the frame back to the pool
-        list_add_tail_locked(&obj_to_host->list, &usb_buf->list_host_pool);
+        memcpy(usb_buf->to_host_buf, &k_HostFrame, len);
     }
 
+    // USBD_SendInDataToHost needs a buffer that remains unchanged until the send process has finished, not a local variable!
     USBD_SendInDataToHost(channel, usb_buf->to_host_buf, len);
 }
 
 // called from the main loop
-// send a host packet to CAN bus if list_to_can has data
+// send a host packet to CAN bus if can_buffer has data
 void buf_process_can(uint8_t channel, buf_class* can_buf)
 {
     if (!can_is_tx_fifo_free(channel))
         return; // all 3 CAN Tx FIFO's are full
-
-    kCanFrameObject* obj_to_can = buf_get_can_frame_locked(&can_buf->list_to_can);
-    if (!obj_to_can)
+    
+    kCanFrameObject k_CanFrame;
+    if (!FifoRead(&can_buf->can_fifo, &k_CanFrame, sizeof(k_CanFrame), FIFO_ReadNext))
         return; // nothing to be sent
 
     // ------------------------------
@@ -202,13 +180,10 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
     if (can_is_tx_allowed(channel) != FBK_Success)
     {
         error_assert(channel, APP_CanTxFail, true); // both LED ON
-
-        // give the CAN frame back to where it came from.
-        list_add_tail_locked(&obj_to_can->list, &can_buf->list_can_pool);
         return; // do not send the message
     }
 
-    can_send_packet(channel, &obj_to_can->header, obj_to_can->data);
+    can_send_packet(channel, &k_CanFrame.header, k_CanFrame.data);
     // At this point the Tx packet is in the CAN Tx FIFO, but it has not yet been transmitted to CAN bus.
 
     if (GLB_ProtoElmue) // new ElmüSoft protocol
@@ -227,21 +202,19 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
         // But to maintain backwards compatibility with legacy software, this design error is left unchanged.
         // If Linux cangen does not receive this fake echo, it stops sending after 10 USB OUT transfers
         // and throws a not understandable and misleading error message: "No buffer space available".
+        
+        FDCAN_TxHeaderTypeDef* tx_header = &k_CanFrame.header;
+        FDCAN_RxHeaderTypeDef  rx_header;
+        rx_header.Identifier          = tx_header->Identifier;
+        rx_header.IdType              = tx_header->IdType;
+        rx_header.RxFrameType         = tx_header->TxFrameType;
+        rx_header.DataLength          = tx_header->DataLength;
+        rx_header.ErrorStateIndicator = tx_header->ErrorStateIndicator;
+        rx_header.BitRateSwitch       = tx_header->BitRateSwitch;
+        rx_header.FDFormat            = tx_header->FDFormat;
 
-        FDCAN_RxHeaderTypeDef rx_header;
-        rx_header.Identifier          = obj_to_can->header.Identifier;
-        rx_header.IdType              = obj_to_can->header.IdType;
-        rx_header.RxFrameType         = obj_to_can->header.TxFrameType;
-        rx_header.DataLength          = obj_to_can->header.DataLength;
-        rx_header.ErrorStateIndicator = obj_to_can->header.ErrorStateIndicator;
-        rx_header.BitRateSwitch       = obj_to_can->header.BitRateSwitch;
-        rx_header.FDFormat            = obj_to_can->header.FDFormat;
-
-        buf_store_rx_packet_echo(channel, &rx_header, obj_to_can->data, obj_to_can->header.MessageMarker);
+        buf_store_rx_packet_echo(channel, &rx_header, k_CanFrame.data, tx_header->MessageMarker);
     }
-
-    // give the CAN frame back to where it came from.
-    list_add_tail_locked(&obj_to_can->list, &can_buf->list_can_pool);
 }
 
 // public function
@@ -252,10 +225,19 @@ void buf_store_can_frame_blob(uint8_t channel, uint8_t* can_frame)
     kBlob* blob = (kBlob*)can_frame;
     if (GLB_ProtoElmue && blob->msg_type == MSG_TxBlob)
     {
+        kFifo* can_fifo = &buf_inst[channel].can_fifo;
+        if (can_fifo->Count + blob->frame_count > can_fifo->MaxCount)
+        {
+            // If the host has sent more packets than fit into the FIFO -> reject them all.
+            // The host must send the entire blob again after a short delay.
+            error_assert(channel, APP_CanTxOverflow, true); // both LED ON
+            return; 
+        }
+        
         int offset = sizeof(kBlob);
         for (uint8_t i=0; i<blob->frame_count; i++)
         {
-            kTxFrameElmue *tx_frame = (kTxFrameElmue*)(can_frame + offset);
+            kTxFrameElmue* tx_frame = (kTxFrameElmue*)(can_frame + offset);
             if (offset + tx_frame->header.size > MAX_BLOB_SIZE)
             {
                 error_assert(channel, APP_CanTxOverflow, true); // both LED ON
@@ -356,7 +338,7 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
         if (!can_using_FD(channel))
         {
             // the host tries to send a CAN FD packet in classic mode (data baudrate has not been set)
-            error_assert(channel, APP_CanTxFail, true);
+            error_assert(channel, APP_CanTxFail, true); // both LED ON
             return false;
         }
 
@@ -376,21 +358,16 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
 bool buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
 {
     buf_class* can_buf = &buf_inst[channel];
-
-    kCanFrameObject* obj_to_can = buf_get_can_frame_locked(&can_buf->list_can_pool);
-    if (obj_to_can)
-    {
-        memcpy(&obj_to_can->header, tx_header, sizeof(obj_to_can->header));
-        memcpy(&obj_to_can->data,   tx_data,   sizeof(obj_to_can->data));
-        list_add_tail_locked(&obj_to_can->list, &can_buf->list_to_can);
+    
+    kCanFrameObject k_CanFrame;
+    memcpy(&k_CanFrame.header, tx_header, sizeof(k_CanFrame.header));
+    memcpy(&k_CanFrame.data,   tx_data,   sizeof(k_CanFrame.data));
+    if (FifoWrite(&can_buf->can_fifo, &k_CanFrame, sizeof(k_CanFrame)))
         return true;
-    }
-    else // CAN buffer overflow
-    {
-        // in case of buffer overflow inform the host immediately, so the host stops sending more packets and displays an error to the user.
-        error_assert(channel, APP_CanTxOverflow, true); // Both LED's = ON --> indicate severe error
-        return false;
-    }
+
+    // in case of buffer overflow inform the host immediately, so the host stops sending more packets and displays an error to the user.
+    error_assert(channel, APP_CanTxOverflow, true); // Both LED's = ON
+    return false;
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -398,7 +375,7 @@ bool buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint
 // public function
 // Enqueue a CAN Rx packet for the host.
 // rx_data is a 64 byte buffer with the received / sent data bytes
-// append the frame to list_to_host
+// append the frame to host_buffer
 void buf_store_rx_packet(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data)
 {
     buf_store_rx_packet_echo(channel, rx_header, rx_data, ECHO_RxData);
@@ -406,13 +383,7 @@ void buf_store_rx_packet(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint
 // private function
 // fake_echo is only used for legacy mode
 void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo)
-{   
-    buf_class* usb_buf = buf_get_inst_for_usb(channel);
-
-    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
-    if (!obj_to_host)
-        return; // buffer overflow! buf_process() will report this error to the host
-    
+{      
     uint32_t u32_Timestamp = system_get_timestamp();    
 
     uint32_t can_id;
@@ -436,6 +407,7 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
 
     // ------------------------
 
+    kHostFrameUnion k_HostFrame; // size = 80 byte
     if (GLB_ProtoElmue) // new ElmüSoft protocol
     {
         uint8_t byte_count;
@@ -447,7 +419,7 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
         }
         else byte_count = utils_dlc_to_byte_count(can_dlc);
 
-        kRxFrameElmue* frame   = (kRxFrameElmue*)obj_to_host->frame;
+        kRxFrameElmue* frame   = &k_HostFrame.RxFrame;
         frame->header.size     = sizeof(kRxFrameElmue) + byte_count;
         frame->header.msg_type = MSG_RxFrame;
         frame->flags           = flags;
@@ -467,7 +439,7 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
     }
     else // legacy Geschwister Schneider protocol
     {
-        kHostFrameLegacy* frame = (kHostFrameLegacy*)obj_to_host->frame;
+        kHostFrameLegacy* frame = &k_HostFrame.Legacy;
         frame->channel  = channel;
         frame->reserved = 0;
         frame->flags    = flags;
@@ -484,8 +456,8 @@ void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header,
             frame->pack_classic.timestamp_us = u32_Timestamp;
     }
 
-    // add the frame to list_to_host with IRQs disabled
-    list_add_tail_locked(&obj_to_host->list, &usb_buf->list_to_host);
+    buf_class* usb_buf = buf_get_inst_for_usb(channel);
+    FifoWrite(&usb_buf->host_fifo, &k_HostFrame, sizeof(k_HostFrame)); // Fifo overflow is reported in buf_process()
 }
 
 // a CAN packet from the Tx FIFO has been sent and acknowledged on CAN bus --> send marker to host.
@@ -495,39 +467,29 @@ void buf_store_tx_echo(uint8_t channel, FDCAN_TxEventFifoTypeDef* tx_event)
     if (!GLB_ProtoElmue) // legacy protocol -> Tx Echo not supported
         return;
 
-    buf_class* usb_buf = buf_get_inst_for_usb(channel);
-
-    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
-    if (!obj_to_host)
-        return; // buffer overflow! buf_process() will report this error to the host
-
-    kTxEchoElmue* frame    = (kTxEchoElmue*)obj_to_host->frame;
-    frame->header.size     = sizeof(kTxEchoElmue);
-    frame->header.msg_type = MSG_TxEcho;
-    frame->marker          = tx_event->MessageMarker;
-    frame->timestamp       = system_get_timestamp();
+    kTxEchoElmue k_Echo;
+    k_Echo.header.size     = sizeof(kTxEchoElmue);
+    k_Echo.header.msg_type = MSG_TxEcho;
+    k_Echo.marker          = tx_event->MessageMarker;
+    k_Echo.timestamp       = system_get_timestamp();
 
     if ((GLB_UserFlags[channel] & USR_Timestamp) == 0)
-        frame->header.size -= 4;
-
-    // add the frame to list_to_host with IRQs disabled
-    list_add_tail_locked(&obj_to_host->list, &usb_buf->list_to_host);
+        k_Echo.header.size -= 4;
+    
+    buf_class* usb_buf = buf_get_inst_for_usb(channel);    
+    FifoWrite(&usb_buf->host_fifo, &k_Echo, sizeof(k_Echo)); // Fifo overflow is reported in buf_process()
 }
 
-// append an error frame to the list_to_host
+// append an error frame to the host_buffer
 void buf_store_error(uint8_t channel)
 {
-    buf_class* usb_buf = buf_get_inst_for_usb(channel);
-
-    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
-    if (!obj_to_host)
-        return; // buffer overflow! buf_process() will report this error to the host
-    
     uint32_t u32_Timestamp = system_get_timestamp();
+    
+    kHostFrameUnion k_HostFrame; // size = 80 byte
+    memset(&k_HostFrame, 0, sizeof(k_HostFrame));    
 
-    kHostFrameLegacy* frame_gs    = (kHostFrameLegacy*)obj_to_host->frame;
-    kErrorElmue*      frame_elmue = (kErrorElmue*)     obj_to_host->frame;
-    memset(frame_gs, 0, sizeof(kHostFrameLegacy));
+    kHostFrameLegacy* frame_gs    = &k_HostFrame.Legacy;
+    kErrorElmue*      frame_elmue = &k_HostFrame.Error;
 
     uint8_t* frame_data;
     if (GLB_ProtoElmue) // new ElmüSoft protocol
@@ -584,8 +546,8 @@ void buf_store_error(uint8_t channel)
     {
         // The host uses the new protocol    --> all the app_flags are sent in byte 5
         // The host uses the legacy protocol --> clone the flags to ID and Byte 1
-        // There is no legacy error flag availabe to transmit APP_CanRxFail or APP_CanTxFail.
-        if (state->app_flags & APP_CanTxTimeout)  can_id |= ERID_Tx_Timeout;
+        // APP_CanRxFail and APP_CanTxFail cannot be sent as there is no legacy error flag available.
+        if (state->app_flags & APP_CanTxTimeout)  can_id        |= ERID_Tx_Timeout;
         if (state->app_flags & APP_UsbInOverflow) frame_data[1] |= ER1_Rx_Buffer_Overflow;
         if (state->app_flags & APP_CanTxOverflow) frame_data[1] |= ER1_Tx_Buffer_Overflow;
 
@@ -619,45 +581,21 @@ void buf_store_error(uint8_t channel)
         frame_gs->can_dlc = 8;
         frame_gs->pack_classic.timestamp_us = u32_Timestamp;
     }
+    
+    buf_class* usb_buf = buf_get_inst_for_usb(channel);
+    FifoWrite(&usb_buf->host_fifo, &k_HostFrame, sizeof(k_HostFrame)); // Fifo overflow is reported in buf_process()
 
-    // add the frame to list_to_host with IRQs disabled
-    list_add_tail_locked(&obj_to_host->list, &usb_buf->list_to_host);
     error_clear(channel);
 }
 
-// ---------------------------------------------------------------------------------------------------
-
-// Helper function: Get the the next frame after the head frame whith IRQs disabled
-// returns NULL if there is no next frame
-kHostFrameObject* buf_peek_host_frame_locked(list_item* list_head)
+// Send a debug message or busload report to the host
+bool buf_store_host_packet(uint8_t channel, void* packet, int size)
 {
-    system_disable_irq();
-    kHostFrameObject* frame_obj = list_get_head_or_null(list_head, kHostFrameObject, list);
-    system_enable_irq();
-    return frame_obj;
+    buf_class* usb_buf = buf_get_inst_for_usb(channel);
+    return FifoWrite(&usb_buf->host_fifo, packet, size); // Fifo overflow is reported in buf_process()
 }
 
-// Helper function: Get the head frame and remove it from it's list whith IRQs disabled
-// returns NULL if the list is empty
-kHostFrameObject* buf_get_host_frame_locked(list_item* list_head)
-{
-    system_disable_irq();
-    kHostFrameObject* frame_obj = list_get_head_or_null(list_head, kHostFrameObject, list);
-    if (frame_obj)
-        list_remove(&frame_obj->list); // remove frame_obj from it's list
-    system_enable_irq();
-    return frame_obj;
-}
-
-kCanFrameObject* buf_get_can_frame_locked(list_item* list_head)
-{
-    system_disable_irq();
-    kCanFrameObject* frame_obj = list_get_head_or_null(list_head, kCanFrameObject, list);
-    if (frame_obj)
-        list_remove(&frame_obj->list); // remove frame_obj from it's list
-    system_enable_irq();
-    return frame_obj;
-}
+// ---------------------------------------------
 
 buf_class* buf_get_instance(uint8_t channel)
 {
@@ -674,3 +612,63 @@ buf_class* buf_get_inst_for_usb(uint8_t channel)
     else
         return &buf_inst[0];       // Legacy   -> send all CAN channels through USB interface 0
 }
+
+// ============================================ FIFO ===================================================
+// Fifo added by ElmüSoft
+// This Fifo replaces the extremely ugly and clumsy ringbuffer of the legacy firmware
+
+void FifoReset(kFifo* Fifo, void* Ptr, int Size, int Capacity)
+{
+    Fifo->Buffer   = (uint8_t*)Ptr;
+    Fifo->ElemSize = Size;
+    Fifo->MaxCount = Capacity;
+    Fifo->Count    = 0;    
+    Fifo->ReadIdx  = 0;
+    Fifo->IsFull   = false;
+    Fifo->IsEmpty  = true;
+}
+
+// e_Write == FIFO_Urgent --> insert a Tx error frame before the FIFO data to be reported immediately to the host.
+bool FifoWrite(kFifo* Fifo, void* Data, int Size)
+{
+    system_disable_irq();
+    
+    bool Success = !Fifo->IsFull && Size <= Fifo->ElemSize;
+    if (Success)
+    {
+        int WriteIdx = (Fifo->ReadIdx + Fifo->Count) % Fifo->MaxCount;
+        uint8_t* Pointer = Fifo->Buffer + WriteIdx * Fifo->ElemSize;
+        memcpy(Pointer, Data, Size);
+        Fifo->Count ++;
+        Fifo->IsFull  = Fifo->Count == Fifo->MaxCount;
+        Fifo->IsEmpty = false;
+    }
+    
+    system_enable_irq();
+    return Success;
+}
+
+// e_Read == FIFO_Peek --> return the current read element without incrementing the read index
+bool FifoRead(kFifo* Fifo, void* Data, int Size, eFifoRead e_Read)
+{
+    system_disable_irq();
+    
+    bool Success = !Fifo->IsEmpty && Size <= Fifo->ElemSize;
+    if (Success)
+    {
+        uint8_t* Pointer = Fifo->Buffer + Fifo->ReadIdx * Fifo->ElemSize;
+        memcpy(Data, Pointer, Size);
+        
+        if (e_Read == FIFO_ReadNext)
+        {
+            Fifo->ReadIdx = (Fifo->ReadIdx + 1) % Fifo->MaxCount;
+            Fifo->Count --;
+            Fifo->IsFull  = false;
+            Fifo->IsEmpty = Fifo->Count == 0;
+        }
+    }
+    
+    system_enable_irq();
+    return Success;
+}
+

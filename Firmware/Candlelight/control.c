@@ -105,7 +105,7 @@ void control_init()
 
     ELM_BoardInfo.McuDeviceID = (uint16_t)HAL_GetDEVID();
     strcpy(ELM_BoardInfo.McuName,   TARGET_MCU);   // "STM32G431"  (from makefile)
-    strcpy(ELM_BoardInfo.BoardName, TARGET_BOARD); // "Multiboard", "OpenlightLabs", "Jhoinrch"  (from makefile)
+    strcpy(ELM_BoardInfo.BoardName, ADAPTER_NAME); // "Multiboard", "Openlight Labs",... (from makefile)
 
 #if HSE_VALUE > 0
     ELM_BoardInfo.BoardFlags |= BRD_Quartz_In_Use;
@@ -551,7 +551,7 @@ void control_setup_OUT_data()
     }
 }
 
-// ========================= Errors ===========================
+// ========================= Reports ===========================
 
 // This function is called approx 100 times in one millisecond from can_process()
 // if the error state has changed, report it every 100 ms
@@ -566,19 +566,12 @@ void control_report_errors(uint8_t channel, uint32_t tick_now)
 
 void control_report_busload(uint8_t channel, uint8_t busload_percent)
 {
-    // only called for ElmüSoft protocol
-    buf_class* usb_buf = buf_get_instance(channel);
+    kBusloadElmue packet;
+    packet.header.size     = sizeof(kBusloadElmue);
+    packet.header.msg_type = MSG_Busload;
+    packet.bus_load        = busload_percent;
 
-    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
-    if (!obj_to_host)
-        return; // buffer overflow! buf_process() will report this error to the host
-
-    kBusloadElmue* packet   = (kBusloadElmue*)obj_to_host->frame;
-    packet->header.size     = sizeof(kBusloadElmue);
-    packet->header.msg_type = MSG_Busload;
-    packet->bus_load        = busload_percent;
-
-    list_add_tail_locked(&obj_to_host->list, &usb_buf->list_to_host);
+    buf_store_host_packet(channel, &packet, packet.header.size);
 }
 
 // Send a debug message. Maximum length is 78 characters.
@@ -588,33 +581,24 @@ void control_report_busload(uint8_t channel, uint8_t busload_percent)
 // This closes the device if still open and enables debug output.
 // If the device has a legacy firmware it will ignore any flags that are passed with GS_ModeReset.
 // Only the new ElmüSoft firmware allows to set flags when closing the device.
-bool control_send_debug_mesg(uint8_t channel, const char* message)
+void control_send_debug_mesg(uint8_t channel, const char* message)
 {
     // USR_DebugReport is only set if GLB_ProtoElmue == true
     if ((GLB_UserFlags[channel] & USR_DebugReport) == 0)
-        return false;
-
-    // only called for ElmüSoft protocol
-    buf_class* usb_buf = buf_get_instance(channel);
-
-    kHostFrameObject* obj_to_host = buf_get_host_frame_locked(&usb_buf->list_host_pool);
-    if (!obj_to_host)
-        return false; // buffer overflow! buf_process() will report this error to the host
-
-    // ------------------------------
+        return;
 
     int len = strlen(message);
-    if (len > sizeof(kHostFrameLegacy) - sizeof(kStringElmue))
+    if (len > sizeof(kHostFrameUnion) - sizeof(kStringElmue))
     {
         message = "*** Dbg msg too long"; // 20 chars
         len = 20;
     }
-
-    kStringElmue* packet    = (kStringElmue*)obj_to_host->frame;
+    
+    kHostFrameUnion k_HostFrame; // size = 80 byte
+    kStringElmue* packet    = &k_HostFrame.String;
     packet->header.size     = sizeof(kStringElmue) + len;
     packet->header.msg_type = MSG_String;
     memcpy(packet->ascii_msg, message, len);
 
-    list_add_tail_locked(&obj_to_host->list, &usb_buf->list_to_host);
-    return true;
+    buf_store_host_packet(channel, packet, packet->header.size);
 }

@@ -613,6 +613,15 @@ public class WinUSB : IDisposable
             i_Thread.Priority     = ThreadPriority.Highest;
             i_Thread.Name         = "WinUSB Pipe Thread";
             i_Thread.Start();
+
+            // When the thread starts reading the IN pipe there may be a USB packet hanging from the last time the device was opened.
+            // Delete this packet by resetting the fifo count after a delay.
+            Thread.Sleep(100);
+            lock (mi_RxFifo)
+            {
+                ms32_FifoReadIdx = (ms32_FifoReadIdx + ms32_FifoCount) % mi_RxFifo.Length;
+                ms32_FifoCount   = 0;
+            }
         }
 
         // ------------------------------------------------------------------------------------------------------------------------------------
@@ -763,7 +772,7 @@ public class WinUSB : IDisposable
                         mb_FifoOverflow = false;
                     }
                     // In the demo application the reason is the slow Windows console
-                    throw new Exception("Rx FIFO overflow");
+                    throw new Exception("USB Rx FIFO overflow. Polling is too slow.");
                 }
 
                 eWaitObject e_Result = Utils.WaitForSingleObject(mh_ReceiveEvent, s32_Timeout);

@@ -1,4 +1,4 @@
-
+﻿
 // https://netcult.ch/elmue/CANable%20Firmware%20Update
 
 #pragma once
@@ -39,6 +39,8 @@ public:
     static void    PrintConsole(uint16_t u16_Color, string s_Format, ...);
     static bool    CheckConsoleEnterPressed();
     static int     WaitConsoleChar();
+    static void    ClearConsole();
+    static void    Sleep(uint32_t u32_Interval);
     static int64_t GetOsTimestamp();
 
      OsLibrary();
