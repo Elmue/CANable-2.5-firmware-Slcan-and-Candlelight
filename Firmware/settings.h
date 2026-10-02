@@ -104,6 +104,7 @@ typedef enum // sent as 8 bit
 
 #elif defined(OpenlightLabs)
 
+    // Maximum 24 characters!
     #define ADAPTER_NAME        "Openlight Labs"
 
     // OpenlightLabs has the Tx LED at pin B11
@@ -116,6 +117,7 @@ typedef enum // sent as 8 bit
 
 #elif defined(OleksiiSolo)
 
+    // Maximum 24 characters!
     #define ADAPTER_NAME        "Oleksii Solo"
 
     // Oleksii puts a 8 MHz quartz on the single channel board
@@ -134,12 +136,14 @@ typedef enum // sent as 8 bit
 
 #elif defined(OleksiiDual)
 
+    // Maximum 24 characters!
     #define ADAPTER_NAME        "Oleksii Dual"
 
     // Oleksii puts a 8 MHz quartz on the dual channel board
     // The board has 2 CAN connectors and creates 2 Candlelight USB interfaces.
     #define CHANNEL_COUNT       2
-    // -------------------      Channel 1:               Channel 2:
+    // ---------------------------------------------------------
+    //                          Channel 1:               Channel 2:
     #define CAN_INTERFACES      FDCAN1,                  FDCAN2
     #define CAN_PINS            GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_5 | GPIO_PIN_6 // CANFD Tx, Rx pins
     #define CAN_PORTS           GPIOB,                   GPIOB                   // CANFD Port
@@ -149,9 +153,6 @@ typedef enum // sent as 8 bit
     #define LED_TX_PORTS        GPIOA,                   GPIOA
     #define LED_RX_PINS         GPIO_PIN_6,              GPIO_PIN_4
     #define LED_RX_PORTS        GPIOA,                   GPIOA
-    // -------------------
-    #define TERMINATOR_PINS     -1,                      -1  // termination resistor is switched by a manual jumper
-    #define TERMINATOR_PORTS    GPIOB,                   GPIOB
     // ---------------------------------------------------------
     #define LED_MODE            GPIO_MODE_OUTPUT_PP
     #define LED_ON              GPIO_PIN_SET             // The LED's cathode is connected to ground
@@ -163,11 +164,11 @@ typedef enum // sent as 8 bit
 
 #elif defined(WeActStudioV1)
 
+    // Maximum 24 characters!
     #define ADAPTER_NAME        "WeAct Studio v1"
 
     // The WeActStudio USB2CANFD v1 has a STM32G0B1 processor and a 16 MHz quartz
     #define CHANNEL_COUNT       1
-    // -------------------
     #define CAN_INTERFACES      FDCAN1
     #define CAN_PINS            GPIO_PIN_8 | GPIO_PIN_9  // Rx = PB8, Tx = PB9
     #define CAN_PORTS           GPIOB                    // Port B
@@ -189,6 +190,7 @@ typedef enum // sent as 8 bit
 
 #elif defined(WeActStudioV2)
 
+    // Maximum 24 characters!
     #define ADAPTER_NAME        "WeAct Studio v2"
 
     // The WeActStudio USB2CANFD v2 has a STM32G431 processor and a 16 MHz quartz
@@ -199,7 +201,7 @@ typedef enum // sent as 8 bit
     #define LED_PWR_PIN         GPIO_PIN_2 // see comment of WeActStudioV1
     #define LED_PWR_PORT        GPIOA
     // -------------------
-    // This board has a more intelligent hardware design than most boards for the STM32G431.
+    // This board has a more intelligent hardware design than most boards with the STM32G431.
     // The shared processor pin CAN RXD + BOOT0 is held low by hardware to avoid entering BOOT mode when USB power is connected.
     // The firmware must enable the CAN transceiver chip by switching processor pin PB7 to low.
     #define CAN_TRX_ENABLE_PIN  GPIO_PIN_7
@@ -212,16 +214,21 @@ typedef enum // sent as 8 bit
 
 #elif defined(BigTreeTechU2C)
 
+    // Maximum 24 characters!
     #define ADAPTER_NAME        "Bigtreetech U2C v2"
 
     // The BigTreeTech U2C v2 CAN adapter has a STM32G0B1 processor and a 8 MHz quartz.
     #define CHANNEL_COUNT       1
-    // -------------------
     #define CAN_INTERFACES      FDCAN2
     #define CAN_PINS            GPIO_PIN_5 | GPIO_PIN_6  // Rx = PB5, Tx = PB6
     #define CAN_PORTS           GPIOB                    // Port B
     #define CAN_ALTERNATES      GPIO_AF3_FDCAN2          // Switch pin 5,6 multiplexer to CAN module
     // -------------------
+    // The board has no Tx/Rx LEDs
+    #define LED_TX_PINS         -1
+    #define LED_TX_PORTS        GPIOA
+    #define LED_RX_PINS         -1
+    #define LED_RX_PORTS        GPIOA
     // The blue "Status" LED is connected between PA13 and Ground.
     // After Reset it is ON by internal pull up resistor in the processor.
     // The firmware switches the Power LED output pin PA13 to Ground with LED_ON = GPIO_PIN_RESET (defined below)
@@ -235,6 +242,7 @@ typedef enum // sent as 8 bit
 
 #elif defined(DsdTechC32A)
     
+    // Maximum 24 characters!
     #define ADAPTER_NAME        "DSD Tech C32A"
     
     // DSD Tech puts a 25 MHz quartz on the SH-C32A
@@ -243,7 +251,7 @@ typedef enum // sent as 8 bit
     #define LED_RX_PINS         GPIO_PIN_4  
     #define LED_RX_PORTS        GPIOA
     // -------------------
-    // This board has a more intelligent hardware design than most boards for the STM32G431.
+    // This board has a more intelligent hardware design than most boards with the STM32G431.
     // The shared processor pin CAN RXD + BOOT0 is held low by hardware to avoid entering BOOT mode when USB power is connected.
     // The firmware must enable the CAN transceiver chip by switching processor pin PB7 to low.
     #define CAN_TRX_ENABLE_PIN  GPIO_PIN_7
@@ -270,13 +278,15 @@ typedef enum // sent as 8 bit
     #define ADAPTER_NAME        TARGET_BOARD
 #endif
 
-// Define single channel default: Tx LED is at pin A0
+// ----------------------------- Rx/Tx LED's ----------------------------------
+
+// Define single channel default: Tx LED is at pin A0   (Multiboard firmware and others)
 #ifndef LED_TX_PINS
     #define LED_TX_PINS         GPIO_PIN_0  // MKS Makerbase: green, Jhoinrch: blue
     #define LED_TX_PORTS        GPIOA
 #endif
 
-// Define single channel default: Rx LED is at pin A15
+// Define single channel default: Rx LED is at pin A15   (Multiboard firmware and others)
 #ifndef LED_RX_PINS
     #define LED_RX_PINS         GPIO_PIN_15 // MKS Makerbase: blue, Jhoinrch: magenta
     #define LED_RX_PORTS        GPIOA
@@ -290,21 +300,10 @@ typedef enum // sent as 8 bit
     #define LED_OFF             GPIO_PIN_SET
 #endif
 
-// Define single channel default: no terminator pin available
-// Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
-// If the board does not support this --> set TERMINATOR_Pin = -1
-#ifndef TERMINATOR_PINS
-    #define TERMINATOR_PINS     -1
-    #define TERMINATOR_PORTS    GPIOB
-#endif
-#ifndef TERMINATOR_MODE
-    #define TERMINATOR_MODE     GPIO_MODE_OUTPUT_PP
-    #define TERMINATOR_ON       GPIO_PIN_SET        // turn on termination resistor
-    #define TERMINATOR_OFF      GPIO_PIN_RESET
-#endif
+// ---------------------------- CAN Rx/Tx Pins -------------------------------
 
-// Define single channel default: Use CAN interface 1 at PB8 and PB9
-// (STUPID STM32G431 design where FDCAN1 and BOOT0 use the same pin)
+// Define single channel default for G4 processors: Use CAN interface 1 at PB8 and PB9
+// (STUPID STM32G431 processor design where FDCAN1 and BOOT0 use the same pin)
 #ifndef CHANNEL_COUNT
     #define CHANNEL_COUNT       1
     #define CAN_INTERFACES      FDCAN1
@@ -312,6 +311,34 @@ typedef enum // sent as 8 bit
     #define CAN_PORTS           GPIOB                   // Port B
     #define CAN_ALTERNATES      GPIO_AF9_FDCAN1         // switch pin 8,9 multiplexer to CAN module
 #endif
+
+// ------------------------------- Terminator --------------------------------
+
+// Define single channel default: no terminator pin available
+// Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
+// If the board does not support this --> set TERMINATOR_Pin = -1
+#ifndef TERMINATOR_PINS
+    #if CHANNEL_COUNT == 1
+        #define TERMINATOR_PINS     -1
+        #define TERMINATOR_PORTS    GPIOA
+    #elif CHANNEL_COUNT == 2
+        #define TERMINATOR_PINS     -1,     -1
+        #define TERMINATOR_PORTS    GPIOA,  GPIOA
+    #elif CHANNEL_COUNT == 3
+        #define TERMINATOR_PINS     -1,     -1,     -1
+        #define TERMINATOR_PORTS    GPIOA,  GPIOA,  GPIOA
+    #else
+        #error "Invalid CHANNEL_COUNT"
+    #endif
+#endif
+
+#ifndef TERMINATOR_MODE
+    #define TERMINATOR_MODE     GPIO_MODE_OUTPUT_PP
+    #define TERMINATOR_ON       GPIO_PIN_SET        // turn on termination resistor
+    #define TERMINATOR_OFF      GPIO_PIN_RESET
+#endif
+
+// ------------------------------- USB Power ----------------------------------
 
 // 0x00 = adapter power comes over USB cable
 // 0x40 = adapter has own power supply (flag 'Self Powered' in bmAttributes in Configuration descriptor)

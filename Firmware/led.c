@@ -59,17 +59,16 @@ bool led_init()
         led_set_Tx(C, true);
     }
     
-#ifdef LED_PWR_PIN
-    GPIO_InitStruct.Pin = LED_PWR_PIN;
-    HAL_GPIO_Init(LED_PWR_PORT, &GPIO_InitStruct);
-    
+#ifdef LED_PWR_PIN   
     // WeActStudio v1 adapter:
     // Turn ON the red Power LED. It is OFF in DFU mode.
     // --------------------------------------------------
     // BigTreeTech U2C v2 adapter:
     // Turn OFF the blue Status LED. 
     // It is ON in DFU mode, because by default PA13 is internally pulled up by the STM32G0B1 processor.
-    led_set_Pwr(true);
+    GPIO_InitStruct.Pin = LED_PWR_PIN;
+    HAL_GPIO_Init(LED_PWR_PORT, &GPIO_InitStruct);
+    HAL_GPIO_WritePin(LED_PWR_PORT, LED_PWR_PIN, LED_ON);
 #endif
     return true;
 }
@@ -231,17 +230,13 @@ void led_process(uint8_t channel, uint32_t tick_now)
 
 void led_set_Rx(uint8_t channel, bool status)
 {
-    HAL_GPIO_WritePin(SET_LedRxPorts[channel], SET_LedRxPins[channel], status ? LED_ON : LED_OFF);
+    if (SET_LedRxPins[channel] >= 0)
+        HAL_GPIO_WritePin(SET_LedRxPorts[channel], SET_LedRxPins[channel], status ? LED_ON : LED_OFF);
 }
 
 void led_set_Tx(uint8_t channel, bool status)
 {
-    HAL_GPIO_WritePin(SET_LedTxPorts[channel], SET_LedTxPins[channel], status ? LED_ON : LED_OFF);
+    if (SET_LedTxPins[channel] >= 0)
+        HAL_GPIO_WritePin(SET_LedTxPorts[channel], SET_LedTxPins[channel], status ? LED_ON : LED_OFF);
 }
 
-#ifdef LED_PWR_PIN
-void led_set_Pwr(bool status)
-{
-    HAL_GPIO_WritePin(LED_PWR_PORT, LED_PWR_PIN, status ? LED_ON : LED_OFF);
-}
-#endif

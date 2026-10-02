@@ -27,6 +27,5 @@ void led_turn_TX(uint8_t channel, bool state);
 void led_blink_identify(uint8_t channel, bool blink_on);
 void led_flash_TX(uint8_t channel);
 void led_flash_RX(uint8_t channel);
-void led_set_Pwr(bool status);
 
 
