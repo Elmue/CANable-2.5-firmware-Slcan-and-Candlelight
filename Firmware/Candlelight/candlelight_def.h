@@ -131,11 +131,11 @@ typedef enum // transferred as 32 bit
     // No additional flag is required to indicate this feature.
     // Marc Kleine Budde uses a completely incompatible struct to transmit the filter settings.
 //  MKB_DevFlagFilter                 = 0x10000, // bit 16
-} eDeviceFlags;
 
-// Elmue protocol extension: the FRM_OneShot flag can select the retransmission
-// policy independently for every transmitted frame.
-#define ELM_DevFlagPerFrameOneShot 0x80000000UL
+    // The FRM_OneShot flag can select the retransmission policy independently
+    // for every transmitted Elmue protocol frame.
+    ELM_DevFlagPerFrameOneShot       = 0x80000, // bit 19
+} eDeviceFlags;
 
 // ==============================================================================
 
