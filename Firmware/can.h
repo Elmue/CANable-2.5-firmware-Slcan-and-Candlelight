@@ -101,6 +101,7 @@ bool       can_is_passive(uint8_t channel);
 bool       can_using_FD(uint8_t channel);
 bool       can_using_BRS(uint8_t channel);
 bool       can_is_tx_fifo_free(uint8_t channel);
+bool       can_prepare_tx_mode(uint8_t channel, bool one_shot);
 eFeedback  can_is_tx_allowed(uint8_t channel);
 eFeedback  can_add_host_filter(uint8_t channel, bool extended, uint32_t filter, uint32_t mask);
 eFeedback  can_clear_host_filters(uint8_t channel);
@@ -109,5 +110,4 @@ void       can_recover_bus_off(uint8_t channel);
 
 can_bitrate_cfg*     can_getBitrate(uint8_t channel, bool get_data);
 FDCAN_HandleTypeDef* can_get_handle(uint8_t channel);
-
 

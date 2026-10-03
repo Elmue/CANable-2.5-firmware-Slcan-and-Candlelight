@@ -133,6 +133,10 @@ typedef enum // transferred as 32 bit
 //  MKB_DevFlagFilter                 = 0x10000, // bit 16
 } eDeviceFlags;
 
+// Elmue protocol extension: the FRM_OneShot flag can select the retransmission
+// policy independently for every transmitted frame.
+#define ELM_DevFlagPerFrameOneShot 0x80000000UL
+
 // ==============================================================================
 
 // GS_ReqGetDeviceVersion
@@ -373,6 +377,7 @@ typedef enum // 8 bit
     FRM_FDF      = 0x02, // The CAN frame has the FDF (Flexible Datarate Frame) flag set. It is a CAN FD frame.
     FRM_BRS      = 0x04, // The CAN frame has the BRS (Bit Rate Switch) flag set. The data is transmitted with a higher baudrate
     FRM_ESI      = 0x08, // The CAN frame has the ESI (Error State Indicator) flag set. The sender reports errors.
+    FRM_OneShot  = 0x10, // Transmit this frame once; do not retry it when no ACK is received.
 } eFrameFlags;
 
 typedef enum // 32 bit 
@@ -667,4 +672,3 @@ typedef union
     kStringElmue     String;
     kBusloadElmue    BusLoad;
 } kHostFrameUnion;
-

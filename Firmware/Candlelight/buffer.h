@@ -35,6 +35,7 @@ typedef struct
 typedef struct 
 {
     FDCAN_TxHeaderTypeDef header;  
+    bool                  one_shot;
     uint8_t               data[64];   
 } kCanFrameObject;
 

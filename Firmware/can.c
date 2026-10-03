@@ -966,6 +966,43 @@ bool can_is_tx_fifo_free(uint8_t channel)
     return HAL_FDCAN_GetTxFifoFreeLevel(&can_inst[channel].handle) > 0;
 }
 
+// Select automatic retransmission for the next frame. DAR is channel-wide on
+// STM32 FDCAN, so it may only be changed after every previously queued frame
+// and its Tx event have been consumed. Repeated frames with the same policy
+// stay on the fast path and continue using all three hardware FIFO slots.
+bool can_prepare_tx_mode(uint8_t channel, bool one_shot)
+{
+    can_class* inst = &can_inst[channel];
+    bool current_one_shot = inst->handle.Init.AutoRetransmission == DISABLE;
+
+    if (current_one_shot == one_shot)
+        return true;
+
+    if (HAL_FDCAN_GetTxFifoFreeLevel(&inst->handle) < 3)
+        return false;
+    if ((inst->handle.Instance->TXEFS & FDCAN_TXEFS_EFFL) != 0)
+        return false;
+
+    if (HAL_FDCAN_Stop(&inst->handle) != HAL_OK)
+    {
+        error_assert(channel, APP_CanTxFail, true);
+        return false;
+    }
+
+    if (one_shot)
+        SET_BIT(inst->handle.Instance->CCCR, FDCAN_CCCR_DAR);
+    else
+        CLEAR_BIT(inst->handle.Instance->CCCR, FDCAN_CCCR_DAR);
+    inst->handle.Init.AutoRetransmission = one_shot ? DISABLE : ENABLE;
+
+    if (HAL_FDCAN_Start(&inst->handle) != HAL_OK)
+    {
+        error_assert(channel, APP_CanTxFail, true);
+        return false;
+    }
+    return true;
+}
+
 // Return reference to CAN handle
 FDCAN_HandleTypeDef *can_get_handle(uint8_t channel)
 {
@@ -1051,4 +1088,3 @@ uint32_t can_calc_bit_count_in_frame(can_class* inst, uint32_t DataLength,
     }
     return bit_count;
 }
-

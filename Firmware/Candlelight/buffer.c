@@ -44,6 +44,7 @@ bool  FifoRead (kFifo* Fifo, void* Data, int Size, eFifoRead  e_Read);
 void       buf_process_host (uint8_t channel, buf_class* usb_buf);
 void       buf_process_can  (uint8_t channel, buf_class* can_buf);
 bool       buf_store_can_frame (uint8_t channel, uint8_t* can_frame);
+bool       buf_store_tx_packet_mode(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data, bool one_shot);
 void       buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo);
 buf_class* buf_get_inst_for_usb(uint8_t channel);
 
@@ -171,8 +172,16 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
         return; // all 3 CAN Tx FIFO's are full
     
     kCanFrameObject k_CanFrame;
-    if (!FifoRead(&can_buf->can_fifo, &k_CanFrame, sizeof(k_CanFrame), FIFO_ReadNext))
+    if (!FifoRead(&can_buf->can_fifo, &k_CanFrame, sizeof(k_CanFrame), FIFO_Peek))
         return; // nothing to be sent
+
+    // Per-frame One-Shot is implemented through the channel-wide FDCAN DAR
+    // bit. If a policy switch is needed, wait until older frames are fully
+    // transmitted before changing it.
+    if (!can_prepare_tx_mode(channel, k_CanFrame.one_shot))
+        return;
+
+    FifoRead(&can_buf->can_fifo, &k_CanFrame, sizeof(k_CanFrame), FIFO_ReadNext);
 
     // ------------------------------
 
@@ -351,16 +360,24 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
 
     tx_header.DataLength = can_dlc;
 
-    return buf_store_tx_packet(channel, &tx_header, frame_data);
+    return buf_store_tx_packet_mode(channel, &tx_header, frame_data,
+                                    GLB_ProtoElmue && (flags & FRM_OneShot));
 }
 
 // Enqueue a packet for CAN bus.
 bool buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
 {
+    return buf_store_tx_packet_mode(channel, tx_header, tx_data, false);
+}
+
+// Enqueue a packet and preserve its per-frame retransmission policy.
+bool buf_store_tx_packet_mode(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data, bool one_shot)
+{
     buf_class* can_buf = &buf_inst[channel];
     
     kCanFrameObject k_CanFrame;
     memcpy(&k_CanFrame.header, tx_header, sizeof(k_CanFrame.header));
+    k_CanFrame.one_shot = one_shot;
     memcpy(&k_CanFrame.data,   tx_data,   sizeof(k_CanFrame.data));
     if (FifoWrite(&can_buf->can_fifo, &k_CanFrame, sizeof(k_CanFrame)))
         return true;
@@ -671,4 +688,3 @@ bool FifoRead(kFifo* Fifo, void* Data, int Size, eFifoRead e_Read)
     system_enable_irq();
     return Success;
 }
-

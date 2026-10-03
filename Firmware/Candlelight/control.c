@@ -65,7 +65,8 @@ void control_init()
                                    GS_DevFlagBitTimingFD    |
                                    GS_DevFlagGetErrorState  |
                                    ELM_DevFlagProtocolElmue |
-                                   ELM_DevFlagSendUsbBlobs;
+                                   ELM_DevFlagSendUsbBlobs  |
+                                   ELM_DevFlagPerFrameOneShot;
     if (SET_TermPins[0] > 0)
         GS_CapabilityClassic.feature |= GS_DevFlagTermination;
 
