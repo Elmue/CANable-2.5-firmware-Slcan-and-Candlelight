@@ -1,4 +1,8 @@
 # CANable-2.5-firmware-Slcan-and-Candlelight
+[![Firmware CI](https://github.com/sendu2wfdx/CANable-2.5-firmware-Slcan-and-Candlelight/actions/workflows/ci.yml/badge.svg?branch=zcanpro-per-frame-one-shot)](https://github.com/sendu2wfdx/CANable-2.5-firmware-Slcan-and-Candlelight/actions/workflows/ci.yml)
+
+> **Fork note:** The `zcanpro-per-frame-one-shot` branch is the enhanced firmware used by [canable25-zcan-adapter](https://github.com/sendu2wfdx/canable25-zcan-adapter). It adds per-frame One-Shot control and drains real FDCAN Tx Events before reusing a transmit buffer. These changes have not yet been merged upstream.
+
 Two new high quality, speed optimized firmwares for CANable adapters with lots of new features.
 
 ![CANable Adapter](https://github.com/user-attachments/assets/061f60ba-14a2-4896-866f-6226fc9123f6)

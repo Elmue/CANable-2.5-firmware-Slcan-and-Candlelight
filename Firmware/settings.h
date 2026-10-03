@@ -58,7 +58,7 @@ typedef enum // sent as 4 bit
 // These flags are reset after sending them once to the host
 // They are set again if the error is still present
 // Slcan sends this in the error report "EXXXXXXXX\r"
-// Candlelight sends this in a special error packet with a flag (legacy: CAN_ID_Error, ElmüSoft: MSG_Error)
+// Candlelight sends this in a special error packet with a flag (legacy: CAN_ID_Error, ElmueSoft: MSG_Error)
 typedef enum // sent as 8 bit
 {
     APP_CanRxFail       = 0x01, // CAN packets arrive faster than the firmware can process them
@@ -66,6 +66,7 @@ typedef enum // sent as 8 bit
     APP_CanTxOverflow   = 0x04, // a CAN packet could not be sent because the Tx FIFO + buffer are full (mostly because bus is passive).
     APP_UsbInOverflow   = 0x08, // a USB IN packet could not be sent because CAN traffic is faster than USB transfer.
     APP_CanTxTimeout    = 0x10, // a packet in the transmit FIFO was not acknowledged during 500 ms --> abort Tx and clear Tx buffer.
+    APP_CanTxEventLost  = 0x20, // a transmitted packet's confirmation event was lost because the hardware Tx Event FIFO overflowed.
 } eErrorAppFlags;
 
 // ============================================================================================
@@ -346,7 +347,5 @@ typedef enum // sent as 8 bit
 #ifndef USBD_SELF_POWERED
     #define USBD_SELF_POWERED   0x00
 #endif
-
-
 
 

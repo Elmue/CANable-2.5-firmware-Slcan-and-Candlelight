@@ -1,0 +1,54 @@
+name: Firmware CI
+
+on:
+  push:
+    branches:
+      - main
+      - zcanpro-per-frame-one-shot
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        makefile:
+          - Make_G0B1_Candle_BigTreeTechU2C
+          - Make_G0B1_Candle_WeActStudioV1
+          - Make_G0B1_Slcan_BigTreeTechU2C
+          - Make_G0B1_Slcan_WeActStudioV1
+          - Make_G431_Candle_Jhoinrch
+          - Make_G431_Candle_Multiboard
+          - Make_G431_Candle_OleksiiSolo
+          - Make_G431_Candle_Openlightlabs
+          - Make_G431_Candle_WeActStudioV2
+          - Make_G431_Slcan_Jhoinrch
+          - Make_G431_Slcan_Multiboard
+          - Make_G431_Slcan_OleksiiSolo
+          - Make_G431_Slcan_Openlightlabs
+          - Make_G431_Slcan_WeActStudioV2
+          - Make_G473_Candle_Multiboard
+          - Make_G473_Candle_OleksiiDual
+          - Make_G473_Slcan_Multiboard
+          - Make_G473_Slcan_OleksiiDual
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install ARM GNU toolchain
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi
+
+      - name: Build ${{ matrix.makefile }}
+        run: make -s -f Build/${{ matrix.makefile }}
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.makefile }}
+          path: |
+            Build/**/*.bin
+            Build/**/*.hex
+          if-no-files-found: error

@@ -33,6 +33,7 @@ can_class            can_inst[CHANNEL_COUNT] = {0};
 // ----- Private Methods
 void      can_reset(uint8_t channel);
 void      can_print_info(uint8_t channel);
+void      can_process_tx_events(uint8_t channel, uint32_t tick_now);
 bool      can_apply_host_filters(can_class* inst);
 uint32_t  can_calc_bit_count_in_frame(can_class* inst, uint32_t DataLength, uint32_t FrameType, uint32_t IdType, uint32_t FDFormat, uint32_t BitRateSwitch);
 void      can_forward_bridge_packet(can_class* inst, FDCAN_RxHeaderTypeDef* rx_header, uint8_t* rx_data);
@@ -193,7 +194,7 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
 
     inst->nom_bit_len_ns  = 1 + inst->bitrate_nominal.Seg1 + inst->bitrate_nominal.Seg2; // time quantums
     inst->nom_bit_len_ns *= inst->bitrate_nominal.Brp;     // clock prescaler
-    inst->nom_bit_len_ns *= 1000;                          // µs -> ns
+    inst->nom_bit_len_ns *= 1000;                          // us -> ns
     inst->nom_bit_len_ns /= clock_MHz;
 
     // ---------------- TDC compensation ------------------
@@ -295,6 +296,12 @@ void can_send_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t*
 {
     can_class* inst = &can_inst[channel];
 
+    // A completed transmission releases its Tx buffer before its event is
+    // consumed. Drain confirmations before reusing that free buffer, otherwise
+    // a fast USB burst can produce a fourth event while the fixed three-entry
+    // hardware Tx Event FIFO is still full.
+    can_process_tx_events(channel, HAL_GetTick());
+
     // Sending a message with BRS flag, but nominal and data baudrate are the same --> reset flag and send without BRS.
     if (!can_using_BRS(channel))
         tx_header->BitRateSwitch = FDCAN_BRS_OFF;
@@ -319,6 +326,33 @@ void can_send_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t*
     // When an ACK is received HAL_FDCAN_GetTxEvent() will return the Tx Event and the Tx LED will be flashed.
 }
 
+// Drain all real transmission confirmations from the fixed-size hardware FIFO.
+// Called both before queueing another frame and from the regular CAN worker.
+void can_process_tx_events(uint8_t channel, uint32_t tick_now)
+{
+    can_class* inst = &can_inst[channel];
+    FDCAN_TxEventFifoTypeDef tx_event;
+
+    while (HAL_FDCAN_GetTxEvent(&inst->handle, &tx_event) == HAL_OK)
+    {
+        if ((GLB_UserFlags[channel] & USR_TxEcho) && tx_event.MessageMarker > 0)
+            buf_store_tx_echo(channel, &tx_event);
+
+        if (inst->handle.Init.Mode == FDCAN_MODE_NORMAL)
+        {
+            inst->bit_count_total += can_calc_bit_count_in_frame(inst, tx_event.DataLength,
+                tx_event.TxFrameType, tx_event.IdType, tx_event.FDFormat, tx_event.BitRateSwitch);
+        }
+
+        if (inst->tx_pending > 0)
+        {
+            inst->last_tx_tick = tick_now;
+            inst->tx_pending --;
+        }
+        led_flash_TX(channel);
+    }
+}
+
 // Process data from CAN tx/rx circular buffers
 // This function is called approx 100 times in one millisecond (on STM32G431)
 void can_process(uint8_t channel, uint32_t tick_now)
@@ -332,37 +366,11 @@ void can_process(uint8_t channel, uint32_t tick_now)
 
     // -------------------------- Tx Event ------------------------------------
 
-    // This was competely wrong in the original Candlelight firmware (fixed by Elmüsoft).
+    // This was competely wrong in the original Candlelight firmware (fixed by ElmueSoft).
     // Instead of sending a Tx Event to the host in the moment when the processor has really sent the packet to the CAN bus
     // they have sent a fake event immediately after dispatching the packet, no matter if it really was sent or not.
-    FDCAN_TxEventFifoTypeDef tx_event;
-    if (HAL_FDCAN_GetTxEvent(&inst->handle, &tx_event) == HAL_OK)
-    {       
-        // Here tx_event.EventType is FDCAN_TX_EVENT if auto retransmission is enabled.
-        // Here tx_event.EventType is FDCAN_TX_IN_SPITE_OF_ABORT if auto retransmission is disabled.
-        // "In DAR mode (Disable Auto Retransmission) all transmissions are automatically canceled after
-        // they have been started on the CAN bus." (see "STM32G4 Series - Chapter FDCAN.pdf" in subfolder "Documentation")
-        // A marker of zero must not send an echo to the host! (forwarded bridge packets)
-        if ((GLB_UserFlags[channel] & USR_TxEcho) && tx_event.MessageMarker > 0)
-        {
-            buf_store_tx_echo(channel, &tx_event);
-        }
-        
-        // In loopback mode do not count the same packet twice (Tx == Rx at the same time without delay)
-        // In bus montoring mode and restricted mode sending packets is not possible.
-        if (inst->handle.Init.Mode == FDCAN_MODE_NORMAL)
-        {
-            // for bus load calculation
-            inst->bit_count_total += can_calc_bit_count_in_frame(inst, tx_event.DataLength, tx_event.TxFrameType, tx_event.IdType, tx_event.FDFormat, tx_event.BitRateSwitch);
-        }
-
-        if (inst->tx_pending > 0)
-        {
-            inst->last_tx_tick = tick_now;
-            inst->tx_pending --;
-        }
-        led_flash_TX(channel); // flash 15 ms
-    }
+    // Drain every pending event before doing slower RX/error/report work.
+    can_process_tx_events(channel, tick_now);
 
     // -------------------------- Rx Packet ------------------------------------
 
@@ -402,7 +410,7 @@ void can_process(uint8_t channel, uint32_t tick_now)
     // Tx Event FIFO packet lost (this should never happen)
     if (__HAL_FDCAN_GET_FLAG(&inst->handle, FDCAN_FLAG_TX_EVT_FIFO_ELT_LOST))
     {
-        error_assert(channel, APP_CanTxFail, false);
+        error_assert(channel, APP_CanTxEventLost, false);
         __HAL_FDCAN_CLEAR_FLAG(&inst->handle, FDCAN_FLAG_TX_EVT_FIFO_ELT_LOST);
     }
 
@@ -539,7 +547,7 @@ void can_timer_100ms()
 
         if (inst->busload_counter >= inst->busload_interval) // interval elapsed
         {
-            // This function is called every 100 ms = 100 * 1000 µs --> divide by 100000
+            // This function is called every 100 ms = 100 * 1000 us --> divide by 100000
             uint32_t rate_us_ppm = inst->bit_count_total * inst->nom_bit_len_ns / 100000;
             uint32_t busload_ppm = rate_us_ppm * STUFFING_FACTOR / inst->busload_interval;
 
