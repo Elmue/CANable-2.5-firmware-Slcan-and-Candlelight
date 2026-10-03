@@ -41,7 +41,7 @@ int main(void)
     {       
         if (HAL_PCD_Is_Suspended()) // computer is in sleep mode (USB off)
         {
-            led_sleep(); // only the power LED is on
+            led_power_down(); // only the power LED is on
             usb_suspend = true;
             continue;
         }

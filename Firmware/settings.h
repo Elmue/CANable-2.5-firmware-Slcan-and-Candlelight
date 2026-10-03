@@ -140,20 +140,20 @@ typedef enum // sent as 8 bit
     #define ADAPTER_NAME        "Oleksii Dual"
 
     // Oleksii puts a 8 MHz quartz on the dual channel board
-    // The board has 2 CAN connectors and creates 2 Candlelight USB interfaces.
+    // The board has 2 CAN connectors and creates 2 independent Candlelight USB interfaces.
     #define CHANNEL_COUNT       2
-    // ---------------------------------------------------------
+    // ------------------------------------------------------------
     //                          Channel 1:               Channel 2:
     #define CAN_INTERFACES      FDCAN1,                  FDCAN2
     #define CAN_PINS            GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_5 | GPIO_PIN_6 // CANFD Tx, Rx pins
     #define CAN_PORTS           GPIOB,                   GPIOB                   // CANFD Port
-    #define CAN_ALTERNATES      GPIO_AF9_FDCAN1,         GPIO_AF9_FDCAN2  // switch pin multiplexer to CAN module
+    #define CAN_ALTERNATES      GPIO_AF9_FDCAN1,         GPIO_AF9_FDCAN2         // switch pin multiplexer to CAN module
     // -------------------
     #define LED_TX_PINS         GPIO_PIN_5,              GPIO_PIN_3
     #define LED_TX_PORTS        GPIOA,                   GPIOA
     #define LED_RX_PINS         GPIO_PIN_6,              GPIO_PIN_4
     #define LED_RX_PORTS        GPIOA,                   GPIOA
-    // ---------------------------------------------------------
+    // ------------------------------------------------------------
     #define LED_MODE            GPIO_MODE_OUTPUT_PP
     #define LED_ON              GPIO_PIN_SET             // The LED's cathode is connected to ground
     #define LED_OFF             GPIO_PIN_RESET
@@ -162,6 +162,39 @@ typedef enum // sent as 8 bit
     // -------------------
     #define ALLOW_DISABLE_BOOT0 1  // allow disable pin BOOT0 (indispensable for correct operation)
 
+#elif defined(OleksiiCanBridge)
+
+    // Maximum 24 characters!
+    #define ADAPTER_NAME        "Oleksii CAN Bridge"
+
+    // Oleksii puts a 8 MHz quartz on the triple channel board.
+    // The board has 3 CAN channels and creates 3 independent Candlelight USB interfaces.
+    #define CHANNEL_COUNT       3
+    // --------------------------------------------------------------------------------------
+    //                          Channel 1:               Channel 2:               Channel 3:
+    #define CAN_INTERFACES      FDCAN1,                  FDCAN2,                  FDCAN3
+    #define CAN_PINS            GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_5 | GPIO_PIN_6, GPIO_PIN_4 | GPIO_PIN_3 // CANFD Tx, Rx pins
+    #define CAN_PORTS           GPIOB,                   GPIOB,                   GPIOB                   // CANFD Port
+    #define CAN_ALTERNATES      GPIO_AF9_FDCAN1,         GPIO_AF9_FDCAN2,         GPIO_AF11_FDCAN3        // Switch pin multiplexer to CAN module
+    // -------------------
+    // The board has only one LED per channel which flashes for Rx data and for Tx data
+    #define LED_TX_PINS         GPIO_PIN_13,             GPIO_PIN_7,              GPIO_PIN_15
+    #define LED_TX_PORTS        GPIOC,                   GPIOB,                   GPIOA    
+    #define LED_RX_PINS         GPIO_PIN_13,             GPIO_PIN_7,              GPIO_PIN_15          
+    #define LED_RX_PORTS        GPIOC,                   GPIOB,                   GPIOA
+    // ---------------------------------------------------------------------------------------
+    #define LED_MODE            GPIO_MODE_OUTPUT_PP
+    #define LED_ON              GPIO_PIN_SET        // The LED's cathode is connected to ground
+    #define LED_OFF             GPIO_PIN_RESET
+    // -------------------
+    // The Status LED is turned on when the firmware starts
+    #define LED_PWR_PIN         GPIO_PIN_5
+    #define LED_PWR_PORT        GPIOA
+    // -------------------
+    #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1051 limits to 5 Mbaud
+    // -------------------
+    #define ALLOW_DISABLE_BOOT0 1  // allow disable pin BOOT0 (indispensable for correct operation)    
+    
 #elif defined(WeActStudioV1)
 
     // Maximum 24 characters!
@@ -272,13 +305,15 @@ typedef enum // sent as 8 bit
 // ============================================================================================
 // Load default settings if no board-specific settings are defined
 
-// This is displayed in the USB descriptor and Version info.
+// This is used in the USB descriptor and Candlelight board info / Slcan version info.
 // Maximum 24 characters!
 #ifndef ADAPTER_NAME
     #define ADAPTER_NAME        TARGET_BOARD
 #endif
 
-// ----------------------------- Rx/Tx LED's ----------------------------------
+// -------------------------------- LED's ------------------------------------
+
+// If a board has only one LED for Rx and Tx, set both to the same pin and port.
 
 // Define single channel default: Tx LED is at pin A0   (Multiboard firmware and others)
 #ifndef LED_TX_PINS
@@ -292,8 +327,8 @@ typedef enum // sent as 8 bit
     #define LED_RX_PORTS        GPIOA
 #endif
 
+// Define default for most boards which have the LED's anode connected to +3.3V
 // PP = Push/Pull, OD = Open Drain
-// Most boards use inverted voltage (Low = ON): The LED's anode is connected to +3.3V
 #ifndef LED_MODE
     #define LED_MODE            GPIO_MODE_OUTPUT_PP
     #define LED_ON              GPIO_PIN_RESET
@@ -314,9 +349,9 @@ typedef enum // sent as 8 bit
 
 // ------------------------------- Terminator --------------------------------
 
-// Define single channel default: no terminator pin available
+// Define default: no terminator pin available
 // Some boards have a 120 Ohm termination resistor that can be enabled by a GPIO pin.
-// If the board does not support this --> set TERMINATOR_Pin = -1
+// If the board does not support this, TERMINATOR_PINS is set to -1
 #ifndef TERMINATOR_PINS
     #if CHANNEL_COUNT == 1
         #define TERMINATOR_PINS     -1

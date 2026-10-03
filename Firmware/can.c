@@ -258,7 +258,6 @@ eFeedback can_open(uint8_t channel, uint32_t mode)
     // sets inst->handle.State == HAL_FDCAN_STATE_BUSY
     if (HAL_FDCAN_Start(&inst->handle) != HAL_OK) return FBK_ErrorFromHAL; // error detail in inst->handle.ErrorCode
 
-    led_turn_TX(channel, false);
     inst->is_open = true;
     return FBK_Success;
 }
@@ -286,7 +285,6 @@ void can_close(uint8_t channel)
 
     // reset all class variables, also is_open
     can_reset(channel);
-    led_turn_TX(channel, true);
 }
 
 // Called from Buffer. Stores a packet in the Tx FIFO

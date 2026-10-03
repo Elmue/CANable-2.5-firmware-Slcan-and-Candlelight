@@ -25,6 +25,7 @@ GPIO_TypeDef* SET_LedTxPorts[CHANNEL_COUNT] = { LED_TX_PORTS };
 int           SET_LedTxPins [CHANNEL_COUNT] = { LED_TX_PINS  };
 GPIO_TypeDef* SET_LedRxPorts[CHANNEL_COUNT] = { LED_RX_PORTS };
 int           SET_LedRxPins [CHANNEL_COUNT] = { LED_RX_PINS  };
+bool          SET_CommonPins[CHANNEL_COUNT] = {0};
 
 // ----- Class Instance
 led_class  led_inst[CHANNEL_COUNT] = {0};
@@ -32,6 +33,8 @@ led_class  led_inst[CHANNEL_COUNT] = {0};
 // ----- Private Methods
 void led_set_Rx(uint8_t channel, bool status);
 void led_set_Tx(uint8_t channel, bool status);
+void led_set_both(uint8_t channel, bool status);
+void led_set_alternate(uint8_t channel, bool status);
 
 // Initialize LED GPIOs
 bool led_init()
@@ -43,7 +46,7 @@ bool led_init()
     GPIO_InitStruct.Alternate = 0;
 
     for (int C=0; C<CHANNEL_COUNT; C++)
-    {
+    {       
         if (SET_LedRxPins[C] >= 0)
         {
             GPIO_InitStruct.Pin = SET_LedRxPins[C];
@@ -53,16 +56,19 @@ bool led_init()
         {
             GPIO_InitStruct.Pin = SET_LedTxPins[C];
             HAL_GPIO_Init(SET_LedTxPorts[C], &GPIO_InitStruct);
+            
+            // Set SET_CommonPins = true if a board has only one LED for Rx and Tx
+            SET_CommonPins[C] = SET_LedRxPins [C] == SET_LedTxPins [C] && 
+                                SET_LedRxPorts[C] == SET_LedTxPorts[C];
         }
-        // In case of a crash during initialization --> all LEDs are ON which shows a severe error.
-        led_set_Rx(C, true);
-        led_set_Tx(C, true);
+        // In case of a crash during the following initialization --> all LEDs are ON which shows a severe error.
+        led_set_both(C, true);
     }
     
 #ifdef LED_PWR_PIN   
     // WeActStudio v1 adapter:
     // Turn ON the red Power LED. It is OFF in DFU mode.
-    // --------------------------------------------------
+    // -------------------------------------------------
     // BigTreeTech U2C v2 adapter:
     // Turn OFF the blue Status LED. 
     // It is ON in DFU mode, because by default PA13 is internally pulled up by the STM32G0B1 processor.
@@ -73,17 +79,18 @@ bool led_init()
     return true;
 }
 
+// -------------------------------------------------------------------
+
 // when the operating system goes into sleep mode --> USB suspended --> turn off all LED's
-void led_sleep()
+void led_power_down()
 {
     for (int C=0; C<CHANNEL_COUNT; C++)
     {
-        led_set_Rx(C, false);
-        led_set_Tx(C, false);
+        led_set_both(C, false);
     }
 }
 
-// Blink LEDs of all channels alternatingly on power on.
+// Blink Rx + Tx LEDs of all channels alternatingly on power on.
 // This is a blocking function by purpose.
 void led_blink_power_on()
 {   
@@ -92,24 +99,21 @@ void led_blink_power_on()
     {
         for (int C=0; C<CHANNEL_COUNT; C++)
         {
-            led_set_Rx(C, true);
-            led_set_Tx(C, false);
+            led_set_alternate(C, true);
         }       
         HAL_Delay(POWER_ON_DURATION);        
         
         for (int C=0; C<CHANNEL_COUNT; C++)
         {
-            led_set_Rx(C, false);
-            led_set_Tx(C, true);    
+            led_set_alternate(C, false);
         }
         HAL_Delay(POWER_ON_DURATION);
     }
 }
 
-// -----------------------------------
-
-// Blink Rx + Tx alternatingly to identify a device if multiple devices are connected at the same time.
+// Blink Rx + Tx of one channel alternatingly to identify a channel and device if multiple devices are connected at the same time.
 // This is a non-blocking function. Blinking is enabled by USB command.
+// When a CAN channel is opened the blinking will be stopped.
 void led_blink_identify(uint8_t channel, bool blink_on)
 {
     led_class* inst = &led_inst[channel];
@@ -117,33 +121,34 @@ void led_blink_identify(uint8_t channel, bool blink_on)
     if (inst->identify == blink_on)
         return;
 
+    // blinking is done in led_process()
     inst->identify   = blink_on;
-    inst->next_blink = HAL_GetTick() + IDENTIFY_DURATION;
-    
-    led_set_Rx(channel, blink_on);
-    led_set_Tx(channel, blink_on);
+    inst->next_blink = HAL_GetTick();
+
+    if (!blink_on)
+        led_set_both(channel, false);
 }
 
-// Turn Tx LED on/off
-void led_turn_TX(uint8_t channel, bool state)
-{
-    led_class* inst = &led_inst[channel];
-    if (inst->identify)
-        return;
-    
-    led_set_Tx(channel, state);
-}
+// -------------------------------------------------------------------
 
 // Turn Tx LED on for a short duration
-// Called when CAN frame has been transmitted
+// Called when CAN frame has been sent
 void led_flash_TX(uint8_t channel)
 {
+    // If the board has only one common LED for Rx and Tx --> use only the pair of RX_laston and RX_lastoff variables
+    // otherwise the LEDs will be permanently ON at high CAN traffic.
+    if (SET_CommonPins[channel])
+    {
+        led_flash_RX(channel);
+        return;
+    }
+    
     led_class* inst = &led_inst[channel];
     if (inst->identify)
         return;
     
     // Make sure the LED has been off for at least FLASH_OFF_DURATION before turning on again
-    // This prevents a solid status LED on a busy canbus
+    // This prevents a solid status LED on a busy CAN bus
     if (inst->TX_laston == 0 && HAL_GetTick() - inst->TX_lastoff > FLASH_OFF_DURATION)
     {
         led_set_Tx(channel, true);
@@ -152,7 +157,7 @@ void led_flash_TX(uint8_t channel)
 }
 
 // Turn Rx LED on for a short duration
-// Called when CAN frame was received
+// Called when CAN frame has been received
 void led_flash_RX(uint8_t channel)
 {
     led_class* inst = &led_inst[channel];
@@ -160,7 +165,7 @@ void led_flash_RX(uint8_t channel)
         return;
     
     // Make sure the LED has been off for at least FLASH_OFF_DURATION before turning on again
-    // This prevents a solid status LED on a busy canbus
+    // This prevents a solid status LED on a busy CAN bus
     if (inst->RX_laston == 0 && HAL_GetTick() - inst->RX_lastoff > FLASH_OFF_DURATION)
     {
         led_set_Rx(channel, true);
@@ -168,32 +173,38 @@ void led_flash_RX(uint8_t channel)
     }
 }
 
+// -------------------------------------------------------------------
+
 // called approx 100 times per millisecond from main.c
 void led_process(uint8_t channel, uint32_t tick_now)
 {
     led_class* inst = &led_inst[channel];
     
-    if (inst->identify) // highest priority
+    // --- 1.) user blink (highest priority)
+    
+    if (inst->identify)
     {
-        // Blink pattern: Both off, Rx ON, Both off, Tx ON, ...
         if (tick_now >= inst->next_blink)
         {
             inst->blink_count ++;
-            led_set_Tx(channel, (inst->blink_count & 3) == 1);            
+            inst->next_blink += IDENTIFY_DURATION;
+            
+            // Blink pattern: Both OFF, Rx ON, Both OFF, Tx ON, ...
+            led_set_Tx(channel, (inst->blink_count & 3) == 1);       
             led_set_Rx(channel, (inst->blink_count & 3) == 3);
-            inst->next_blink += IDENTIFY_DURATION;            
         }
         return;
     }
     
-    // If an error occurred, turn Rx + Tx LEDs on (second highest priority)
+    // --- 2.) severe CAN errors (second highest priority)
+    
+    // If an error occurred, turn Rx + Tx LEDs on.
     // Severe errors displayed by LED are: Bus Off, Rx failed, Tx failed, Buffer Overflow.
     // Bus Passive is NOT a severe error to be displayed by both LED's turned on.
     if (error_get_state(channel)->bus_status == BUS_StatusOff || 
         error_get_state(channel)->app_flags)
     {
-        led_set_Rx(channel, true);
-        led_set_Tx(channel, true);
+        led_set_both(channel, true);
         inst->error_was_indicating = 1;
         return;
     }
@@ -201,10 +212,11 @@ void led_process(uint8_t channel, uint32_t tick_now)
     // error state has finished --> return to LEDs off
     if (inst->error_was_indicating)
     {
-        led_set_Rx(channel, false);
-        led_set_Tx(channel, false);
+        led_set_both(channel, false);
         inst->error_was_indicating = 0;
     }
+    
+    // --- 3.) CAN Rx/Tx packets
 
     // If LED has been flashing for long enough, turn it off
     if (inst->RX_laston > 0 && tick_now - inst->RX_laston > FLASH_ON_DURATION)
@@ -217,23 +229,60 @@ void led_process(uint8_t channel, uint32_t tick_now)
     // If LED has been flashing for long enough, turn it off
     if (inst->TX_laston > 0 && tick_now - inst->TX_laston > FLASH_ON_DURATION)
     {
-        // Invert LED
         led_set_Tx(channel, false);
         inst->TX_laston  = 0;
         inst->TX_lastoff = tick_now;
     }
     
-    // Tx LED on while bus is closed
-    if (!can_is_open(channel))
-        led_turn_TX(channel, true);
+    // --- 4.) CAN open/closed status
+    
+    if (can_is_open(channel))
+    {
+        // Turn Tx LED off when the CAN channel has been opened
+        if (!inst->can_open)
+            led_set_Tx(channel, false);
+
+        inst->can_open = true;
+    }
+    else // CAN channel is closed
+    {
+        // Turn Tx LED permanently on while the bus is closed
+        led_set_Tx(channel, true);
+        inst->can_open = false;
+    }
 }
 
+// -------------------------------------------------------------------
+
+// Turn one LED on and the other off
+void led_set_alternate(uint8_t channel, bool status)
+{
+    if (SET_CommonPins[channel]) // a common LED for Rx and Tx
+    {
+        led_set_Rx(channel, status);
+    }
+    else // separate Rx/Tx LED's
+    {
+        led_set_Rx(channel, status == true);
+        led_set_Tx(channel, status == false);
+    }
+}
+
+// Set both LEDs
+void led_set_both(uint8_t channel, bool status)
+{
+    led_set_Rx(channel, status);
+    led_set_Tx(channel, status);
+}
+
+// Set Rx LED
 void led_set_Rx(uint8_t channel, bool status)
 {
     if (SET_LedRxPins[channel] >= 0)
         HAL_GPIO_WritePin(SET_LedRxPorts[channel], SET_LedRxPins[channel], status ? LED_ON : LED_OFF);
 }
 
+// Set Tx LED
 void led_set_Tx(uint8_t channel, bool status)
 {
     if (SET_LedTxPins[channel] >= 0)
