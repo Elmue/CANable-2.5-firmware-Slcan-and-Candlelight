@@ -428,7 +428,9 @@ void can_process(uint8_t channel, uint32_t tick_now)
     // The processor continues to send the message !!ETERNALLY!! producing a bus load of 95%.
     // Tx requests must be canceled by firmware to free CAN bus from the congestion.
     // the processor will never stop alone sending the same packet over and over again.
-    if (inst->tx_pending > 0 && tick_now >= inst->last_tx_tick + CAN_TX_TIMEOUT)
+    // The signed difference is safe when the tick counter wraps around after 49.7 days,
+    // and when last_tx_tick (set from HAL_GetTick() in can_send_packet()) is 1 ms ahead of tick_now.
+    if (inst->tx_pending > 0 && (int32_t)(tick_now - inst->last_tx_tick) >= CAN_TX_TIMEOUT)
     {
         inst->tx_pending = 0;
         HAL_FDCAN_AbortTxRequest(&inst->handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
@@ -501,6 +503,9 @@ void can_recover_bus_off(uint8_t channel)
             control_send_debug_mesg(channel, ">> Start recovery from Bus Off");
 
             HAL_FDCAN_AbortTxRequest(&inst->handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
+            // The aborted packets will never produce a Tx event.
+            // Otherwise the Tx timeout would fire after the recovery and clear the packets waiting in the buffer.
+            inst->tx_pending = 0;
             HAL_FDCAN_Stop (&inst->handle);
             HAL_FDCAN_Start(&inst->handle);
         }
@@ -538,7 +543,8 @@ void can_timer_100ms()
         if (inst->busload_counter >= inst->busload_interval) // interval elapsed
         {
             // This function is called every 100 ms = 100 * 1000 µs --> divide by 100000
-            uint32_t rate_us_ppm = inst->bit_count_total * inst->nom_bit_len_ns / 100000;
+            // 64 bit, because the product overflows 32 bit for intervals > 4 seconds at high bus load
+            uint32_t rate_us_ppm = (uint32_t)((uint64_t)inst->bit_count_total * inst->nom_bit_len_ns / 100000);
             uint32_t busload_ppm = rate_us_ppm * STUFFING_FACTOR / inst->busload_interval;
 
             // divide by 1000 to remove stuff factor, which is multiplied with 1000, and divide by 10 to convert 1000 into 100%
@@ -586,16 +592,18 @@ eFeedback can_set_bit_timing(uint8_t channel, bool set_data, uint32_t BRP, uint3
                 return FBK_ParamOutOfRange;
     }
 
-    can_bitrate_cfg* bitrate = set_data ? &inst->bitrate_data : &inst->bitrate_nominal;
+    can_bitrate_cfg new_rate;
+    new_rate.Brp  = BRP;
+    new_rate.Seg1 = Seg1;
+    new_rate.Seg2 = Seg2;
+    new_rate.Sjw  = Sjw;
 
-    bitrate->Brp  = BRP;
-    bitrate->Seg1 = Seg1;
-    bitrate->Seg2 = Seg2;
-    bitrate->Sjw  = Sjw;
-
-    if (can_calc_baud(bitrate) > MAX_CAN_BAUDRATE * 1000000)
+    // Check before storing, otherwise a rejected baudrate would be used by the next can_open()
+    if (can_calc_baud(&new_rate) > MAX_CAN_BAUDRATE * 1000000)
         return FBK_ParamOutOfRange;
 
+    if (set_data) inst->bitrate_data    = new_rate;
+    else          inst->bitrate_nominal = new_rate;
     return FBK_Success;
 }
 

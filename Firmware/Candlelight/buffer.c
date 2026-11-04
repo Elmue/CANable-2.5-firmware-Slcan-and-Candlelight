@@ -44,6 +44,7 @@ bool  FifoRead (kFifo* Fifo, void* Data, int Size, eFifoRead  e_Read);
 void       buf_process_host (uint8_t channel, buf_class* usb_buf);
 void       buf_process_can  (uint8_t channel, buf_class* can_buf);
 bool       buf_store_can_frame (uint8_t channel, uint8_t* can_frame);
+void       buf_send_fake_echo  (uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data);
 void       buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo);
 buf_class* buf_get_inst_for_usb(uint8_t channel);
 
@@ -61,7 +62,22 @@ void buf_clear_fifos(uint8_t channel, bool clear_can, bool clear_host)
 {
     buf_class* inst = &buf_inst[channel];
 
-    if (clear_can)
+    // Legacy protocol while the adapter is open (= Tx timeout in can_process()):
+    // The Linux gs_usb driver frees a Tx slot only when it receives the echo of the packet and it allows only 10 slots.
+    // Packets that are discarded without echo block these slots until the interface is closed,
+    // and all further sending fails with "No buffer space available".
+    // --> send the (fake) echo for each packet that is discarded.
+    // When opening / closing the adapter the host resets its Tx slots itself --> no echo.
+    // The Fifo is emptied by reading, not by FifoReset(), so a packet that the USB interrupt stores meanwhile is not lost without echo.
+    if (clear_can && !GLB_ProtoElmue && can_is_open(channel))
+    {
+        kCanFrameObject k_CanFrame;
+        while (FifoRead(&inst->can_fifo, &k_CanFrame, sizeof(k_CanFrame), FIFO_ReadNext))
+        {
+            buf_send_fake_echo(channel, &k_CanFrame.header, k_CanFrame.data);
+        }
+    }
+    else if (clear_can)
         FifoReset(&inst->can_fifo,  inst->can_buffer,  sizeof(kCanFrameObject), CAN_QUEUE_SIZE);
         
     if (clear_host)
@@ -180,6 +196,10 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
     if (can_is_tx_allowed(channel) != FBK_Success)
     {
         error_assert(channel, APP_CanTxFail, true); // both LED ON
+
+        // Legacy: the host must get an echo also for a dropped packet, otherwise its Tx slot stays blocked (see buf_clear_fifos())
+        if (!GLB_ProtoElmue)
+            buf_send_fake_echo(channel, &k_CanFrame.header, k_CanFrame.data);
         return; // do not send the message
     }
 
@@ -203,18 +223,25 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
         // If Linux cangen does not receive this fake echo, it stops sending after 10 USB OUT transfers
         // and throws a not understandable and misleading error message: "No buffer space available".
         
-        FDCAN_TxHeaderTypeDef* tx_header = &k_CanFrame.header;
-        FDCAN_RxHeaderTypeDef  rx_header;
-        rx_header.Identifier          = tx_header->Identifier;
-        rx_header.IdType              = tx_header->IdType;
-        rx_header.RxFrameType         = tx_header->TxFrameType;
-        rx_header.DataLength          = tx_header->DataLength;
-        rx_header.ErrorStateIndicator = tx_header->ErrorStateIndicator;
-        rx_header.BitRateSwitch       = tx_header->BitRateSwitch;
-        rx_header.FDFormat            = tx_header->FDFormat;
-
-        buf_store_rx_packet_echo(channel, &rx_header, k_CanFrame.data, tx_header->MessageMarker);
+        buf_send_fake_echo(channel, &k_CanFrame.header, k_CanFrame.data);
     }
+}
+
+// private function, legacy protocol only
+// Send an exact copy of the Tx packet back to the host as echo, with the echo_id the host has put into the Tx packet.
+// tx_data must be a 64 byte buffer.
+void buf_send_fake_echo(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
+{
+    FDCAN_RxHeaderTypeDef rx_header;
+    rx_header.Identifier          = tx_header->Identifier;
+    rx_header.IdType              = tx_header->IdType;
+    rx_header.RxFrameType         = tx_header->TxFrameType;
+    rx_header.DataLength          = tx_header->DataLength;
+    rx_header.ErrorStateIndicator = tx_header->ErrorStateIndicator;
+    rx_header.BitRateSwitch       = tx_header->BitRateSwitch;
+    rx_header.FDFormat            = tx_header->FDFormat;
+
+    buf_store_rx_packet_echo(channel, &rx_header, tx_data, tx_header->MessageMarker);
 }
 
 // public function
@@ -278,7 +305,12 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
         marker     = tx_frame->marker;
         frame_data = tx_frame->data_start;
 
-        int byte_count = tx_frame->header.size - sizeof(kTxFrameElmue);
+        int byte_count = (int)tx_frame->header.size - (int)sizeof(kTxFrameElmue);
+        if (byte_count < 0 || byte_count > 64)
+        {
+            error_assert(channel, APP_CanTxFail, true); // both LED ON
+            return false; // host has sent an invalid frame size
+        }
 
         // Remote frames never send data bytes. The host can write the DLC value into the first data byte, otherwise DLC = 0 is sent.
         if (can_id & CAN_ID_RTR)
@@ -295,18 +327,26 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
         // Although the multi channel firmware creates one USB interface for each CAN channel,
         // The legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
         // kHostFrameLegacy.channel tells the host which channel is the origin/destination of the packet.
-        channel = tx_frame->channel;
-        if (channel >= CHANNEL_COUNT)
+        if (tx_frame->channel >= CHANNEL_COUNT)
         {
-            error_assert(channel, APP_CanTxFail, true); // both LED ON
+            // report on the first channel, the invalid channel must not be used as array index
+            error_assert(0, APP_CanTxFail, true); // both LED ON
             return false; // host has sent an invalid channel
         }
+        channel = tx_frame->channel;
 
         can_id     = tx_frame->can_id;
         marker     = tx_frame->echo_id;
         flags      = tx_frame->flags;
         frame_data = tx_frame->pack_FD.data;
         can_dlc    = tx_frame->can_dlc;
+
+        // The DLC is a 4 bit value. A larger value makes the HAL read past its DLC table and write past the Tx element in the message RAM.
+        if (can_dlc > 15)
+        {
+            error_assert(channel, APP_CanTxFail, true); // both LED ON
+            return false; // host has sent an invalid DLC (no echo: the header cannot be sent back as a valid packet)
+        }
     }
 
     // ------------------------------
@@ -339,6 +379,15 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
         {
             // the host tries to send a CAN FD packet in classic mode (data baudrate has not been set)
             error_assert(channel, APP_CanTxFail, true); // both LED ON
+
+            // Legacy: free the host's Tx slot (see buf_clear_fifos()). Sent as classic echo with max 8 bytes.
+            if (!GLB_ProtoElmue)
+            {
+                uint8_t echo_data[64] = {0};
+                memcpy(echo_data, frame_data, 8);
+                tx_header.DataLength = MIN(can_dlc, 8);
+                buf_send_fake_echo(channel, &tx_header, echo_data);
+            }
             return false;
         }
 
