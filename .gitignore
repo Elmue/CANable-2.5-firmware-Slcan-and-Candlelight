@@ -1,0 +1,4 @@
+.mcp.json
+
+# Build artefacts (Build/<MCU>_<Firmware>_<Board>/ with .o, .elf, .bin, .hex, .map)
+Build/STM32*/
