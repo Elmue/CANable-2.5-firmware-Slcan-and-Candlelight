@@ -20,6 +20,7 @@
 #include "usb_class.h"
 #include "led.h"
 #include "can.h"
+#include "system.h"
 
 PCD_HandleTypeDef PCD_Handle;
 bool volatile     bSuspended = false;
@@ -75,6 +76,10 @@ void HAL_PCD_DataInStageCallback(PCD_HandleTypeDef* dummy, uint8_t epnum)
 
 void HAL_PCD_SOFCallback(PCD_HandleTypeDef* dummy)
 {
+#if HSE_VALUE == 0
+  // Board without quartz: calibrate the HSI16 RC oscillator (FDCAN clock) against the USB frame rate
+  system_calibrate_hsi(PCD_Handle.Instance->FNR);
+#endif
   USBD_LL_SOF();  
 }
 

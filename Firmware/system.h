@@ -42,6 +42,9 @@ eFeedback     system_set_option_bytes (eOptionBytes e_Option);
 uint32_t      system_get_can_clock();
 eMcuSerie     system_get_mcu_serie();
 uint32_t      system_get_timestamp();
+#if HSE_VALUE == 0
+void          system_calibrate_hsi(uint16_t frame);
+#endif
 uint32_t      system_get_flash_addr(uint32_t segment);
 eFeedback     system_write_flash(uint32_t segment, uint8_t* buffer, uint16_t data_len);
 

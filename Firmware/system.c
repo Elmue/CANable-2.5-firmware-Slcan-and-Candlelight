@@ -219,6 +219,220 @@ uint32_t system_get_can_clock()
 
 // ===================================================================================================
 
+#if HSE_VALUE == 0 // Board without quartz: FDCAN and SYSCLK are derived from the HSI16 RC oscillator
+
+// The HSI16 RC oscillator has a factory precision of only approx. 1% (worse over temperature).
+// This is not good enough for reliable CAN timing, especially for CAN FD.
+// The CRS only trims the HSI48 (USB clock). The HSI48 cannot feed the PLL, so FDCAN does not profit from it.
+// Therefore HSI16 is calibrated here in software against the USB SOF packets which the host sends every 1 ms.
+// The USB host's SOF period is crystal-controlled (USB full speed requires 1 ms +/- 0.05%).
+// Timer 2 runs at 1 MHz derived from HSI16 --> over CAL_WINDOW_FRAMES frames it must count exactly 1000 per frame.
+// The error is corrected with the HSITRIM bits in RCC->ICSCR (one step is approx. 0.2 ... 0.4 %).
+//
+// The window is measured from the absolute Timer 2 value and the absolute USB frame number (FNR),
+// so intermediate SOF interrupts that are delayed or lost do not matter.
+// A window only starts and ends on a "clean" SOF that arrived 1 frame and approx. 1 ms after the previous one,
+// so a delayed ISR at the start or end of the window cannot falsify the result.
+//
+// STM32G4 datasheet (HSI16 characteristics): the trim step is 0.2 ... 0.4 %, but stepping onto a code that is
+// a multiple of 64 changes the frequency by -4 ... -8 %. HSITRIM therefore consists of two monotonic segments
+// [0..63] and [64..127] where code c in the lower segment is approx. as fast as code c + CAL_SEG_OFFSET in the upper.
+// The calibration never steps across the boundary. It jumps to the equivalent code in the other segment instead,
+// and only while no CAN channel is open. If the jump turns out to be wrong, it is reverted and never tried again.
+
+#define CAL_WINDOW_FRAMES   1000  // measure over 1 second -> resolution 1 ppm
+#define CAL_CLEAN_DEV        200  // a SOF is "clean" if it arrives 1000 +/- 200 us after the previous one
+#define CAL_GROSS_DEV        150  // deviation per frame (15%) above which frames were lost (suspend, reset, FNR wrap)
+#define CAL_STEP_INIT       2000  // initial estimate of one HSITRIM step in ppm (datasheet min = 0.2%), learned at runtime
+#define CAL_STEP_MIN        1000
+#define CAL_STEP_MAX        6000
+#define CAL_MAX_ERR        30000  // 3%: larger errors are only possible after a wrong segment jump
+#define CAL_REVERT_US    3000000  // revert a trim change if no valid measurement was possible within 3 seconds
+#define CAL_TRIM_MAX         127
+
+#if defined(STM32G4xx)
+    #define CAL_SEGMENTS     1
+    #define CAL_SEG_LOW     64    // first code of the upper segment
+    #define CAL_SEG_OFFSET  21    // approx. 6% / 0.3%
+#endif
+
+static struct
+{
+    bool     synced;          // last_frame and last_us are valid
+    bool     window;          // a measurement window is running
+    uint16_t last_frame;      // last USB frame number (11 bit)
+    uint32_t last_us;         // Timer 2 at the last SOF
+    uint32_t start_us;        // Timer 2 at the start of the measurement window
+    uint32_t frames;          // count of frames in the current window
+    int32_t  step_ppm;        // learned size of one HSITRIM step
+    // state after a trim change
+    bool     changed;         // the trim was changed and not yet verified by a measurement
+    bool     crossed;         // the change was a jump into the other segment
+    bool     no_cross;        // a segment jump has failed -> never jump again
+    int32_t  prev_trim;       // trim before the change (for revert)
+    int32_t  prev_err_ppm;    // error before the change (for learning the step size)
+    int32_t  steps;           // count of steps of the change
+    uint32_t since_change_us; // time since the change
+} hsi_cal = { .step_ppm = CAL_STEP_INIT };
+
+static volatile int32_t hsi_error_ppm = 0; // last measured error (positive = HSI16 too fast), for the debugger
+
+static inline int32_t cal_abs(int32_t value) { return value < 0 ? -value : value; }
+
+static inline int32_t cal_get_trim()
+{
+    return (RCC->ICSCR & RCC_ICSCR_HSITRIM) >> RCC_ICSCR_HSITRIM_Pos;
+}
+
+static void cal_revert()
+{
+    __HAL_RCC_HSI_CALIBRATIONVALUE_ADJUST((uint32_t)hsi_cal.prev_trim);
+    if (hsi_cal.crossed)
+        hsi_cal.no_cross = true;
+    hsi_cal.changed = false;
+    hsi_cal.window  = false;
+}
+
+// Decide about a trim change after a valid measurement
+static void cal_evaluate(int32_t err_ppm)
+{
+    int32_t trim = cal_get_trim();
+
+    if (hsi_cal.changed)
+    {
+        hsi_cal.changed = false;
+        if (hsi_cal.crossed)
+        {
+            if (cal_abs(err_ppm) > CAL_MAX_ERR) // the segment jump went wrong
+            {
+                cal_revert();
+                return;
+            }
+        }
+        else // learn the real step size from the effect of the change
+        {
+            int32_t step = cal_abs(hsi_cal.prev_err_ppm - err_ppm) / cal_abs(hsi_cal.steps);
+            if (step >= CAL_STEP_MIN && step <= CAL_STEP_MAX)
+                hsi_cal.step_ppm = step;
+        }
+    }
+
+    // Hysteresis of 60% of one step: after a correction the residual error (<= 50% step) does not trigger again.
+    if (cal_abs(err_ppm) <= hsi_cal.step_ppm * 6 / 10 || cal_abs(err_ppm) > CAL_MAX_ERR)
+        return;
+
+    // steps > 0 --> increase the frequency (HSI16 too slow)
+    int32_t steps = (cal_abs(err_ppm) + hsi_cal.step_ppm / 2) / hsi_cal.step_ppm;
+    if (steps == 0) steps = 1;
+    if (err_ppm > 0) steps = -steps;
+
+    // While CAN is open only single steps (approx. 0.3%) are allowed, which the CAN bit timing tolerates.
+    bool can_open = can_is_any_open();
+    if (can_open)
+        steps = (steps > 0) ? 1 : -1;
+
+    int32_t new_trim = trim + steps;
+    bool    crossed  = false;
+
+#if defined(CAL_SEGMENTS)
+    if (trim >= CAL_SEG_LOW && new_trim < CAL_SEG_LOW) // upper --> lower segment
+    {
+        if (can_open || hsi_cal.no_cross) new_trim = CAL_SEG_LOW;
+        else { new_trim -= CAL_SEG_OFFSET; crossed = true; }
+    }
+    else if (trim < CAL_SEG_LOW && new_trim >= CAL_SEG_LOW) // lower --> upper segment
+    {
+        if (can_open || hsi_cal.no_cross) new_trim = CAL_SEG_LOW - 1;
+        else { new_trim += CAL_SEG_OFFSET; crossed = true; }
+    }
+#endif
+
+    if (new_trim < 0)            new_trim = 0;
+    if (new_trim > CAL_TRIM_MAX) new_trim = CAL_TRIM_MAX;
+    if (new_trim == trim)
+        return;
+
+    __HAL_RCC_HSI_CALIBRATIONVALUE_ADJUST((uint32_t)new_trim);
+    hsi_cal.changed         = true;
+    hsi_cal.crossed         = crossed;
+    hsi_cal.prev_trim       = trim;
+    hsi_cal.prev_err_ppm    = err_ppm;
+    hsi_cal.steps           = new_trim - trim;
+    hsi_cal.since_change_us = 0;
+    hsi_cal.window          = false; // the current window started before the change
+}
+
+// Called from the USB interrupt on each SOF packet (every 1 ms)
+void system_calibrate_hsi(uint16_t frame)
+{
+    uint32_t now_us = TIM2->CNT;
+    frame &= 0x7FF;
+
+    if (!hsi_cal.synced)
+    {
+        hsi_cal.synced     = true;
+        hsi_cal.last_frame = frame;
+        hsi_cal.last_us    = now_us;
+        return;
+    }
+
+    uint32_t d_frames  = (frame - hsi_cal.last_frame) & 0x7FF;
+    uint32_t d_us      = now_us - hsi_cal.last_us;
+    int32_t  deviation = (int32_t)d_us - (int32_t)(d_frames * 1000);
+    hsi_cal.last_frame = frame;
+    hsi_cal.last_us    = now_us;
+
+    // A trim change that cannot be verified (e.g. a segment jump that went far off) is reverted.
+    if (hsi_cal.changed)
+    {
+        hsi_cal.since_change_us += d_us;
+        if (hsi_cal.since_change_us > CAL_REVERT_US)
+        {
+            cal_revert();
+            return;
+        }
+    }
+
+    // Frames lost: suspend/resume, bus reset or frame counter wrap-around during a long gap
+    if (d_frames == 0 || cal_abs(deviation) > (int32_t)d_frames * CAL_GROSS_DEV)
+    {
+        hsi_cal.window = false;
+        return;
+    }
+
+    bool clean = (d_frames == 1 && cal_abs(deviation) <= CAL_CLEAN_DEV);
+
+    if (!hsi_cal.window)
+    {
+        if (clean)
+        {
+            hsi_cal.window   = true;
+            hsi_cal.start_us = now_us;
+            hsi_cal.frames   = 0;
+        }
+        return;
+    }
+
+    hsi_cal.frames += d_frames;
+    if (hsi_cal.frames < CAL_WINDOW_FRAMES || !clean)
+        return;
+
+    // error in ppm = (measured - expected) / expected * 10^6 with expected = frames * 1000 us
+    int32_t diff_us = (int32_t)(now_us - hsi_cal.start_us) - (int32_t)(hsi_cal.frames * 1000);
+    int32_t err_ppm = diff_us * 1000 / (int32_t)hsi_cal.frames;
+    hsi_error_ppm   = err_ppm;
+
+    // this clean SOF also starts the next window
+    hsi_cal.start_us = now_us;
+    hsi_cal.frames   = 0;
+
+    cal_evaluate(err_ppm);
+}
+
+#endif // HSE_VALUE == 0
+
+// ===================================================================================================
+
 // While TARGET_MCU (from the make file) defines for which MCU serie the code was COMPILED,
 // this function returns on which MCU the code is actually RUNNING.
 // The user may have uploaded the firmware to the wrong processor which returns SERIE_Invalid.
