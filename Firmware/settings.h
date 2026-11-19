@@ -98,7 +98,7 @@ typedef enum // sent as 8 bit
 #elif defined(Jhoinrch)
 
     // Jhoinrch puts a 25 MHz quartz on all their boards since 2026
-    #define MAX_CAN_BAUDRATE    10  // maximum is 10 Mbaud (The RH02 has the transceiver ADM 3050)
+    #define MAX_CAN_BAUDRATE    10  // The CAN transceiver chip is an ADM 3050, see NOTE above.
     // -------------------
     #define ALLOW_DISABLE_BOOT0 1   // allow to disable pin BOOT0
 
@@ -114,6 +114,24 @@ typedef enum // sent as 8 bit
     #define MAX_CAN_BAUDRATE    5  // CAN transceiver chip TJA 1051 limits to 5 Mbaud
     // -------------------
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
+    
+#elif defined(MakerbasePro)
+
+    // Maximum 24 characters!
+    #define ADAPTER_NAME        "MKS Makerbase Pro"
+
+    // The MKS Makerbase 2.5 Pro has a 8 MHz quartz
+    #define MAX_CAN_BAUDRATE    10 // The CAN transceiver chip is an ADM 3050, see NOTE above.
+    // -------------------
+    // The CAN transceiver / BOOT0 isolation buffer is enabled by pulling PB7 low at firmware start.
+    #define CAN_TRX_ENABLE_PIN  GPIO_PIN_7
+    #define CAN_TRX_ENABLE_PORT GPIOB
+    #define CAN_TRX_ENABLE_ON   GPIO_PIN_RESET
+    // -------------------
+    // This board has a more intelligent hardware design than most boards with the STM32G431 (see diagram).
+    // The shared processor pin CAN RXD + BOOT0 is held low by hardware to avoid entering BOOT mode when USB power is connected.
+    // The firmware must enable the CAN transceiver chip by switching processor pin PB7 to low.
+    #define ALLOW_DISABLE_BOOT0 0    
 
 #elif defined(OleksiiSolo)
 
@@ -234,7 +252,7 @@ typedef enum // sent as 8 bit
     #define LED_PWR_PIN         GPIO_PIN_2 // see comment of WeActStudioV1
     #define LED_PWR_PORT        GPIOA
     // -------------------
-    // This board has a more intelligent hardware design than most boards with the STM32G431.
+    // This board has a more intelligent hardware design than most boards with the STM32G431 (see diagram).
     // The shared processor pin CAN RXD + BOOT0 is held low by hardware to avoid entering BOOT mode when USB power is connected.
     // The firmware must enable the CAN transceiver chip by switching processor pin PB7 to low.
     #define CAN_TRX_ENABLE_PIN  GPIO_PIN_7

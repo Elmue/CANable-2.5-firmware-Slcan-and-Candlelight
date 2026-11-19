@@ -428,10 +428,10 @@ void can_process(uint8_t channel, uint32_t tick_now)
     // The processor continues to send the message !!ETERNALLY!! producing a bus load of 95%.
     // Tx requests must be canceled by firmware to free CAN bus from the congestion.
     // the processor will never stop alone sending the same packet over and over again.
-    if (inst->tx_pending > 0 && tick_now >= inst->last_tx_tick + CAN_TX_TIMEOUT)
+    if (inst->tx_pending > 0 && (int)(tick_now - inst->last_tx_tick) >= CAN_TX_TIMEOUT)
     {
-        inst->tx_pending = 0;
         HAL_FDCAN_AbortTxRequest(&inst->handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
+        inst->tx_pending = 0;        
         buf_clear_fifos(channel, true, false);
         error_assert(channel, APP_CanTxTimeout, false);
     }
@@ -501,6 +501,9 @@ void can_recover_bus_off(uint8_t channel)
             control_send_debug_mesg(channel, ">> Start recovery from Bus Off");
 
             HAL_FDCAN_AbortTxRequest(&inst->handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
+            
+            inst->tx_pending = 0; // All Tx requests aborted -> No Tx packets pending anymore.
+            
             HAL_FDCAN_Stop (&inst->handle);
             HAL_FDCAN_Start(&inst->handle);
         }
@@ -537,8 +540,11 @@ void can_timer_100ms()
 
         if (inst->busload_counter >= inst->busload_interval) // interval elapsed
         {
-            // This function is called every 100 ms = 100 * 1000 µs --> divide by 100000
-            uint32_t rate_us_ppm = inst->bit_count_total * inst->nom_bit_len_ns / 100000;
+            // Use 64 bit multiplication to avoid 32 bit overflow for intervals > 4 seconds at high bus load.
+            uint64_t multiply_64 = (uint64_t)inst->bit_count_total * inst->nom_bit_len_ns;
+            
+            // This function is called every 100 ms = 100 * 1000 µs --> divide by 100000            
+            uint32_t rate_us_ppm = (uint32_t)(multiply_64 / 100000);
             uint32_t busload_ppm = rate_us_ppm * STUFFING_FACTOR / inst->busload_interval;
 
             // divide by 1000 to remove stuff factor, which is multiplied with 1000, and divide by 10 to convert 1000 into 100%
@@ -594,8 +600,10 @@ eFeedback can_set_bit_timing(uint8_t channel, bool set_data, uint32_t BRP, uint3
     bitrate->Sjw  = Sjw;
 
     if (can_calc_baud(bitrate) > MAX_CAN_BAUDRATE * 1000000)
+    {
+        bitrate->Brp = 0; // make struct invalid (Brp is checked in can_open() and can_using_FD())
         return FBK_ParamOutOfRange;
-
+    }
     return FBK_Success;
 }
 

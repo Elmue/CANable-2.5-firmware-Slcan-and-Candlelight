@@ -1,0 +1,29 @@
+
+# CANable Candlelight Makefile
+
+######################################
+#
+# This makefile compiles for the CANable board 
+# DSD Tech SH-C32A which has a 25 MHz quartz
+#
+# Windows:
+# --------
+# Run the script Build.cmd in the root directory
+#
+# Linux:
+# ------
+# Compile this by typing in the root directory:
+# make -s -f Build/Make_G431_Candle_DsdTechC32A
+#
+#######################################
+
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
+
+TARGET_FIRMWARE = Candlelight
+TARGET_BOARD    = DsdTechC32A
+TARGET_MCU      = STM32G431
+
+# This board has a 25 MHz quartz.
+QUARTZ_FREQU    = 25000000
+
+include Build/GCC_Rules.mk
