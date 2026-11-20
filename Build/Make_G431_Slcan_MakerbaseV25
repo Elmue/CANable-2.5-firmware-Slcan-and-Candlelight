@@ -1,10 +1,10 @@
 
-# CANable Candlelight Makefile
+# CANable Slcan Makefile
 
 ######################################
 #
 # This makefile compiles for the CANable board
-# MKS Makerbase Pro board with 8 MHz quartz
+# MKS Makerbase V2.5 board with 8 MHz quartz
 #
 # Windows:
 # --------
@@ -13,14 +13,14 @@
 # Linux:
 # ------
 # Compile this by typing in the root directory:
-# make -s -f Build/Make_G431_Candle_MakerbasePro
+# make -s -f Build/Make_G431_Slcan_MakerbaseV25
 #
 #######################################
 
-# TARGET_BOARD and TARGET_MCU: maximum 24 characters.
+# TARGET_BOARD and TARGET_MCU: maximum 24 characters!
 
-TARGET_FIRMWARE = Candlelight
-TARGET_BOARD    = MakerbasePro
+TARGET_FIRMWARE = Slcan
+TARGET_BOARD    = MakerbaseV25
 TARGET_MCU      = STM32G431
 
 # This board has an 8 MHz quartz.

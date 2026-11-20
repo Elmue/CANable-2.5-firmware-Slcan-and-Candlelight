@@ -115,12 +115,12 @@ typedef enum // sent as 8 bit
     // -------------------
     #define ALLOW_DISABLE_BOOT0 1  // allow to disable pin BOOT0
     
-#elif defined(MakerbasePro)
+#elif defined(MakerbaseV25)
 
     // Maximum 24 characters!
-    #define ADAPTER_NAME        "MKS Makerbase Pro"
+    #define ADAPTER_NAME        "MKS Makerbase V2.5"
 
-    // The MKS Makerbase 2.5 Pro has a 8 MHz quartz
+    // The MKS Makerbase V2.5 has a 8 MHz quartz
     #define MAX_CAN_BAUDRATE    10 // The CAN transceiver chip is an ADM 3050, see NOTE above.
     // -------------------
     // The CAN transceiver / BOOT0 isolation buffer is enabled by pulling PB7 low at firmware start.
