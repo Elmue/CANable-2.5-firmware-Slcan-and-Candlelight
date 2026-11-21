@@ -63,8 +63,11 @@ int8_t utils_dlc_to_byte_count(uint32_t dlc_code)
     }
 }
 
-int8_t utils_byte_count_to_dlc(uint32_t byte_count)
+int utils_byte_count_to_dlc(int byte_count)
 {
+    if (byte_count < 0 || byte_count > 64)
+        return -1;
+    
          if (byte_count > 48) return 15;
     else if (byte_count > 32) return 14;
     else if (byte_count > 24) return 13;

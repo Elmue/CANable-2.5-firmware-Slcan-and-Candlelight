@@ -1,4 +1,9 @@
+
 @echo off
+cls
+
+rem enable !VARIABLE! parsing at run time instead of %VARIABLE% parsing at compile time.
+setlocal enabledelayedexpansion
 
 rem Copy all BIN files after compiling into this directory:
 rem The firmware updater will convert them automatically into DFU files.
@@ -6,39 +11,31 @@ set "COPY_DIRECTORY=C:\Program Files (x86)\HUD ECU Hacker\Driver\CANable Firmwar
 
 rem -------------------------------------------------------------------------------------------------
 
-echo You must have MingW and the STM32 Cube CLT installed.
-echo Find a detailed description on https://netcult.ch/elmue/CANable Firmware Update#Compiling
+echo:
+echo  You must have MingW and the STM32 Cube CLT installed.
+echo  Find a detailed description on https://netcult.ch/elmue/CANable Firmware Update#Compiling
 echo:
 
 :Loop
 
-rem Print menu
+rem Print board menu
 echo:
 echo ----------------------------------
-echo  A: Build all boards
-echo  B: Build Slcan Multiboard 431
-echo  C: Build Slcan Multiboard 473
-echo  D: Build Slcan Jhoinrch
-echo  E: Build Slcan Openlightlabs
-echo  F: Build Slcan OleksiiSolo
-echo  G: Build Slcan OleksiiDual
-echo  H: Build Slcan WeActStudioV1
-echo  I: Build Slcan WeActStudioV2
-echo  J: Build Slcan BigTreeTech
-echo  K: Build Candlelight Multiboard 431
-echo  L: Build Candlelight Multiboard 473
-echo  M: Build Candlelight Jhoinrch
-echo  N: Build Candlelight Openlightlabs
-echo  O: Build Candlelight OleksiiSolo
-echo  P: Build Candlelight OleksiiDual
-echo  Q: Build Candlelight WeActStudioV1
-echo  R: Build Candlelight WeActStudioV2
-echo  S: Build Candlelight BigTreeTech
+echo  A: Build All make files
+echo  B: Build BigTreeTech
+echo  C: Build Jhoinrch
+echo  D: Build Multiboard 431
+echo  E: Build Multiboard 473
+echo  F: Build OleksiiSolo
+echo  G: Build OleksiiDual
+echo  H: Build Openlightlabs
+echo  I: Build WeActStudioV1
+echo  J: Build WeActStudioV2
 echo  X: Clean up and Exit
 echo ----------------------------------
-choice /C XABCDEFGHIJKLMNOPQRS /N /M "Press a key: "
 
-cls
+choice /C XABCDEFGHIJ /N /M "Press a key: "
+set "BOARD_MENU=!errorlevel!"
 
 rem The compiler fails to correctly detect changes in sourcecode --> always re-build from scratch.
 rem Delete all subfolders "Build\STM32*"
@@ -47,35 +44,46 @@ for /D %%i in ("Build\STM*") do (
 )
 
 rem 'X'
-if %errorlevel% == 1 exit
+if !BOARD_MENU! EQU 1 exit
 
-rem 'A'
-if %errorlevel% == 2 (
-    rem compile all files "Make_*" in the current folder
+rem 'A' --> Compile all "Make_*" files in subfolder 'Build'
+if !BOARD_MENU! EQU 2 (
+    cls
     for %%f in ("Build\Make_*") do (
         call :Compile %%f
     )
-)
+) else (
+    rem 'B', 'C',... --> Print firmware menu
+    echo:
+    echo ----------------------------------
+    echo  1: Build Candlelight
+    echo  2: Build Slcan
+    echo  X: Clean up and Exit
+    echo ----------------------------------
 
-rem 'B', 'C',...
-if %errorlevel% ==  3 call :Compile  Build\Make_G431_Slcan_Multiboard
-if %errorlevel% ==  4 call :Compile  Build\Make_G473_Slcan_Multiboard
-if %errorlevel% ==  5 call :Compile  Build\Make_G431_Slcan_Jhoinrch
-if %errorlevel% ==  6 call :Compile  Build\Make_G431_Slcan_Openlightlabs
-if %errorlevel% ==  7 call :Compile  Build\Make_G431_Slcan_OleksiiSolo
-if %errorlevel% ==  8 call :Compile  Build\Make_G473_Slcan_OleksiiDual
-if %errorlevel% ==  9 call :Compile  Build\Make_G0B1_Slcan_WeActStudioV1
-if %errorlevel% == 10 call :Compile  Build\Make_G431_Slcan_WeActStudioV2
-if %errorlevel% == 11 call :Compile  Build\Make_G0B1_Slcan_BigTreeTechU2C
-if %errorlevel% == 12 call :Compile  Build\Make_G431_Candle_Multiboard
-if %errorlevel% == 13 call :Compile  Build\Make_G473_Candle_Multiboard
-if %errorlevel% == 14 call :Compile  Build\Make_G431_Candle_Jhoinrch
-if %errorlevel% == 15 call :Compile  Build\Make_G431_Candle_Openlightlabs
-if %errorlevel% == 16 call :Compile  Build\Make_G431_Candle_OleksiiSolo
-if %errorlevel% == 17 call :Compile  Build\Make_G473_Candle_OleksiiDual
-if %errorlevel% == 18 call :Compile  Build\Make_G0B1_Candle_WeActStudioV1
-if %errorlevel% == 19 call :Compile  Build\Make_G431_Candle_WeActStudioV2
-if %errorlevel% == 20 call :Compile  Build\Make_G0B1_Candle_BigTreeTechU2C
+    choice /C X12 /N /M "Press a key: "
+    set "FIRMWARE_MENU=!errorlevel!"
+
+    rem 'X'
+    if !FIRMWARE_MENU! EQU 1 exit
+
+    cls
+
+    rem '1', '2'
+    if !FIRMWARE_MENU! EQU 2 set "FIRMW_NAME=Candle"
+    if !FIRMWARE_MENU! EQU 3 set "FIRMW_NAME=Slcan"
+
+    rem 'B', 'C',...
+    if !BOARD_MENU! EQU  3 call :Compile  Build\Make_G0B1_!FIRMW_NAME!_BigTreeTechU2C
+    if !BOARD_MENU! EQU  4 call :Compile  Build\Make_G431_!FIRMW_NAME!_Jhoinrch
+    if !BOARD_MENU! EQU  5 call :Compile  Build\Make_G431_!FIRMW_NAME!_Multiboard
+    if !BOARD_MENU! EQU  6 call :Compile  Build\Make_G473_!FIRMW_NAME!_Multiboard
+    if !BOARD_MENU! EQU  7 call :Compile  Build\Make_G431_!FIRMW_NAME!_OleksiiSolo
+    if !BOARD_MENU! EQU  8 call :Compile  Build\Make_G473_!FIRMW_NAME!_OleksiiDual
+    if !BOARD_MENU! EQU  9 call :Compile  Build\Make_G431_!FIRMW_NAME!_Openlightlabs
+    if !BOARD_MENU! EQU 10 call :Compile  Build\Make_G0B1_!FIRMW_NAME!_WeActStudioV1
+    if !BOARD_MENU! EQU 11 call :Compile  Build\Make_G431_!FIRMW_NAME!_WeActStudioV2
+)
 
 if exist "%COPY_DIRECTORY%" (
     rem Copy all BIN files to HUD ECU Hacker's firmware update directory
@@ -96,7 +104,9 @@ rem function Compile(Makefile)
 :Compile
 
 echo:
-echo Compiling '%1' ...
+echo Compiling '%1'
+echo Please wait...
+echo:
 make -s -f %1
 
 rem return from function

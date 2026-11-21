@@ -63,7 +63,7 @@ void buf_clear_fifos(uint8_t channel, bool clear_can, bool clear_host)
 
     if (clear_can)
         FifoReset(&inst->can_fifo,  inst->can_buffer,  sizeof(kCanFrameObject), CAN_QUEUE_SIZE);
-        
+
     if (clear_host)
         FifoReset(&inst->host_fifo, inst->host_buffer, sizeof(kHostFrameUnion), HOST_QUEUE_SIZE);
 }
@@ -125,11 +125,11 @@ void buf_process_host(uint8_t channel, buf_class* usb_buf)
                 memcpy(usb_buf->to_host_buf + len, &k_HostFrame, size);
                 len += size;
                 blob->frame_count ++;
-                
+
                 // frame_count is a byte --> max count = 255
                 if (blob->frame_count > 250)
-                    break;               
-                
+                    break;
+
                 // peek the next frame without incrementing the Fifo read index
                 if (!FifoRead(&usb_buf->host_fifo, &k_HostFrame, sizeof(k_HostFrame), FIFO_Peek))
                     break;
@@ -169,7 +169,7 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
 {
     if (!can_is_tx_fifo_free(channel))
         return; // all 3 CAN Tx FIFO's are full
-    
+
     kCanFrameObject k_CanFrame;
     if (!FifoRead(&can_buf->can_fifo, &k_CanFrame, sizeof(k_CanFrame), FIFO_ReadNext))
         return; // nothing to be sent
@@ -202,7 +202,7 @@ void buf_process_can(uint8_t channel, buf_class* can_buf)
         // But to maintain backwards compatibility with legacy software, this design error is left unchanged.
         // If Linux cangen does not receive this fake echo, it stops sending after 10 USB OUT transfers
         // and throws a not understandable and misleading error message: "No buffer space available".
-        
+
         FDCAN_TxHeaderTypeDef* tx_header = &k_CanFrame.header;
         FDCAN_RxHeaderTypeDef  rx_header;
         rx_header.Identifier          = tx_header->Identifier;
@@ -231,9 +231,9 @@ void buf_store_can_frame_blob(uint8_t channel, uint8_t* can_frame)
             // If the host has sent more packets than fit into the FIFO -> reject them all.
             // The host must send the entire blob again after a short delay.
             error_assert(channel, APP_CanTxOverflow, true); // both LED ON
-            return; 
+            return;
         }
-        
+
         int offset = sizeof(kBlob);
         for (uint8_t i=0; i<blob->frame_count; i++)
         {
@@ -261,7 +261,7 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
 {
     uint32_t can_id;
     uint8_t  flags;
-    uint8_t  can_dlc = 0;
+    int      can_dlc = 0;
     uint8_t  marker  = 0;
     uint8_t* frame_data;
     if (GLB_ProtoElmue) // new ElmüSoft protocol
@@ -278,27 +278,28 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
         marker     = tx_frame->marker;
         frame_data = tx_frame->data_start;
 
-        int byte_count = tx_frame->header.size - sizeof(kTxFrameElmue);
+        int byte_count = (int)tx_frame->header.size - (int)sizeof(kTxFrameElmue);
 
         // Remote frames never send data bytes. The host can write the DLC value into the first data byte, otherwise DLC = 0 is sent.
         if (can_id & CAN_ID_RTR)
         {
             if (byte_count > 0)
-                can_dlc = MIN(frame_data[0], 8);
+                can_dlc = frame_data[0]; // can_dlc is checked below
         }
-        else can_dlc = utils_byte_count_to_dlc(byte_count);
+        else can_dlc = utils_byte_count_to_dlc(byte_count); // returns -1 on invalid byte count
     }
     else // legacy Geschwister Schneider protocol
     {
         kHostFrameLegacy* tx_frame = (kHostFrameLegacy*)can_frame;
 
         // Although the multi channel firmware creates one USB interface for each CAN channel,
-        // The legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
+        // the legacy protocol routes all traffic of all CAN channels through the first USB interface (EP 81 / 02) for backward compatibility.
         // kHostFrameLegacy.channel tells the host which channel is the origin/destination of the packet.
         channel = tx_frame->channel;
         if (channel >= CHANNEL_COUNT)
         {
-            error_assert(channel, APP_CanTxFail, true); // both LED ON
+            // In case of invalid channel number -> report the error on channel 0
+            error_assert(0, APP_CanTxFail, true); // both LED ON
             return false; // host has sent an invalid channel
         }
 
@@ -307,6 +308,12 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
         flags      = tx_frame->flags;
         frame_data = tx_frame->pack_FD.data;
         can_dlc    = tx_frame->can_dlc;
+    }
+
+    if (can_dlc < 0 || can_dlc > 15)
+    {
+        error_assert(channel, APP_CanTxFail, true); // both LED ON
+        return false; // host has sent an invalid DLC or an invalid byte_count
     }
 
     // ------------------------------
@@ -358,7 +365,7 @@ bool buf_store_can_frame(uint8_t channel, uint8_t* can_frame)
 bool buf_store_tx_packet(uint8_t channel, FDCAN_TxHeaderTypeDef* tx_header, uint8_t* tx_data)
 {
     buf_class* can_buf = &buf_inst[channel];
-    
+
     kCanFrameObject k_CanFrame;
     memcpy(&k_CanFrame.header, tx_header, sizeof(k_CanFrame.header));
     memcpy(&k_CanFrame.data,   tx_data,   sizeof(k_CanFrame.data));
@@ -383,8 +390,8 @@ void buf_store_rx_packet(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint
 // private function
 // fake_echo is only used for legacy mode
 void buf_store_rx_packet_echo(uint8_t channel, FDCAN_RxHeaderTypeDef *rx_header, uint8_t *rx_data, uint32_t fake_echo)
-{      
-    uint32_t u32_Timestamp = system_get_timestamp();    
+{
+    uint32_t u32_Timestamp = system_get_timestamp();
 
     uint32_t can_id;
     if (rx_header->IdType == FDCAN_EXTENDED_ID)
@@ -475,8 +482,8 @@ void buf_store_tx_echo(uint8_t channel, FDCAN_TxEventFifoTypeDef* tx_event)
 
     if ((GLB_UserFlags[channel] & USR_Timestamp) == 0)
         k_Echo.header.size -= 4;
-    
-    buf_class* usb_buf = buf_get_inst_for_usb(channel);    
+
+    buf_class* usb_buf = buf_get_inst_for_usb(channel);
     FifoWrite(&usb_buf->host_fifo, &k_Echo, sizeof(k_Echo)); // Fifo overflow is reported in buf_process()
 }
 
@@ -484,9 +491,9 @@ void buf_store_tx_echo(uint8_t channel, FDCAN_TxEventFifoTypeDef* tx_event)
 void buf_store_error(uint8_t channel)
 {
     uint32_t u32_Timestamp = system_get_timestamp();
-    
+
     kHostFrameUnion k_HostFrame; // size = 80 byte
-    memset(&k_HostFrame, 0, sizeof(k_HostFrame));    
+    memset(&k_HostFrame, 0, sizeof(k_HostFrame));
 
     kHostFrameLegacy* frame_gs    = &k_HostFrame.Legacy;
     kErrorElmue*      frame_elmue = &k_HostFrame.Error;
@@ -581,7 +588,7 @@ void buf_store_error(uint8_t channel)
         frame_gs->can_dlc = 8;
         frame_gs->pack_classic.timestamp_us = u32_Timestamp;
     }
-    
+
     buf_class* usb_buf = buf_get_inst_for_usb(channel);
     FifoWrite(&usb_buf->host_fifo, &k_HostFrame, sizeof(k_HostFrame)); // Fifo overflow is reported in buf_process()
 
@@ -622,7 +629,7 @@ void FifoReset(kFifo* Fifo, void* Ptr, int Size, int Capacity)
     Fifo->Buffer   = (uint8_t*)Ptr;
     Fifo->ElemSize = Size;
     Fifo->MaxCount = Capacity;
-    Fifo->Count    = 0;    
+    Fifo->Count    = 0;
     Fifo->ReadIdx  = 0;
     Fifo->IsFull   = false;
     Fifo->IsEmpty  = true;
@@ -632,7 +639,7 @@ void FifoReset(kFifo* Fifo, void* Ptr, int Size, int Capacity)
 bool FifoWrite(kFifo* Fifo, void* Data, int Size)
 {
     system_disable_irq();
-    
+
     bool Success = !Fifo->IsFull && Size <= Fifo->ElemSize;
     if (Success)
     {
@@ -643,7 +650,7 @@ bool FifoWrite(kFifo* Fifo, void* Data, int Size)
         Fifo->IsFull  = Fifo->Count == Fifo->MaxCount;
         Fifo->IsEmpty = false;
     }
-    
+
     system_enable_irq();
     return Success;
 }
@@ -652,13 +659,13 @@ bool FifoWrite(kFifo* Fifo, void* Data, int Size)
 bool FifoRead(kFifo* Fifo, void* Data, int Size, eFifoRead e_Read)
 {
     system_disable_irq();
-    
+
     bool Success = !Fifo->IsEmpty && Size <= Fifo->ElemSize;
     if (Success)
     {
         uint8_t* Pointer = Fifo->Buffer + Fifo->ReadIdx * Fifo->ElemSize;
         memcpy(Data, Pointer, Size);
-        
+
         if (e_Read == FIFO_ReadNext)
         {
             Fifo->ReadIdx = (Fifo->ReadIdx + 1) % Fifo->MaxCount;
@@ -667,7 +674,7 @@ bool FifoRead(kFifo* Fifo, void* Data, int Size, eFifoRead e_Read)
             Fifo->IsEmpty = Fifo->Count == 0;
         }
     }
-    
+
     system_enable_irq();
     return Success;
 }
