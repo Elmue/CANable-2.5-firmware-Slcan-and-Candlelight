@@ -428,7 +428,7 @@ void can_process(uint8_t channel, uint32_t tick_now)
     // The processor continues to send the message !!ETERNALLY!! producing a bus load of 95%.
     // Tx requests must be canceled by firmware to free CAN bus from the congestion.
     // the processor will never stop alone sending the same packet over and over again.
-    if (inst->tx_pending > 0 && (int)(tick_now - inst->last_tx_tick) >= CAN_TX_TIMEOUT)
+    if (inst->tx_pending > 0 && (int32_t)(tick_now - inst->last_tx_tick) >= CAN_TX_TIMEOUT)
     {
         HAL_FDCAN_AbortTxRequest(&inst->handle, FDCAN_TX_BUFFER0 | FDCAN_TX_BUFFER1 | FDCAN_TX_BUFFER2);
         inst->tx_pending = 0;        

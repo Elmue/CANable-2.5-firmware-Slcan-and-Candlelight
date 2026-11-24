@@ -18,6 +18,11 @@ TIM_HandleTypeDef timer2 = {0};
 // private functions
 bool system_init_timestamp();
 
+
+// ===================================================================================================
+//                                             Setup Oszillators
+// ===================================================================================================
+
 // See "STM32G4/G0 Series - Clock Generation.png" in subfolder "Documentation"
 bool system_init(void)
 {
@@ -181,7 +186,10 @@ bool system_init(void)
     return true;
 }
 
-// --------------------------------------------
+
+// ===================================================================================================
+//                                           Timestamp
+// ===================================================================================================
 
 // Configure 32 bit Timer 2 as 1 µs timer (1 MHz). 
 bool system_init_timestamp()
@@ -217,6 +225,9 @@ uint32_t system_get_can_clock()
     return canfd_clock;
 }
 
+
+// ===================================================================================================
+//                                               MCU Serie
 // ===================================================================================================
 
 // While TARGET_MCU (from the make file) defines for which MCU serie the code was COMPILED,
@@ -252,7 +263,10 @@ eMcuSerie system_get_mcu_serie()
     return e_Serie;
 }
 
-// ----------------------------- Option Bytes ----------------------------------
+
+// ===================================================================================================
+//                                             Option Bytes
+// ===================================================================================================
 
 // returns if the requested option is set in the Option Bytes
 eOptionStatus system_is_option_enabled(eOptionBytes e_Option)
@@ -372,7 +386,10 @@ eFeedback system_set_option_bytes(eOptionBytes e_Option)
     return FBK_Success;
 }
 
-// ----------------------------- R/W Flash Memory ----------------------------------
+
+// ===================================================================================================
+//                                             R/W Flash Memory
+// ===================================================================================================
 
 // Read/Write user data from/to one segment in flash memory.
 // Firmware  is stored at the begin of the flash memory
